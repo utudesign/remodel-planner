@@ -121,6 +121,13 @@ begin
     left join public.milestones m on m.project_id = p1 and m.key = i.milestone_key
    where i.template_id = tpl_tasks;
   update public.tasks set description = 'Supplier says 2 boxes back-ordered' where project_id = p1 and sort_order = 5;
+  update public.tasks set trade = case
+      when title ilike 'plumbing%' then 'Plumber'
+      when title ilike 'electrical%' or title ilike 'layout%' then 'Electrician'
+      when title ilike 'countertop%' then 'Countertop fabricator'
+      when sort_order between 7 and 15 then 'Install crew'
+    end
+   where project_id = p1;
 
   insert into public.project_members (project_id, user_id, company_id) values (p1, u_f, c);
 

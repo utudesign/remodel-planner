@@ -156,8 +156,23 @@ export async function savePayment(_: ActionState, fd: FormData): Promise<ActionS
   return run(async () => {
     const v = paymentSchema.parse(formToObject(fd));
     const s = await requireRole(...OFFICE);
-    // With a manual due date (no milestone trigger), the installment is due now.
-    const status = v.due_trigger ? undefined : "due";
+    // Manual date → due now. Milestone trigger → due only once that milestone is done.
+    let status: "pending" | "due" = v.due_trigger ? "pending" : "due";
+    let dueDate = v.due_date;
+    if (v.due_trigger) {
+      const m = maybe(
+        await s.db
+          .from("milestones")
+          .select("actual_date")
+          .eq("project_id", v.project_id)
+          .eq("key", v.due_trigger)
+          .maybeSingle(),
+      );
+      if (m?.actual_date) {
+        status = "due";
+        dueDate = dueDate ?? m.actual_date;
+      }
+    }
     if (v.payment_id) {
       ok(
         await s.db
@@ -187,8 +202,8 @@ export async function savePayment(_: ActionState, fd: FormData): Promise<ActionS
           label: v.label,
           amount_cents: v.amount,
           due_trigger: v.due_trigger,
-          due_date: v.due_date,
-          status: status ?? "pending",
+          due_date: dueDate,
+          status,
           sort_order: (last[0]?.sort_order ?? 0) + 1,
         }),
       );

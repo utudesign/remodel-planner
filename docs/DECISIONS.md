@@ -67,3 +67,35 @@ Format: date · decision · why. Times in ET.
 | Removed `@supabase/ssr`                                                                                                                                                                                     | Auth is Clerk; a plain `supabase-js` client with `accessToken` is all we need         | —                                         |
 | No browser Supabase client                                                                                                                                                                                  | All data access is server-side (RLS still applies)                                    | —                                         |
 | SQL rule tests in `supabase/tests/rules_test.sql` (visibility per role, guards, convert, board moves, close gate, margin lock, audit, settings)                                                             | Rules are the riskiest part; they're tested at the DB                                 | —                                         |
+
+## 2026-10-23 — Steps 4–10
+
+| Decision                                                                                                                          | Why                                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Team = 3 office people (owner/sales, PM, admin assistant) + crew without logins                                                   | Owner's description of the company                                                           |
+| Roles: owner + PM = **admin**, assistant = **designer** shown as "Office" (sees and edits everything except Settings and closing) | Everyone sees everything from their phone; only admins lock financials                       |
+| `tasks.trade` free text (Install crew, Plumber, Electrician…)                                                                     | Assign work to people who don't log in                                                       |
+| **Team updates** feed on Today (activities from the last 48h: calls, stage moves, milestones, tasks done/blocked, payments)       | The team rarely meets; Today is the shared status board                                      |
+| Lead drag to Won is refused (use _Deposit received_); drag to Lost opens the reason dialog                                        | Business rules 2 and 3                                                                       |
+| Moving a lead to a new stage sets its follow-up from that stage's first rule                                                      | Rule 1 holds without asking on every drag                                                    |
+| "Log a touch" pre-fills the next follow-up from rule #(outbound touches in this stage + 1)                                        | Follow-up cadence matches the playbook without thinking                                      |
+| Booking a meeting from New/Contacted can move the lead to Meeting Booked, with a follow-up 24h before                             | Playbook §1 Step 2                                                                           |
+| Tasks: list (grouped by milestone) is the default view on phones; board view with drag is one tap away                            | Lists are faster to tick on a phone                                                          |
+| Field users can change task status on their projects; everything else on a project is office-only                                 | Matches RLS                                                                                  |
+| Installments can be added/edited/deleted until received; received ones can be undone, not deleted                                 | Keeps the money trail honest                                                                 |
+| A payment can be recorded with a different amount than scheduled                                                                  | Real checks differ; the balance-due math follows                                             |
+| Analytics (Phase 1) = margin table + 4 tiles; open projects also show a projected margin (estimates for missing actuals)          | Spec §8 keeps the dashboard in Phase 2                                                       |
+| Settings: built-in stages (new, contacted, meeting_booked, won, lost) can be renamed but not hidden                               | The app's logic keys on them                                                                 |
+| Settings → Team: invites go through Clerk's org UI; roles are set in the app                                                      | DB is the role source of truth                                                               |
+| PWA manifest + icons (Add to Home Screen)                                                                                         | Phone-first team                                                                             |
+| Browser `confirm()` before deleting an installment or cost line                                                                   | Simple, native on phones                                                                     |
+| Steps 4–5 and 6–7 were committed together                                                                                         | They share files (convert dialog lives on the lead page; payments UI is in the project page) |
+
+## Not verified in this build environment (verify on your Mac — docs/DEPLOY.md §3)
+
+- Sign-in against a real Clerk instance, and Supabase accepting the Clerk token (third-party auth). Needs your keys.
+- Screens rendered in a browser. `pnpm build` passes and every query is type-checked against the schema
+  (supabase-js validates embeds at compile time), but nothing was clicked through.
+- What _was_ verified: migrations + seed apply on Postgres 16; `supabase/tests/rules_test.sql` passes (RLS per role,
+  lead guards, convert, board moves → payments due, close gate, margin lock, audit, settings write protection);
+  45 unit tests pass; lint, typecheck and production build are clean.

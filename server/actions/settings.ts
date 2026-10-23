@@ -56,15 +56,13 @@ export async function saveLookupRows(
         while (keys.has(key)) key = `${key}_${Math.floor(Math.random() * 1000)}`;
         keys.add(key);
         ok(
-          await s.db
-            .from(v.table)
-            .insert({
-              company_id: s.companyId,
-              key,
-              label: r.label,
-              sort_order: r.sort_order,
-              active: r.active,
-            }),
+          await s.db.from(v.table).insert({
+            company_id: s.companyId,
+            key,
+            label: r.label,
+            sort_order: r.sort_order,
+            active: r.active,
+          }),
         );
       }
     }
@@ -81,16 +79,14 @@ export async function saveFollowUpRules(
     ok(await s.db.from("follow_up_rules").delete().eq("stage_id", v.stage_id));
     if (v.rules.length) {
       ok(
-        await s.db
-          .from("follow_up_rules")
-          .insert(
-            v.rules.map((r, i) => ({
-              ...r,
-              sequence: i + 1,
-              stage_id: v.stage_id,
-              company_id: s.companyId,
-            })),
-          ),
+        await s.db.from("follow_up_rules").insert(
+          v.rules.map((r, i) => ({
+            ...r,
+            sequence: i + 1,
+            stage_id: v.stage_id,
+            company_id: s.companyId,
+          })),
+        ),
       );
     }
     return done("/settings/pipeline");
@@ -177,16 +173,14 @@ export async function saveTaskTemplate(
     }
     if (v.items.length) {
       ok(
-        await s.db
-          .from("task_template_items")
-          .insert(
-            v.items.map((i, idx) => ({
-              ...i,
-              company_id: s.companyId,
-              template_id: templateId!,
-              sort_order: idx + 1,
-            })),
-          ),
+        await s.db.from("task_template_items").insert(
+          v.items.map((i, idx) => ({
+            ...i,
+            company_id: s.companyId,
+            template_id: templateId!,
+            sort_order: idx + 1,
+          })),
+        ),
       );
     }
     return done("/settings/templates");

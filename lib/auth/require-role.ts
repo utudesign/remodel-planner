@@ -51,7 +51,11 @@ async function loadMember(db: Db, clerkUserId: string) {
     .eq("clerk_id", clerkUserId)
     .eq("active", true)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) {
+    throw new Error(
+      `The database rejected your sign-in (${error.message}). Check Supabase → Authentication → Third-party auth → Clerk, and Clerk → Integrations → Supabase (docs/DEPLOY.md).`,
+    );
+  }
   return data;
 }
 

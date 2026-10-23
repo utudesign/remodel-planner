@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Remodel Planner
 
-## Getting Started
+Leads → projects → payments → margin for a small kitchen remodel team. Phone-first; installs to the home screen.
 
-First, run the development server:
+| Read                       | For                                                                          |
+| -------------------------- | ---------------------------------------------------------------------------- |
+| `docs/CONTEXT.md`          | Product spec (source of truth)                                               |
+| `docs/DECISIONS.md`        | Every call made where the spec was silent, plus proposed spec updates        |
+| `docs/PLAYBOOK-MAPPING.md` | How the Sales & Estimating Playbook maps to app defaults, and what's Phase 2 |
+| `docs/DEPLOY.md`           | Local setup, production deploy, smoke test                                   |
+| `CLAUDE.md`                | Conventions for Claude Code sessions                                         |
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+cp .env.example .env.local      # fill Clerk + Supabase keys (docs/DEPLOY.md §1)
+pnpm db:start && pnpm db:reset
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Command         | Does                                                                    |
+| --------------- | ----------------------------------------------------------------------- |
+| `pnpm dev`      | Dev server                                                              |
+| `pnpm check`    | Lint + typecheck + unit tests + build                                   |
+| `pnpm test`     | Vitest (money, margin, follow-ups, close rule, payment schedule, dates) |
+| `pnpm db:reset` | Re-apply migrations + demo seed locally                                 |
+| `pnpm db:types` | Regenerate `types/db.ts` from the local DB                              |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Where things live
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+app/(app)/            today · leads · projects · payments · analytics · settings
+components/           ui (shadcn) · leads · projects · payments · settings · shared
+lib/                  money · dates · follow-up · payment-schedule · margin · close-rule · validation
+server/actions/       mutations (Zod → requireRole → RLS-scoped query → revalidate)
+server/queries/       reads
+supabase/migrations/  0001 schema · 0002 RLS · 0003 rules/RPCs/defaults
+supabase/tests/       SQL tests for RLS + business rules
+```

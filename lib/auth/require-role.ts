@@ -88,13 +88,17 @@ export const getSession = cache(async (): Promise<Session> => {
   let member = await loadMember(db, clerkUserId);
   if (!member) {
     const u = await currentUser();
-    const { bootstrapOwner } = await import("@/server/onboarding");
-    const r = await bootstrapOwner({
+    const { acceptPartnerInvite, bootstrapOwner } = await import("@/server/onboarding");
+    const who = {
       clerkUserId,
       name: [u?.firstName, u?.lastName].filter(Boolean).join(" ") || u?.username || "",
       email: u?.primaryEmailAddress?.emailAddress ?? "",
-    });
-    if (!r.ok) redirect(`/no-access?reason=${encodeURIComponent(r.reason)}`);
+    };
+    // An invited partner (Crystal) gets her partner login; anyone else may open a rep account.
+    if (!(await acceptPartnerInvite(who))) {
+      const r = await bootstrapOwner(who);
+      if (!r.ok) redirect(`/no-access?reason=${encodeURIComponent(r.reason)}`);
+    }
     member = await loadMember(db, clerkUserId);
   }
   if (!member || !member.company || !isRole(member.role)) {

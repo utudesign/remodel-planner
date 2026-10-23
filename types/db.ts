@@ -2032,6 +2032,62 @@ export type Database = {
           },
         ]
       }
+      partner_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          company_id: string
+          email: string
+          id: string
+          invited_at: string
+          name: string | null
+          partner_id: string
+        }
+        ComputedFields: never
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          company_id: string
+          email: string
+          id?: string
+          invited_at?: string
+          name?: string | null
+          partner_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          company_id?: string
+          email?: string
+          id?: string
+          invited_at?: string
+          name?: string | null
+          partner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_invites_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_invites_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_invites_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partners: {
         Row: {
           active: boolean
@@ -3809,6 +3865,10 @@ export type Database = {
     Functions: {
       _deal_doc_number: {
         Args: { p_deal_id: string; p_kind: string }
+        Returns: string
+      }
+      accept_partner_invite: {
+        Args: { p_clerk_user_id: string; p_email: string; p_name: string }
         Returns: string
       }
       approve_quote: {

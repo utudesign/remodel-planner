@@ -146,3 +146,13 @@ payments schedule, close/margin lock screens) was removed; it's in git history b
 | "Show the client" numbers the estimate once (`share_quote()` → `26-1047-E1`), marks it sent, and updates the deal's value | DEALS §1 document numbers |
 | Client view `/q/<token>`: section totals only, no tax line (tax sits inside the absorbing section), "Estimate. Final price and contract from RenoDesign Inc." + license number, valid 30 days. PDF = the phone's Print → Save as PDF | No PDF library yet (PLAN Q4); a one-tap PDF comes with the hand-off packet |
 | `supabase/seed_timberpeak_demo.sql` = the price list import with the demo company id filled in | `supabase db reset` can't pass psql variables |
+
+### Step 4: hand-off
+
+| Decision | Why |
+| --- | --- |
+| Hand off = pick partner + plan on the deal's Partner tab; the database (0006) refuses without the checklist and the refusal is shown as "Add these first" next to the checklist's Add buttons | Master prompt: refusals become checklists, never raw errors |
+| Packet = **Text summary** (Messages, prefilled), **Photos ZIP** (built on the phone with `fflate`, shared through the iOS share sheet) and **Packet PDF** (printable page → Save as PDF) | `fflate` is ~8 KB with no dependencies (PLAN Q4). No PDF library: the phone's print-to-PDF covers it |
+| Crystal's login: More → Partners → Invite. An invite row + a Clerk email invitation; her first sign-in with that email creates a `partner` user (`accept_partner_invite`) | Works with Clerk sign-ups restricted to you |
+| Partners can read the customer contact and site visit of deals handed to them (0010) | She needs the address and measurements to do the job; estimates, notes and my money stay hidden (0006) |
+| Every job update (hers or mine) is logged on the deal; hers also notify me (`partner_update`, held until 3:30 PM on workdays) | One timeline, no "did you see my text?" |

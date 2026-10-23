@@ -67,11 +67,11 @@ end $$;
 select pg_temp.act_as('seed_crystal');
 do $$ begin
   if (select count(*) from public.deals) <> 3 then raise exception 'partner should see 3 handed-off deals, sees %', (select count(*) from public.deals); end if;
-  if (select count(*) from public.contacts) <> 0 then raise exception 'partner must not read contacts table'; end if;
+  if (select count(*) from public.contacts) <> 3 then raise exception 'partner reads only the customers of her 3 deals'; end if;
   if (select count(*) from public.business_expenses) + (select count(*) from public.mileage_trips) <> 0 then raise exception 'partner sees my money'; end if;
   if (select count(*) from public.activities) <> 0 then raise exception 'partner sees my activity log'; end if;
   if (select count(*) from public.deal_commissions) <> 3 then raise exception 'partner sees commissions on her deals'; end if;
-  raise notice 'OK: partner sees only her 3 deals, no contacts, notes or expenses';
+  raise notice 'OK: partner sees only her 3 deals and their customers, no notes or expenses';
 end $$;
 select pg_temp.expect_error($$update public.deals set stage = 'new' where id = '00000000-0000-0000-0000-0000000000d3'$$,
                             'Partners can only update%');
@@ -172,7 +172,7 @@ do $$ begin
 end $$;
 select pg_temp.act_as('seed_tugu');
 do $$ begin
-  if (select count(*) from public.notifications) <> 1 then raise exception 'owner sees own notification'; end if;
+  if (select count(*) from public.notifications where kind = 'new_lead') <> 1 then raise exception 'owner sees own notification'; end if;
   raise notice 'OK: notifications are per user';
 end $$;
 
@@ -227,6 +227,36 @@ do $$ begin
   raise notice 'OK: partner never sees my estimates';
 end $$;
 select pg_temp.expect_error($$select public.share_quote((select id from public.quotes limit 1))$$, 'Only the owner%');
+
+-- 8. Hand-off + partner login (0010) ------------------------------------------------
+reset role;
+insert into public.partner_invites (company_id, partner_id, email, name)
+select company_id, id, 'sam@example.com', 'Sam' from public.partners
+ where company_id = '00000000-0000-0000-0000-0000000000c1';
+do $$
+declare v uuid; c int;
+begin
+  v := public.accept_partner_invite('user_sam', 'SAM@example.com', '');
+  if v is null or (select role from public.users where id = v) <> 'partner' then raise exception 'invite not accepted'; end if;
+  if public.accept_partner_invite('user_nobody', 'nobody@example.com', '') is not null then raise exception 'uninvited accepted'; end if;
+  select count(*) into c from public.activities where deal_id = '00000000-0000-0000-0000-0000000000d4' and summary like 'Handed off to%';
+  if c <> 1 then raise exception 'hand-off not logged (%)', c; end if;
+  raise notice 'OK: invited partner gets a partner login; uninvited email does not; hand-off logged';
+end $$;
+set role authenticated;
+select pg_temp.act_as('user_sam');
+do $$ begin
+  if (select count(*) from public.contacts) < 3 then raise exception 'partner should read customers of her deals'; end if;
+  update public.deals set job_status = 'in_progress', partner_note = 'Cabinets delivered' where id = '00000000-0000-0000-0000-0000000000d2';
+end $$;
+reset role;
+do $$ begin
+  if not exists (select 1 from public.notifications where kind = 'partner_update' and body like '%in_progress%') then
+    raise exception 'owner not notified of partner update'; end if;
+  if not exists (select 1 from public.activities where deal_id = '00000000-0000-0000-0000-0000000000d2' and summary like 'Job update:%Cabinets delivered%') then
+    raise exception 'partner update not logged'; end if;
+  raise notice 'OK: partner sees her customers; her job updates are logged and notify me';
+end $$;
 
 reset role;
 \echo ALL RULE TESTS PASSED

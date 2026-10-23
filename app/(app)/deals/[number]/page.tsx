@@ -15,6 +15,10 @@ import {
 import { UploadButton } from "@/components/deals/upload-button";
 import { PhotoCapture } from "@/components/photos/photo-capture";
 import { AutoReplyCard } from "@/components/deals/auto-reply-card";
+import { HandoffForm, JobForm, PacketButtons } from "@/components/handoff/handoff-panel";
+import { dealFileName } from "@/lib/deals/dealNumber";
+import { lastName, scopeInfo } from "@/lib/deals/display";
+import type { CommissionRow, DealDetail } from "@/server/queries/deals";
 import { NewEstimateForm } from "@/components/estimates/builder";
 import { getTemplates, listQuotes } from "@/server/queries/estimates";
 import { CopyButton } from "@/components/shared/copy-button";
@@ -25,7 +29,7 @@ import { EmptyState } from "@/components/shared/states";
 import { requireOwner } from "@/lib/auth/require-role";
 import { formatDateTime, utcToDatetimeLocal } from "@/lib/dates";
 import { DEAL_FOLDERS, type DealFolder } from "@/lib/deals/dealNumber";
-import { FOLDER_LABELS, jobStatusLabel, PHOTO_TAGS, sourceLabel, timelineLabel } from "@/lib/deals/display";
+import { FOLDER_LABELS, PHOTO_TAGS, sourceLabel, timelineLabel } from "@/lib/deals/display";
 import { defaultPlanFor, previewFor, type PlanRow } from "@/lib/deals/plans";
 import { leadScore, nextStep } from "@/lib/deals/segments";
 import { formatBudget, formatCents, formatCentsWhole } from "@/lib/money";
@@ -281,36 +285,24 @@ export default async function DealJacket({
         ) : null}
 
         {tab === "partner" ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>{commission?.partner_name ?? "Partner"}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2 text-sm">
-              {deal.handed_off_at ? (
-                <>
-                  <Row k="Handed off" v={formatDateTime(deal.handed_off_at, s.timezone)} />
-                  <Row k="Plan" v={commission?.plan_name ?? "—"} />
-                  <Row k="Job" v={jobStatusLabel(deal.job_status)} />
-                  <Row k="Sold price" v={deal.sold_price_cents ? formatCents(deal.sold_price_cents) : "—"} />
-                  <Row k="Change orders" v={formatCents(deal.change_orders_cents)} />
-                  <Row k="Deposit received" v={deal.deposit_received_at ? formatDateTime(deal.deposit_received_at, s.timezone) : "—"} />
-                  <Row k="Paid in full" v={deal.paid_in_full_at ? formatDateTime(deal.paid_in_full_at, s.timezone) : "—"} />
-                  {commission ? (
-                    <Row
-                      k="Commission"
-                      v={`${formatCents(commission.earned_cents)} earned · ${formatCents(commission.paid_cents)} paid · ${formatCents(commission.owed_cents)} owed`}
-                    />
-                  ) : null}
-                  {deal.partner_note ? <p className="rounded-lg bg-secondary p-3">{deal.partner_note}</p> : null}
-                </>
-              ) : (
-                <p className="text-muted-foreground">
-                  Not handed off yet. Finish the hand-off checklist on Overview; the Hand off button comes with the
-                  partner step.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <PartnerTab
+            deal={deal}
+            checklist={checklist}
+            commission={commission ?? null}
+            partners={partners.map((p) => ({
+              id: p.id,
+              name: p.name,
+              phone: p.phone,
+              active: p.active,
+              plans: (p.plans as PlanRow[])
+                .filter((pl) => pl.active)
+                .map((pl) => ({ id: pl.id, name: pl.name, preview: previewFor(pl, value) })),
+            }))}
+            defaultPlanId={defaultPlanFor(plans, deal.scope)?.id ?? null}
+            tz={s.timezone}
+            photos={photos}
+            companyId={s.companyId}
+          />
         ) : null}
 
         {tab === "activity" ? <ActivityTab dealId={deal.id} tz={s.timezone} /> : null}
@@ -329,14 +321,6 @@ function Stat({ label, value, tone, small, hint }: { label: string; value: strin
   );
 }
 
-function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="flex justify-between gap-3 border-b border-border/60 py-1.5 last:border-0">
-      <span className="text-muted-foreground">{k}</span>
-      <span className="text-right font-medium">{v}</span>
-    </div>
-  );
-}
 
 function HandoffCard({
   items,
@@ -643,6 +627,119 @@ async function EstimateTab({ dealId, number }: { dealId: string; number: string 
         </CardHeader>
         <CardContent>
           <NewEstimateForm dealId={dealId} templates={templates} />
+        </CardContent>
+      </Card>
+    </>
+  );
+}
+
+async function PartnerTab({
+  deal,
+  checklist,
+  commission,
+  partners,
+  defaultPlanId,
+  tz,
+  photos,
+  companyId,
+}: {
+  deal: DealDetail;
+  checklist: ChecklistItem[];
+  commission: CommissionRow | null;
+  partners: { id: string; name: string; phone: string | null; active: boolean; plans: { id: string; name: string; preview: number | null }[] }[];
+  defaultPlanId: string | null;
+  tz: string;
+  photos: Awaited<ReturnType<typeof getDealFiles>>;
+  companyId: string;
+}) {
+  const s = await requireOwner();
+  const partner = partners.find((p) => p.id === deal.partner_id) ?? partners.find((p) => p.active) ?? null;
+  const base = await appUrl();
+  const c = deal.contact;
+  const [quote] = await listQuotes(s, deal.id);
+  const urls = await signedUrls(photos.map((f) => f.storage_path), companyId);
+  const summary = [
+    `#${deal.deal_number} ${c?.name ?? ""} — ${scopeInfo(deal.scope)?.label ?? "Kitchen"}`,
+    [c?.phone, [c?.address, c?.city].filter(Boolean).join(", ")].filter(Boolean).join(" · "),
+    deal.budget_min_cents || deal.budget_max_cents ? `Budget ${formatBudget(deal.budget_min_cents, deal.budget_max_cents)}` : "",
+    quote?.totals ? `My estimate ${quote.doc_number ?? ""} ${formatCentsWhole(quote.totals.total_price_cents)}` : "",
+    deal.year_built ? `Built ${deal.year_built}${deal.year_built < 1978 ? " (pre-1978)" : ""}` : "",
+    deal.notes ? `Notes: ${deal.notes.slice(0, 300)}` : "",
+    `Photos + measurements: ${base}/p/${deal.deal_number}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const timeline = (await getActivities(s, deal.id)).filter((a) => /^(Handed off|Job update)/.test(a.summary));
+
+  if (!deal.handed_off_at) {
+    const left = checklist.filter((i) => i.required && !i.satisfied).length;
+    return (
+      <>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Hand-off checklist</CardTitle>
+            <span className={cn("text-sm font-semibold", left ? "text-destructive" : "text-primary")}>
+              {left ? `${left} missing` : "Ready"}
+            </span>
+          </CardHeader>
+          <CardContent>
+            <Checklist items={checklist} dealId={deal.id} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Hand off</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <HandoffForm dealId={deal.id} partners={partners.filter((p) => p.active && p.plans.length)} defaultPlanId={defaultPlanId} />
+          </CardContent>
+        </Card>
+        <p className="px-1 text-xs text-muted-foreground">
+          Reminder: you never take money yourself. Checks and deposits are made out to the partner, after their contract
+          (with license number and the 3-day cancellation notice) is signed.
+        </p>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Send the packet to {partner?.name ?? "the partner"}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PacketButtons
+            number={deal.deal_number}
+            phone={partner?.phone ?? null}
+            summary={summary}
+            photos={photos.filter((f) => urls[f.storage_path]).map((f) => ({ url: urls[f.storage_path], name: f.title ?? "photo.jpg" }))}
+            zipName={dealFileName(deal.deal_number, lastName(c?.name), `${scopeInfo(deal.scope)?.label ?? "kitchen"} photos`)}
+          />
+        </CardContent>
+      </Card>
+      <div className="grid grid-cols-2 gap-3 rounded-2xl bg-card p-4 ring-1 ring-border">
+        <Stat label="Expected" value={commission ? formatCents(commission.expected_cents) : "—"} tone="text-primary" />
+        <Stat label="Owed now" value={commission ? formatCents(commission.owed_cents) : "—"} tone={commission && commission.owed_cents > 0 ? "text-destructive" : undefined} />
+        <Stat label="Earned" value={commission ? formatCents(commission.earned_cents) : "—"} small />
+        <Stat label="Paid to me" value={commission ? formatCents(commission.paid_cents) : "—"} small hint={commission?.plan_name} />
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Job progress</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {timeline.length ? (
+            <ol className="flex flex-col gap-1.5 border-l-2 border-border pl-3">
+              {timeline.map((a) => (
+                <li key={a.id} className="text-sm">
+                  <span className="text-xs text-muted-foreground">{formatDateTime(a.occurred_at, tz)}</span>
+                  <p>{a.summary}</p>
+                </li>
+              ))}
+            </ol>
+          ) : null}
+          <JobForm dealId={deal.id} v={deal} tz={tz} />
         </CardContent>
       </Card>
     </>

@@ -1,6 +1,6 @@
 # PLAN: Tugu's kitchen sales tool (master prompt v2, Step 0)
 
-Status: **waiting for approval.** Nothing below is built yet.
+Status: **approved Oct 23, 2026 (defaults taken for Q1–Q12). Steps 1–5 built**; Step 6 (lead-source report, review/referral text, deal ZIP export) is next. Decisions per step: `docs/DECISIONS.md`.
 Inputs read: `kitchen-sales-tool-handoff.zip` (SALES-REP-MODE, DEALS, QUICK-ESTIMATE, ESTIMATING, COMPLIANCE-AND-OPS §0, CONTEXT, research, migrations 0002–0006, `test/`, `lib/*`), plus everything already in this repo (last commit `b03802a`, WIP).
 
 Baseline check done on Postgres 16 here: the handoff's own run order (`test/run_all.sh`: stub → 0002 → 0003 → 0004 → tests → 0005 → tests → 0006 → tests) passes with **41 OK, 0 errors**.

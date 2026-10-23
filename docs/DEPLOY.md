@@ -144,7 +144,12 @@ npx web-push generate-vapid-keys   # prints a public and a private key
 | 9 | Estimate tab → New quick estimate → G1 → L3 | Total + margin + **This pays you**; Home Depot card |
 | 10 | Show the client → Client view | `26-1001-E1`, section totals only, no tax line, RenoDesign license line |
 | 11 | Deals → search `1001` | Finds the deal |
-| 12 | Money | Owed / pipeline / paid this year (filled once deals are handed off) |
+| 12 | Deal → Partner tab → Hand off before the checklist is done | "Add these first:" + the missing items; Add buttons above |
+| 13 | Finish the checklist → Hand off to RenoDesign | Stage "Handed off"; packet buttons: Text summary, Photos ZIP (share sheet), Packet PDF |
+| 14 | Job progress: Contract signed, sold $38,500, deposit today → Save | Money: $962.50 owed (5% plan, half at deposit) |
+| 15 | Money → Record a payment I received → $962.50 Zelle | Owed $0, "part paid"; Year tab shows it; CSV downloads |
+| 16 | + → Add expense (receipt photo) and + → Log trip (24 mi) | Year: net = commissions − expenses − 24 × 72.5¢ |
+| 17 | More → Partners → Invite Crystal's email; she signs in on her phone | She sees only handed-off deals at /p, can update job progress; you get a push |
 
 ## 6. Changing the schema later
 

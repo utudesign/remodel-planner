@@ -3,7 +3,7 @@
 -- Price book, quote line items, takeoff, priced views, approval,
 -- quote -> project conversion, and the project materials / pick list.
 --
--- Depends on 0001 (per docs/CONTEXT.md): companies, users, leads, quotes,
+-- Depends on 0001 (per docs/CONTEXT.md): companies, users, deals, quotes,
 -- projects, tasks, costs. Reconcile column names with 0001 before applying
 -- (see docs/ESTIMATING.md "Assumptions about 0001").
 --
@@ -259,7 +259,7 @@ alter table public.quotes
 
 -- Backfill any existing rows, then tighten.
 update public.quotes q set company_id = l.company_id
-  from public.leads l where q.lead_id = l.id and q.company_id is null;
+  from public.deals l where q.deal_id = l.id and q.company_id is null;
 update public.quotes set
   status           = coalesce(status, case when approved_at is not null then 'approved'
                                            when sent_at is not null then 'sent' else 'draft' end),
@@ -288,14 +288,14 @@ alter table public.quotes
   drop column if exists tax,
   drop column if exists total;
 
-create unique index if not exists quotes_lead_version on public.quotes (lead_id, version);
+create unique index if not exists quotes_deal_version on public.quotes (deal_id, version);
 
 create or replace function public.quotes_fill_defaults()
 returns trigger language plpgsql set search_path = public as $$
 declare s public.estimating_settings%rowtype;
 begin
   if new.company_id is null then
-    select company_id into new.company_id from public.leads where id = new.lead_id;
+    select company_id into new.company_id from public.deals where id = new.deal_id;
   end if;
   select * into s from public.estimating_settings where company_id = new.company_id;
   new.target_margin    := coalesce(new.target_margin,    s.target_margin,    0.35);
@@ -484,7 +484,7 @@ with lines as (
   group by quote_id
 ),
 base as (
-  select q.id as quote_id, q.company_id, q.lead_id, q.version, q.status, q.target_margin,
+  select q.id as quote_id, q.company_id, q.deal_id, q.version, q.status, q.target_margin,
          coalesce(l.line_count, 0)                 as line_count,
          coalesce(l.direct_cost_cents, 0)::bigint  as direct_cost_cents,
          coalesce(l.taxable_cost_cents, 0)::bigint as taxable_cost_cents,
@@ -544,7 +544,7 @@ select quote_id, 'materials', 'Sales tax on materials', tax_cost_cents from publ
 -- ---------------------------------------------------------------------
 -- 10. Workflow functions
 -- ---------------------------------------------------------------------
-create or replace function public.create_quote_from_template(p_lead_id uuid, p_template_id uuid, p_name text default null)
+create or replace function public.create_quote_from_template(p_deal_id uuid, p_template_id uuid, p_name text default null)
 returns uuid language plpgsql security invoker set search_path = public as $$
 declare
   v_company uuid;
@@ -555,15 +555,15 @@ begin
   if not public.is_team() then
     raise exception 'Only owners or team members can create quotes' using errcode = '42501';
   end if;
-  select company_id into v_company from public.leads where id = p_lead_id;
-  if v_company is null then raise exception 'Lead % not found', p_lead_id; end if;
+  select company_id into v_company from public.deals where id = p_deal_id;
+  if v_company is null then raise exception 'Deal % not found', p_deal_id; end if;
   select * into v_tpl from public.quote_templates where id = p_template_id and company_id = v_company;
   if not found then raise exception 'Template % not found for this company', p_template_id; end if;
 
-  select coalesce(max(version), 0) + 1 into v_version from public.quotes where lead_id = p_lead_id;
+  select coalesce(max(version), 0) + 1 into v_version from public.quotes where deal_id = p_deal_id;
 
-  insert into public.quotes (company_id, lead_id, version, name, template_id, takeoff, status, created_by)
-  values (v_company, p_lead_id, v_version, coalesce(p_name, v_tpl.name), v_tpl.id, v_tpl.default_takeoff,
+  insert into public.quotes (company_id, deal_id, version, name, template_id, takeoff, status, created_by)
+  values (v_company, p_deal_id, v_version, coalesce(p_name, v_tpl.name), v_tpl.id, v_tpl.default_takeoff,
           'draft', public.current_user_id())
   returning id into v_quote;
 
@@ -598,11 +598,11 @@ begin
   end if;
   select * into q from public.quotes where id = p_quote_id;
   if not found then raise exception 'Quote % not found', p_quote_id; end if;
-  select coalesce(max(version), 0) + 1 into v_ver from public.quotes where lead_id = q.lead_id;
+  select coalesce(max(version), 0) + 1 into v_ver from public.quotes where deal_id = q.deal_id;
 
-  insert into public.quotes (company_id, lead_id, version, name, template_id, takeoff, status, collection_id,
+  insert into public.quotes (company_id, deal_id, version, name, template_id, takeoff, status, collection_id,
                              target_margin, contingency_rate, tax_rate, labor_rate_cents, created_by)
-  values (q.company_id, q.lead_id, v_ver, coalesce(p_name, q.name), q.template_id, q.takeoff, 'draft', q.collection_id,
+  values (q.company_id, q.deal_id, v_ver, coalesce(p_name, q.name), q.template_id, q.takeoff, 'draft', q.collection_id,
           q.target_margin, q.contingency_rate, q.tax_rate, q.labor_rate_cents, public.current_user_id())
   returning id into v_new;
 
@@ -618,7 +618,7 @@ begin
   return v_new;
 end $$;
 
--- Freezes the quote, snapshots totals, supersedes the lead's other open versions.
+-- Freezes the quote, snapshots totals, supersedes the deal's other open versions.
 create or replace function public.approve_quote(p_quote_id uuid)
 returns public.quote_totals language plpgsql security invoker set search_path = public as $$
 declare
@@ -637,7 +637,7 @@ begin
   if t.line_count = 0 then raise exception 'Quote has no line items'; end if;
 
   update public.quotes set status = 'superseded'
-   where lead_id = q.lead_id and id <> q.id and status in ('draft','sent');
+   where deal_id = q.deal_id and id <> q.id and status in ('draft','sent');
 
   update public.quotes
      set status = 'approved',

@@ -8,7 +8,7 @@ import { getLostReasons, getStages } from "@/server/queries/settings";
 export const metadata = { title: "Leads" };
 
 export default async function LeadsPage() {
-  const s = await requirePageRole("admin", "designer");
+  const s = await requirePageRole("owner", "team");
   const [stages, leads, reasons] = await Promise.all([
     getStages(s),
     getBoardLeads(s),

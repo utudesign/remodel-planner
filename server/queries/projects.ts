@@ -55,7 +55,7 @@ export async function getProjectDetail(s: Session, projectId: string) {
   );
   if (!project) notFound();
 
-  const office = s.role !== "field";
+  const office = s.role !== "crew";
   const [milestones, tasks, members, payments, costs, changeOrders] = await Promise.all([
     s.db
       .from("milestones")

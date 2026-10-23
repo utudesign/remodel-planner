@@ -9,12 +9,12 @@ import { closeProject } from "@/server/actions/projects";
 export function ClosePanel({
   projectId,
   blockers,
-  isAdmin,
+  isOwner,
   closed,
 }: {
   projectId: string;
   blockers: string[];
-  isAdmin: boolean;
+  isOwner: boolean;
   closed: boolean;
 }) {
   const [pending, start] = useTransition();
@@ -22,7 +22,7 @@ export function ClosePanel({
   if (closed) {
     return (
       <p className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Lock className="size-4" /> Closed. Margin is locked; admin edits are logged.
+        <Lock className="size-4" /> Closed. Margin is locked; owner edits are logged.
       </p>
     );
   }
@@ -52,7 +52,7 @@ export function ClosePanel({
           ))}
         </ul>
       ) : null}
-      {isAdmin ? (
+      {isOwner ? (
         <Button
           disabled={blockers.length > 0 || pending}
           onClick={() =>
@@ -68,7 +68,7 @@ export function ClosePanel({
           <Lock /> Close project &amp; lock margin
         </Button>
       ) : (
-        <p className="text-xs text-muted-foreground">An admin closes the project.</p>
+        <p className="text-xs text-muted-foreground">An owner closes the project.</p>
       )}
       {msg ? (
         <p className={msg.ok ? "text-sm text-success" : "text-sm text-destructive"}>{msg.text}</p>

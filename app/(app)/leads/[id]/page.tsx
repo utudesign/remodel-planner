@@ -38,7 +38,7 @@ const ACTIVITY_LABEL: Record<string, string> = {
 
 export default async function LeadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const s = await requirePageRole("admin", "designer");
+  const s = await requirePageRole("owner", "team");
   const { lead, activities, meetings } = await getLeadDetail(s, id);
   const [stages, reasons, team, rules, attempts, payTemplates, taskTemplates] = await Promise.all([
     getStages(s),
@@ -252,7 +252,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
               <LeadEditForm
                 lead={lead}
                 contact={contact}
-                team={team.filter((u) => u.active && u.role !== "field")}
+                team={team.filter((u) => u.active && u.role !== "crew")}
               />
             </CardContent>
           </Card>

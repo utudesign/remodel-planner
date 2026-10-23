@@ -14,7 +14,7 @@
  */
 
 export type CostCategory =
-  | 'materials' | 'labor' | 'subcontractor' | 'permit' | 'delivery' | 'disposal' | 'other';
+  "materials" | "labor" | "subcontractor" | "permit" | "delivery" | "disposal" | "other";
 
 export interface QuoteAssumptions {
   /** 0.35 = 35%. Must be < 0.95. */
@@ -25,8 +25,8 @@ export interface QuoteAssumptions {
 }
 
 export interface LineInput {
-  qty: number;              // up to 2 decimals
-  unitCostCents: number;    // integer
+  qty: number; // up to 2 decimals
+  unitCostCents: number; // integer
   usesLaborRate: boolean;
   marginOverride: number | null;
   taxable: boolean;
@@ -61,7 +61,9 @@ export interface QuoteTotals {
 /** Integer division rounded half away from zero (Postgres round(numeric) semantics). */
 export function divRound(numerator: number, denominator: number): number {
   if (!Number.isSafeInteger(numerator) || !Number.isSafeInteger(denominator) || denominator === 0) {
-    throw new RangeError(`divRound needs safe integers and a non-zero denominator (${numerator}/${denominator})`);
+    throw new RangeError(
+      `divRound needs safe integers and a non-zero denominator (${numerator}/${denominator})`,
+    );
   }
   const sign = Math.sign(numerator) * Math.sign(denominator);
   const n = Math.abs(numerator);
@@ -169,7 +171,10 @@ export function sectionTotals(
     out.set(line.sectionId, (out.get(line.sectionId) ?? 0) + priceLine(line, a).priceCents);
   }
   const t = quoteTotals(lines, a);
-  out.set(absorbingSectionId, (out.get(absorbingSectionId) ?? 0) + t.contingencyPriceCents + t.taxPriceCents);
+  out.set(
+    absorbingSectionId,
+    (out.get(absorbingSectionId) ?? 0) + t.contingencyPriceCents + t.taxPriceCents,
+  );
   return out;
 }
 
@@ -190,4 +195,4 @@ function toBasisPointsAllowFull(rate: number): number {
 }
 
 export const formatUsd = (cents: number): string =>
-  (cents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });

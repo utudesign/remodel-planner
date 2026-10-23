@@ -24,8 +24,9 @@ begin
   perform public.seed_company_defaults(c);
 
   insert into public.users (id, company_id, clerk_id, name, email, role, is_default_owner) values
-    (u_d, c, 'seed_designer', 'Dana Designer', 'dana@example.com', 'designer', true),
-    (u_f, c, 'seed_field',    'Frank Field',   'frank@example.com', 'field',   false);
+    (u_d, c, 'seed_office',  'Office Admin (demo)', 'office@example.com',  'team',  true),
+    (u_f, c, 'seed_crew',    'Crew Lead (demo)',    'crew@example.com',    'crew',  false),
+    ('00000000-0000-0000-0000-0000000000e1', c, 'seed_crystal', 'Crystal (demo)', 'crystal@example.com', 'owner', false);
 
   select id into s_new       from public.pipeline_stages where company_id = c and key = 'new';
   select id into s_contacted from public.pipeline_stages where company_id = c and key = 'contacted';

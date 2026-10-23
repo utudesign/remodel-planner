@@ -23,7 +23,7 @@ export default async function PaymentsPage({
   searchParams: Promise<{ f?: string }>;
 }) {
   const { f = "open" } = await searchParams;
-  const s = await requirePageRole("admin", "designer");
+  const s = await requirePageRole("owner", "team");
   const today = todayIn(s.timezone);
   const all = await getAllPayments(s);
 

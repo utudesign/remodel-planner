@@ -12,7 +12,7 @@ import {
 import { formToObject, maybe, must, ok, run, type ActionState } from "@/server/action-utils";
 import { z } from "zod";
 
-const OFFICE = ["admin", "designer"] as const;
+const TEAM_ROLES = ["owner", "team"] as const;
 
 function revalidateProject(projectId?: string) {
   revalidatePath("/projects");
@@ -27,7 +27,7 @@ export async function convertLead(_: ActionState, fd: FormData): Promise<ActionS
   let projectId = "";
   const res = await run(async () => {
     const v = convertLeadSchema.parse(formToObject(fd));
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     const items = v.payment_template_id
       ? must(
           await s.db
@@ -71,7 +71,7 @@ export async function moveProject(input: {
     const v = z
       .object({ project_id: z.uuid(), milestone_key: z.string().min(1).max(60) })
       .parse(input);
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     ok(
       await s.db.rpc("move_project_to_milestone", {
         p_project_id: v.project_id,
@@ -100,7 +100,7 @@ export async function moveProject(input: {
 export async function updateMilestoneDates(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = milestoneDatesSchema.parse(formToObject(fd));
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     const m = must(
       await s.db
         .from("milestones")
@@ -126,7 +126,7 @@ export async function updateMilestoneDates(_: ActionState, fd: FormData): Promis
 export async function updateProjectHeader(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = projectHeaderSchema.parse(formToObject(fd));
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     ok(
       await s.db
         .from("projects")
@@ -145,7 +145,7 @@ export async function updateProjectHeader(_: ActionState, fd: FormData): Promise
 export async function closeProject(input: { project_id: string }): Promise<ActionState> {
   return run(async () => {
     const v = z.object({ project_id: z.uuid() }).parse(input);
-    const s = await requireRole("admin");
+    const s = await requireRole("owner");
     ok(await s.db.rpc("close_project", { p_project_id: v.project_id }));
     revalidateProject(v.project_id);
     return { ok: true, message: "Project closed. Margin locked." };
@@ -158,7 +158,7 @@ export async function setProjectMembers(input: {
 }): Promise<ActionState> {
   return run(async () => {
     const v = z.object({ project_id: z.uuid(), user_ids: z.array(z.uuid()).max(50) }).parse(input);
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     ok(await s.db.from("project_members").delete().eq("project_id", v.project_id));
     if (v.user_ids.length) {
       ok(

@@ -37,7 +37,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             {session.companyName}
           </Link>
           <div className="flex items-center gap-3">
-            {session.role === "admin" ? (
+            {session.role === "owner" ? (
               <Link href="/settings" aria-label="Settings" className="text-muted-foreground">
                 <Settings className="size-5" />
               </Link>

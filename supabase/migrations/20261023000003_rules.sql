@@ -4,7 +4,7 @@
 --   * Stage changes are logged as activities.
 --   * Milestone done → linked installment becomes "due".
 --   * All installments received → "Final Payment" milestone done.
---   * Closed projects: only admins can edit children; every edit is audited.
+--   * Closed projects: only owners can edit children; every edit is audited.
 --   * RPCs: convert_lead_to_project, move_project_to_milestone, close_project.
 --   * Company bootstrap + default settings (service role only).
 -- =============================================================================
@@ -163,8 +163,8 @@ begin
 
   select p.company_id into v_company from public.projects p where p.id = v_project;
 
-  if private.user_role() is distinct from 'admin' then
-    raise exception 'This project is closed. Only an admin can edit it.' using errcode = 'insufficient_privilege';
+  if private.user_role() is distinct from 'owner' then
+    raise exception 'This project is closed. Only an owner can edit it.' using errcode = 'insufficient_privilege';
   end if;
 
   insert into public.audit_log (company_id, actor_id, table_name, record_id, action, before, after)
@@ -230,7 +230,7 @@ declare
 begin
   select * into v_lead from public.leads where id = p_lead_id for update;
   if not found then raise exception 'Lead not found'; end if;
-  if not private.is_office(v_lead.company_id) then
+  if not private.is_team(v_lead.company_id) then
     raise exception 'Not allowed' using errcode = 'insufficient_privilege';
   end if;
   if exists (select 1 from public.projects where lead_id = p_lead_id) then
@@ -308,7 +308,7 @@ declare
 begin
   select * into v_project from public.projects where id = p_project_id;
   if not found then raise exception 'Project not found'; end if;
-  if not private.is_office(v_project.company_id) then
+  if not private.is_team(v_project.company_id) then
     raise exception 'Not allowed' using errcode = 'insufficient_privilege';
   end if;
   if v_project.status = 'closed' then raise exception 'This project is closed'; end if;
@@ -329,7 +329,7 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
--- RPC: close a project (admin). Enforces the close gate and locks margin.
+-- RPC: close a project (owner). Enforces the close gate and locks margin.
 -- Mirrors lib/close-rule.ts, which renders the same reasons in the UI.
 -- ---------------------------------------------------------------------------
 create or replace function public.close_project(p_project_id uuid) returns void
@@ -347,8 +347,8 @@ declare
 begin
   select * into v_project from public.projects where id = p_project_id for update;
   if not found then raise exception 'Project not found'; end if;
-  if not private.is_admin(v_project.company_id) then
-    raise exception 'Only an admin can close a project' using errcode = 'insufficient_privilege';
+  if not private.is_owner(v_project.company_id) then
+    raise exception 'Only an owner can close a project' using errcode = 'insufficient_privilege';
   end if;
   if v_project.status = 'closed' then raise exception 'Already closed'; end if;
 
@@ -388,7 +388,7 @@ begin
 end $$;
 
 -- The closed-guard skips projects whose OLD status is active, and milestone updates above run
--- after status = 'closed' — let the admin's closing write through (it is audited, which is fine).
+-- after status = 'closed' — let the owner's closing write through (it is audited, which is fine).
 
 grant execute on function public.convert_lead_to_project(uuid, text, bigint, uuid, uuid, jsonb, date, text, text, date, uuid) to authenticated;
 grant execute on function public.move_project_to_milestone(uuid, text) to authenticated;
@@ -519,7 +519,7 @@ grant execute on function public.seed_company_defaults(uuid) to service_role;
 -- ---------------------------------------------------------------------------
 -- Clerk → DB bootstrap (webhook + first sign-in). Service role only.
 -- Creates the company (with defaults) if needed and upserts the member.
--- The first member of a company becomes admin + default lead owner.
+-- The first member of a company becomes owner + default lead owner.
 -- Existing roles are never overwritten (DB is the source of truth for roles).
 -- ---------------------------------------------------------------------------
 create or replace function public.bootstrap_membership(
@@ -555,7 +555,7 @@ begin
 
   insert into public.users (company_id, clerk_id, name, email, role, is_default_owner)
   values (v_company, p_clerk_user_id, coalesce(p_name, ''), p_email,
-          case when v_first then 'admin' else coalesce(p_role, 'field') end, v_first)
+          case when v_first then 'owner' else coalesce(p_role, 'crew') end, v_first)
   on conflict (company_id, clerk_id) do update
      set name = coalesce(nullif(excluded.name, ''), public.users.name),
          email = coalesce(excluded.email, public.users.email),

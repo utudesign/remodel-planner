@@ -11,7 +11,7 @@ import {
 export const metadata = { title: "Templates" };
 
 export default async function TemplatesPage() {
-  const s = await requirePageRole("admin");
+  const s = await requirePageRole("owner");
   const [pay, tasks, milestones] = await Promise.all([
     getPaymentTemplates(s),
     getTaskTemplates(s),

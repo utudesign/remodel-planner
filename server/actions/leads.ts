@@ -17,7 +17,7 @@ import { formToObject, maybe, must, ok, run, type ActionState } from "@/server/a
 import { countOutboundSince } from "@/server/queries/leads";
 import { getFollowUpRules } from "@/server/queries/settings";
 
-const OFFICE = ["admin", "designer"] as const;
+const TEAM_ROLES = ["owner", "team"] as const;
 
 function revalidateLead(leadId?: string) {
   revalidatePath("/leads");
@@ -29,7 +29,7 @@ export async function createLead(_: ActionState, fd: FormData): Promise<ActionSt
   let newId = "";
   const res = await run(async () => {
     const v = newLeadSchema.parse(formToObject(fd));
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     const stage = maybe(
       await s.db.from("pipeline_stages").select("id").eq("key", "new").maybeSingle(),
     );
@@ -84,7 +84,7 @@ export async function createLead(_: ActionState, fd: FormData): Promise<ActionSt
 export async function updateLead(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = updateLeadSchema.parse(formToObject(fd));
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     ok(
       await s.db
         .from("contacts")
@@ -121,7 +121,7 @@ export async function updateLead(_: ActionState, fd: FormData): Promise<ActionSt
 export async function logActivity(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = logActivitySchema.parse(formToObject(fd));
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     ok(
       await s.db.from("activities").insert({
         company_id: s.companyId,
@@ -152,7 +152,7 @@ export async function moveLeadStage(input: {
 }): Promise<ActionState> {
   return run(async () => {
     const v = moveStageSchema.parse(input);
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     const stage = must(
       await s.db.from("pipeline_stages").select("id, key, label").eq("id", v.stage_id).single(),
     );
@@ -184,7 +184,7 @@ export async function moveLeadStage(input: {
 export async function markLost(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = markLostSchema.parse(formToObject(fd));
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     const lost = must(await s.db.from("pipeline_stages").select("id").eq("key", "lost").single());
     ok(
       await s.db
@@ -200,7 +200,7 @@ export async function markLost(_: ActionState, fd: FormData): Promise<ActionStat
 export async function reopenLead(input: { lead_id: string }): Promise<ActionState> {
   return run(async () => {
     const v = moveStageSchema.pick({ lead_id: true }).parse(input);
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     const contacted = must(
       await s.db.from("pipeline_stages").select("id").eq("key", "contacted").single(),
     );
@@ -211,7 +211,7 @@ export async function reopenLead(input: { lead_id: string }): Promise<ActionStat
 export async function bookMeeting(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = bookMeetingSchema.parse(formToObject(fd));
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     const at = datetimeLocalToUtc(v.scheduled_at, s.timezone);
     ok(
       await s.db.from("meetings").insert({
@@ -258,7 +258,7 @@ export async function bookMeeting(_: ActionState, fd: FormData): Promise<ActionS
 
 export async function setMeetingStatus(input: { meeting_id: string; status: "done" | "canceled" }) {
   return run(async () => {
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     const m = must(
       await s.db
         .from("meetings")
@@ -273,7 +273,7 @@ export async function setMeetingStatus(input: { meeting_id: string; status: "don
 
 /** Suggested next follow-up for the "Log" form (attempt = outbound touches in this stage). */
 export async function suggestFollowUpFor(leadId: string): Promise<string> {
-  const s = await requireRole(...OFFICE);
+  const s = await requireRole(...TEAM_ROLES);
   const lead = must(
     await s.db.from("leads").select("stage_id, stage_entered_at").eq("id", leadId).single(),
   );

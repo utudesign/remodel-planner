@@ -20,7 +20,7 @@ export const metadata = { title: "Analytics" };
 
 /** Phase 1: per-project margin list. The company dashboard (charts, funnel, sources) is Phase 2. */
 export default async function AnalyticsPage() {
-  const s = await requirePageRole("admin", "designer");
+  const s = await requirePageRole("owner", "team");
   const rows = must(
     await s.db
       .from("projects")

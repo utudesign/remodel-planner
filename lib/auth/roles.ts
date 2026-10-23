@@ -1,4 +1,4 @@
-export const ROLES = ["admin", "designer", "field"] as const;
+export const ROLES = ["owner", "team", "crew"] as const;
 export type Role = (typeof ROLES)[number];
 
 export function isRole(value: unknown): value is Role {
@@ -7,12 +7,16 @@ export function isRole(value: unknown): value is Role {
 
 /** Clerk org role → app role, used only when a membership is first created. */
 export function roleFromClerk(clerkRole: string | null | undefined): Role {
-  return clerkRole === "org:admin" ? "admin" : "field";
+  return clerkRole === "org:admin" ? "owner" : "crew";
 }
 
-/** Display names. "designer" is the office role (sees everything, no Settings / close). */
+/**
+ * owner = the partners (everything, incl. Settings, users, closing jobs).
+ * team  = office admin (sees and edits everything except Settings/users/closing).
+ * crew  = installers/subs (only assigned jobs, never money).
+ */
 export const ROLE_LABELS: Record<Role, string> = {
-  admin: "Admin",
-  designer: "Office",
-  field: "Field",
+  owner: "Owner",
+  team: "Team",
+  crew: "Crew",
 };

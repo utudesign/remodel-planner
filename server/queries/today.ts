@@ -6,7 +6,7 @@ export async function getToday(s: Session) {
   const today = todayIn(s.timezone);
   const { start, end } = dayBoundsUtc(today, s.timezone);
   const week = weekRange(today);
-  const office = s.role !== "field";
+  const office = s.role !== "crew";
   const since = new Date(Date.now() - 48 * 3600_000).toISOString();
   const empty = Promise.resolve({ data: [], error: null });
 

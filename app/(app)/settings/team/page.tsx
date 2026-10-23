@@ -6,7 +6,7 @@ import { getTeam } from "@/server/queries/settings";
 export const metadata = { title: "Team" };
 
 export default async function TeamPage() {
-  const s = await requirePageRole("admin");
+  const s = await requirePageRole("owner");
   const team = (await getTeam(s)).filter((u) => !u.email?.endsWith("@example.com"));
   return (
     <div className="flex flex-col gap-5">
@@ -14,8 +14,8 @@ export default async function TeamPage() {
         <CardHeader>
           <CardTitle>People</CardTitle>
           <CardDescription>
-            Admin = everything incl. Settings and closing jobs. Office = sees and edits everything
-            except Settings and closing. Field = only projects they&apos;re added to.
+            Owner = everything incl. Settings, users and closing jobs. Team = sees and edits
+            everything else. Crew = only jobs they&apos;re added to, never money.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -31,7 +31,7 @@ export default async function TeamPage() {
           <CardTitle>Invite someone</CardTitle>
           <CardDescription>
             Use the company menu (bottom of the sidebar) → Manage → Members → Invite. New people
-            join as Field; set their role here after they sign in.
+            join as Crew; set their role here after they sign in.
           </CardDescription>
         </CardHeader>
       </Card>

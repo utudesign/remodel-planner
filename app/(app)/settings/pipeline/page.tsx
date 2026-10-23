@@ -8,7 +8,7 @@ import { getStages } from "@/server/queries/settings";
 export const metadata = { title: "Pipeline" };
 
 export default async function PipelineSettingsPage() {
-  const s = await requirePageRole("admin");
+  const s = await requirePageRole("owner");
   const [stages, rules] = await Promise.all([
     getStages(s),
     s.db

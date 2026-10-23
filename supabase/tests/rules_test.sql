@@ -5,8 +5,8 @@
 
 -- Link the demo company to a fake Clerk org and add an admin + an unassigned field user.
 update public.companies set clerk_org_id = 'org_test' where id = '00000000-0000-0000-0000-0000000000c1';
-select public.bootstrap_membership('org_test', 'Demo Kitchens', 'user_admin', 'Admin', 'a@x.com', 'field');
-select public.bootstrap_membership('org_test', 'Demo Kitchens', 'user_field_other', 'Other', 'o@x.com', 'field');
+select public.bootstrap_membership('org_test', 'Demo Kitchens', 'user_admin', 'Admin', 'a@x.com', 'crew');
+select public.bootstrap_membership('org_test', 'Demo Kitchens', 'user_field_other', 'Other', 'o@x.com', 'crew');
 
 create or replace function pg_temp.act_as(p_sub text) returns void language sql as $$
   select set_config('request.jwt.claims', json_build_object('sub', p_sub, 'o', json_build_object('id', 'org_test'))::text, false);
@@ -32,7 +32,7 @@ do $$ begin
   if (select count(*) from public.leads) <> 5 then raise exception 'admin should see 5 leads'; end if;
 end $$;
 
-select pg_temp.act_as('seed_field');
+select pg_temp.act_as('seed_crew');
 do $$ begin
   if (select count(*) from public.projects) <> 1 then raise exception 'assigned field user should see 1 project'; end if;
   if (select count(*) from public.leads) <> 0 then raise exception 'field user must not see leads'; end if;
@@ -127,8 +127,8 @@ end $$;
 -- 5. Close gate + margin lock --------------------------------------------------------
 select pg_temp.expect_error($q$select public.close_project('00000000-0000-0000-0000-0000000000a2')$q$, '%Balance due%punch list%');
 
-select pg_temp.act_as('seed_designer');
-select pg_temp.expect_error($q$select public.close_project('00000000-0000-0000-0000-0000000000a2')$q$, '%Only an admin%');
+select pg_temp.act_as('seed_office');
+select pg_temp.expect_error($q$select public.close_project('00000000-0000-0000-0000-0000000000a2')$q$, '%Only an owner%');
 update public.payments set status = 'received', received_on = current_date, method = 'check', check_number = '555'
  where project_id = '00000000-0000-0000-0000-0000000000a2' and status = 'due';
 update public.tasks set status = 'done' where project_id = '00000000-0000-0000-0000-0000000000a2' and kind = 'punch';
@@ -147,7 +147,7 @@ do $$ begin
 end $$;
 
 -- 6. Post-close edits: designer blocked, admin allowed + audited.
-select pg_temp.act_as('seed_designer');
+select pg_temp.act_as('seed_office');
 select pg_temp.expect_error($q$update public.costs set actual_amount_cents = 1 where project_id = '00000000-0000-0000-0000-0000000000a2'$q$, '%closed%');
 select pg_temp.act_as('user_admin');
 update public.costs set vendor = 'CabinetCo Inc.' where project_id = '00000000-0000-0000-0000-0000000000a2' and vendor = 'CabinetCo';
@@ -158,7 +158,7 @@ do $$ begin
 end $$;
 
 -- 7. Settings are admin-only.
-select pg_temp.act_as('seed_designer');
+select pg_temp.act_as('seed_office');
 do $$ begin
   update public.lost_reasons set label = 'hack' where key = 'price';
   if exists (select 1 from public.lost_reasons where label = 'hack') then raise exception 'designer edited settings'; end if;

@@ -11,7 +11,7 @@ import {
 } from "@/lib/validation/project";
 import { formToObject, maybe, must, ok, run, type ActionState } from "@/server/action-utils";
 
-const OFFICE = ["admin", "designer"] as const;
+const TEAM_ROLES = ["owner", "team"] as const;
 
 function revalidate(projectId: string) {
   revalidatePath(`/projects/${projectId}`);
@@ -25,7 +25,7 @@ function revalidate(projectId: string) {
 export async function saveTask(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = taskSchema.parse(formToObject(fd));
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     const row = {
       title: v.title,
       description: v.description,
@@ -71,7 +71,7 @@ export async function setTaskStatus(input: {
     const v = z
       .object({ task_id: z.uuid(), status: z.enum(["todo", "doing", "blocked", "done"]) })
       .parse(input);
-    const s = await requireRole("admin", "designer", "field");
+    const s = await requireRole("owner", "team", "crew");
     const t = must(
       await s.db
         .from("tasks")
@@ -97,7 +97,7 @@ export async function setTaskStatus(input: {
 export async function deleteTask(input: { task_id: string }): Promise<ActionState> {
   return run(async () => {
     const v = z.object({ task_id: z.uuid() }).parse(input);
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     const t = must(
       await s.db.from("tasks").delete().eq("id", v.task_id).select("project_id").single(),
     );
@@ -109,7 +109,7 @@ export async function deleteTask(input: { task_id: string }): Promise<ActionStat
 export async function receivePayment(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = receivePaymentSchema.parse(formToObject(fd));
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     const p = must(
       await s.db
         .from("payments")
@@ -139,7 +139,7 @@ export async function receivePayment(_: ActionState, fd: FormData): Promise<Acti
 export async function undoPayment(input: { payment_id: string }): Promise<ActionState> {
   return run(async () => {
     const v = z.object({ payment_id: z.uuid() }).parse(input);
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     const p = must(
       await s.db
         .from("payments")
@@ -155,7 +155,7 @@ export async function undoPayment(input: { payment_id: string }): Promise<Action
 export async function savePayment(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = paymentSchema.parse(formToObject(fd));
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     // Manual date → due now. Milestone trigger → due only once that milestone is done.
     let status: "pending" | "due" = v.due_trigger ? "pending" : "due";
     let dueDate = v.due_date;
@@ -216,7 +216,7 @@ export async function savePayment(_: ActionState, fd: FormData): Promise<ActionS
 export async function deletePayment(input: { payment_id: string }): Promise<ActionState> {
   return run(async () => {
     const v = z.object({ payment_id: z.uuid() }).parse(input);
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     const p = maybe(
       await s.db
         .from("payments")
@@ -235,7 +235,7 @@ export async function deletePayment(input: { payment_id: string }): Promise<Acti
 export async function saveCost(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = costSchema.parse(formToObject(fd));
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     const row = {
       category_id: v.category_id,
       vendor: v.vendor,
@@ -259,7 +259,7 @@ export async function saveCost(_: ActionState, fd: FormData): Promise<ActionStat
 export async function deleteCost(input: { cost_id: string }): Promise<ActionState> {
   return run(async () => {
     const v = z.object({ cost_id: z.uuid() }).parse(input);
-    const s = await requireRole(...OFFICE);
+    const s = await requireRole(...TEAM_ROLES);
     const c = must(
       await s.db.from("costs").delete().eq("id", v.cost_id).select("project_id").single(),
     );

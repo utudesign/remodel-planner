@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
         p_clerk_user_id: null as unknown as string,
         p_name: "",
         p_email: "",
-        p_role: "field",
+        p_role: "crew",
       });
       if (error) return new Response(error.message, { status: 500 });
       break;

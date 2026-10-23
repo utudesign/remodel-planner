@@ -28,7 +28,7 @@ create table public.users (
   name        text not null default '',
   email       text,
   phone       text,
-  role        text not null default 'field' check (role in ('admin', 'designer', 'field')),
+  role        text not null default 'crew' check (role in ('owner', 'team', 'crew')),
   is_default_owner boolean not null default false,
   active      boolean not null default true,
   created_at  timestamptz not null default now(),
@@ -39,7 +39,7 @@ create index users_clerk_id_idx on public.users (clerk_id);
 create unique index users_one_default_owner on public.users (company_id) where is_default_owner;
 
 -- ---------------------------------------------------------------------------
--- Settings (all editable by admins; nothing is hard-coded in the app)
+-- Settings (all editable by owners; nothing is hard-coded in the app)
 -- ---------------------------------------------------------------------------
 create table public.pipeline_stages (
   id          uuid primary key default gen_random_uuid(),

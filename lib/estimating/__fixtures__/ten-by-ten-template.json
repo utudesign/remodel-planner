@@ -1,825 +1,820 @@
 {
-    "_note": "Exported from Postgres: the seeded 10x10 template at default settings. Used by ballpark.test.ts.",
-    "lines": [
-        {
-            "qty": 1.00,
-            "name": "Lazy susan corner base",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 52000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": true
-        },
-        {
-            "qty": 1.00,
-            "name": "3-drawer base",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 43000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": true
-        },
-        {
-            "qty": 1.00,
-            "name": "Sink base, 2 doors",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 33000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": true
-        },
-        {
-            "qty": 1.00,
-            "name": "Base, 1 door + 1 drawer",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 26000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": true
-        },
-        {
-            "qty": 1.00,
-            "name": "Base, 2 doors + 2 drawers",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 42000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": true
-        },
-        {
-            "qty": 1.00,
-            "name": "Diagonal corner wall",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 30000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": true
-        },
-        {
-            "qty": 1.00,
-            "name": "Wall cabinet 33 x 30",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 26000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": true
-        },
-        {
-            "qty": 1.00,
-            "name": "Wall cabinet 24 x 30",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 21000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": true
-        },
-        {
-            "qty": 1.00,
-            "name": "Wall cabinet 27 x 30",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 23500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": true
-        },
-        {
-            "qty": 1.00,
-            "name": "Wall cabinet over microwave 30 x 18",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 16500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": true
-        },
-        {
-            "qty": 1.00,
-            "name": "Wall cabinet 36 x 30",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 28000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": true
-        },
-        {
-            "qty": 1.00,
-            "name": "Wall over fridge, 24in deep",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 29000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": true
-        },
-        {
-            "qty": 3.00,
-            "name": "Base filler 3 x 34.5",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 3500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 3.00,
-            "name": "Wall filler 3 x 30",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 3000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Fridge end panel 24 x 96",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 21000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 2.00,
-            "name": "Wall skin panel 12 x 30",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 5500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 4.00,
-            "name": "Crown molding, 8 ft",
-            "taxable": true,
-            "qtySource": "crown_sticks",
-            "unitCostCents": 6500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 0.00,
-            "name": "Sub-crown / batten, 8 ft (frameless only)",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 2500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 3.00,
-            "name": "Light rail, 8 ft",
-            "taxable": true,
-            "qtySource": "light_rail_sticks",
-            "unitCostCents": 4500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 3.00,
-            "name": "Toe kick, 8 ft",
-            "taxable": true,
-            "qtySource": "toe_kick_sticks",
-            "unitCostCents": 2500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 2.00,
-            "name": "Scribe molding, 8 ft",
-            "taxable": true,
-            "qtySource": "scribe_sticks",
-            "unitCostCents": 1800,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Outside corner molding, 8 ft",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 1500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Touch-up kit (markers, fill, paint)",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 3500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Cabinet freight / delivery",
-            "taxable": false,
-            "qtySource": null,
-            "unitCostCents": 25000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 21.00,
-            "name": "Door pulls",
-            "taxable": true,
-            "qtySource": "door_pulls",
-            "unitCostCents": 600,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 8.00,
-            "name": "Drawer pulls",
-            "taxable": true,
-            "qtySource": "drawer_pulls",
-            "unitCostCents": 700,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Spare shelf pins / bumpers",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 800,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 35.00,
-            "name": "3 cm quartz, fabricated + installed",
-            "taxable": false,
-            "qtySource": "countertop_sqft",
-            "unitCostCents": 5800,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Undermount sink cutout",
-            "taxable": false,
-            "qtySource": null,
-            "unitCostCents": 20000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 2.00,
-            "name": "Faucet / soap holes",
-            "taxable": false,
-            "qtySource": null,
-            "unitCostCents": 4000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 0.00,
-            "name": "Backsplash, 4in quartz",
-            "taxable": false,
-            "qtySource": null,
-            "unitCostCents": 3000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "33in undermount sink, single bowl",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 25000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Faucet (allowance)",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 25000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Garbage disposal 1/2-3/4 HP + flange",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 15000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Disposal power cord kit",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 2000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 2.00,
-            "name": "Faucet supply lines, braided 3/8in",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 1200,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 2.00,
-            "name": "Quarter-turn angle stops",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 1500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Dishwasher water line kit",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 3000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "DW drain extension + high loop / air gap",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 1500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "1.5in P-trap / continuous waste kit",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 2500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Teflon tape, putty, pipe dope",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 1500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "DW side-mount bracket kit",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 1500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "DW power cord kit",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 2000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Range anti-tip bracket",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 2000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Range cord 4-wire or gas flex + shutoff",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 3500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "OTR microwave vent kit or charcoal filter",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 6000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 4.00,
-            "name": "Toggle bolts for microwave plate",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 200,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Fridge water line kit",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 2500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 5.00,
-            "name": "GFCI / dual-function receptacles, TR",
-            "taxable": true,
-            "qtySource": "countertop_outlets",
-            "unitCostCents": 2800,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 5.00,
-            "name": "Box extenders",
-            "taxable": true,
-            "qtySource": "countertop_outlets",
-            "unitCostCents": 500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 6.00,
-            "name": "Cover plates",
-            "taxable": true,
-            "qtySource": "cover_plates",
-            "unitCostCents": 400,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 12.00,
-            "name": "LED tape / bars",
-            "taxable": true,
-            "qtySource": "led_ft",
-            "unitCostCents": 900,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 12.00,
-            "name": "Aluminum channel + diffuser + caps",
-            "taxable": true,
-            "qtySource": "led_ft",
-            "unitCostCents": 600,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "LED driver 24 V",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 6500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "LED-compatible dimmer",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 4500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 25.00,
-            "name": "Low-voltage wire 18/2, in-wall rated",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 60,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Connectors, jumpers, grommets",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 3000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "2.5in cabinet screws (box of 100)",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 2500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "1.25-2in joining screws",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 1500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 2.00,
-            "name": "Composite shims",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 800,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 2.00,
-            "name": "18 ga brads (1.25in and 2in)",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 1000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "23 ga pins 1in",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 1000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Wood glue + construction adhesive",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 1500,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Ledger board 1x4 x 8 ft",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 1000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 4.00,
-            "name": "Paintable caulk + silicone",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 800,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Floor protection + tape",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 4000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Dust barrier + poles",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 6000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Haul-away / dumpster",
-            "taxable": false,
-            "qtySource": null,
-            "unitCostCents": 35000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Drywall patch kit",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 6000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 2.00,
-            "name": "Primer + paint for patches",
-            "taxable": true,
-            "qtySource": null,
-            "unitCostCents": 4000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 8.00,
-            "name": "Demo & protect",
-            "taxable": false,
-            "qtySource": null,
-            "unitCostCents": 0,
-            "usesLaborRate": true,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 4.00,
-            "name": "Layout & prep",
-            "taxable": false,
-            "qtySource": null,
-            "unitCostCents": 0,
-            "usesLaborRate": true,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 20.00,
-            "name": "Cabinet install",
-            "taxable": false,
-            "qtySource": null,
-            "unitCostCents": 0,
-            "usesLaborRate": true,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 10.00,
-            "name": "Fillers, panels, crown, light rail, toe kick",
-            "taxable": false,
-            "qtySource": null,
-            "unitCostCents": 0,
-            "usesLaborRate": true,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 4.00,
-            "name": "Hardware install + adjust",
-            "taxable": false,
-            "qtySource": null,
-            "unitCostCents": 0,
-            "usesLaborRate": true,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 4.00,
-            "name": "Cleanup + punch list",
-            "taxable": false,
-            "qtySource": null,
-            "unitCostCents": 0,
-            "usesLaborRate": true,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Plumber: sink, faucet, disposal, DW, fridge water",
-            "taxable": false,
-            "qtySource": null,
-            "unitCostCents": 65000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Electrician: GFCI, microwave outlet, LED feed + driver",
-            "taxable": false,
-            "qtySource": null,
-            "unitCostCents": 95000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        },
-        {
-            "qty": 1.00,
-            "name": "Electrical permit + inspection",
-            "taxable": false,
-            "qtySource": null,
-            "unitCostCents": 15000,
-            "usesLaborRate": false,
-            "marginOverride": null,
-            "scalesWithCabinets": false
-        }
-    ],
-    "takeoff": {
-        "doors": 19,
-        "led_ft": 12,
-        "corners": 1,
-        "drawers": 6,
-        "crown_lf": 22,
-        "scribe_lf": 12,
-        "cabinet_lf": 29.5,
-        "openings_in": [
-            30
-        ],
-        "toe_kick_lf": 14,
-        "led_driver_w": 60,
-        "light_rail_lf": 14,
-        "counter_runs_in": [
-            120,
-            120
-        ],
-        "counter_depth_in": 25.5,
-        "led_watts_per_ft": 4,
-        "countertop_outlets": 5,
-        "extra_cover_plates": 1
+  "_note": "Exported from Postgres: the seeded 10x10 template at default settings. Used by ballpark.test.ts.",
+  "lines": [
+    {
+      "qty": 1.0,
+      "name": "Lazy susan corner base",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 52000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": true
     },
-    "assumptions": {
-        "taxRate": 0.0600,
-        "targetMargin": 0.3500,
-        "laborRateCents": 5500,
-        "contingencyRate": 0.0700
+    {
+      "qty": 1.0,
+      "name": "3-drawer base",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 43000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": true
     },
-    "expectedTotalPriceCents": 2412386
+    {
+      "qty": 1.0,
+      "name": "Sink base, 2 doors",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 33000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": true
+    },
+    {
+      "qty": 1.0,
+      "name": "Base, 1 door + 1 drawer",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 26000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": true
+    },
+    {
+      "qty": 1.0,
+      "name": "Base, 2 doors + 2 drawers",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 42000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": true
+    },
+    {
+      "qty": 1.0,
+      "name": "Diagonal corner wall",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 30000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": true
+    },
+    {
+      "qty": 1.0,
+      "name": "Wall cabinet 33 x 30",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 26000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": true
+    },
+    {
+      "qty": 1.0,
+      "name": "Wall cabinet 24 x 30",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 21000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": true
+    },
+    {
+      "qty": 1.0,
+      "name": "Wall cabinet 27 x 30",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 23500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": true
+    },
+    {
+      "qty": 1.0,
+      "name": "Wall cabinet over microwave 30 x 18",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 16500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": true
+    },
+    {
+      "qty": 1.0,
+      "name": "Wall cabinet 36 x 30",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 28000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": true
+    },
+    {
+      "qty": 1.0,
+      "name": "Wall over fridge, 24in deep",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 29000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": true
+    },
+    {
+      "qty": 3.0,
+      "name": "Base filler 3 x 34.5",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 3500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 3.0,
+      "name": "Wall filler 3 x 30",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 3000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Fridge end panel 24 x 96",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 21000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 2.0,
+      "name": "Wall skin panel 12 x 30",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 5500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 4.0,
+      "name": "Crown molding, 8 ft",
+      "taxable": true,
+      "qtySource": "crown_sticks",
+      "unitCostCents": 6500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 0.0,
+      "name": "Sub-crown / batten, 8 ft (frameless only)",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 2500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 3.0,
+      "name": "Light rail, 8 ft",
+      "taxable": true,
+      "qtySource": "light_rail_sticks",
+      "unitCostCents": 4500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 3.0,
+      "name": "Toe kick, 8 ft",
+      "taxable": true,
+      "qtySource": "toe_kick_sticks",
+      "unitCostCents": 2500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 2.0,
+      "name": "Scribe molding, 8 ft",
+      "taxable": true,
+      "qtySource": "scribe_sticks",
+      "unitCostCents": 1800,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Outside corner molding, 8 ft",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 1500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Touch-up kit (markers, fill, paint)",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 3500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Cabinet freight / delivery",
+      "taxable": false,
+      "qtySource": null,
+      "unitCostCents": 25000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 21.0,
+      "name": "Door pulls",
+      "taxable": true,
+      "qtySource": "door_pulls",
+      "unitCostCents": 600,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 8.0,
+      "name": "Drawer pulls",
+      "taxable": true,
+      "qtySource": "drawer_pulls",
+      "unitCostCents": 700,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Spare shelf pins / bumpers",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 800,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 35.0,
+      "name": "3 cm quartz, fabricated + installed",
+      "taxable": false,
+      "qtySource": "countertop_sqft",
+      "unitCostCents": 5800,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Undermount sink cutout",
+      "taxable": false,
+      "qtySource": null,
+      "unitCostCents": 20000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 2.0,
+      "name": "Faucet / soap holes",
+      "taxable": false,
+      "qtySource": null,
+      "unitCostCents": 4000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 0.0,
+      "name": "Backsplash, 4in quartz",
+      "taxable": false,
+      "qtySource": null,
+      "unitCostCents": 3000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "33in undermount sink, single bowl",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 25000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Faucet (allowance)",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 25000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Garbage disposal 1/2-3/4 HP + flange",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 15000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Disposal power cord kit",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 2000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 2.0,
+      "name": "Faucet supply lines, braided 3/8in",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 1200,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 2.0,
+      "name": "Quarter-turn angle stops",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 1500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Dishwasher water line kit",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 3000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "DW drain extension + high loop / air gap",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 1500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "1.5in P-trap / continuous waste kit",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 2500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Teflon tape, putty, pipe dope",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 1500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "DW side-mount bracket kit",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 1500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "DW power cord kit",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 2000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Range anti-tip bracket",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 2000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Range cord 4-wire or gas flex + shutoff",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 3500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "OTR microwave vent kit or charcoal filter",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 6000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 4.0,
+      "name": "Toggle bolts for microwave plate",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 200,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Fridge water line kit",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 2500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 5.0,
+      "name": "GFCI / dual-function receptacles, TR",
+      "taxable": true,
+      "qtySource": "countertop_outlets",
+      "unitCostCents": 2800,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 5.0,
+      "name": "Box extenders",
+      "taxable": true,
+      "qtySource": "countertop_outlets",
+      "unitCostCents": 500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 6.0,
+      "name": "Cover plates",
+      "taxable": true,
+      "qtySource": "cover_plates",
+      "unitCostCents": 400,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 12.0,
+      "name": "LED tape / bars",
+      "taxable": true,
+      "qtySource": "led_ft",
+      "unitCostCents": 900,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 12.0,
+      "name": "Aluminum channel + diffuser + caps",
+      "taxable": true,
+      "qtySource": "led_ft",
+      "unitCostCents": 600,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "LED driver 24 V",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 6500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "LED-compatible dimmer",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 4500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 25.0,
+      "name": "Low-voltage wire 18/2, in-wall rated",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 60,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Connectors, jumpers, grommets",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 3000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "2.5in cabinet screws (box of 100)",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 2500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "1.25-2in joining screws",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 1500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 2.0,
+      "name": "Composite shims",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 800,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 2.0,
+      "name": "18 ga brads (1.25in and 2in)",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 1000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "23 ga pins 1in",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 1000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Wood glue + construction adhesive",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 1500,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Ledger board 1x4 x 8 ft",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 1000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 4.0,
+      "name": "Paintable caulk + silicone",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 800,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Floor protection + tape",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 4000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Dust barrier + poles",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 6000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Haul-away / dumpster",
+      "taxable": false,
+      "qtySource": null,
+      "unitCostCents": 35000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Drywall patch kit",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 6000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 2.0,
+      "name": "Primer + paint for patches",
+      "taxable": true,
+      "qtySource": null,
+      "unitCostCents": 4000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 8.0,
+      "name": "Demo & protect",
+      "taxable": false,
+      "qtySource": null,
+      "unitCostCents": 0,
+      "usesLaborRate": true,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 4.0,
+      "name": "Layout & prep",
+      "taxable": false,
+      "qtySource": null,
+      "unitCostCents": 0,
+      "usesLaborRate": true,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 20.0,
+      "name": "Cabinet install",
+      "taxable": false,
+      "qtySource": null,
+      "unitCostCents": 0,
+      "usesLaborRate": true,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 10.0,
+      "name": "Fillers, panels, crown, light rail, toe kick",
+      "taxable": false,
+      "qtySource": null,
+      "unitCostCents": 0,
+      "usesLaborRate": true,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 4.0,
+      "name": "Hardware install + adjust",
+      "taxable": false,
+      "qtySource": null,
+      "unitCostCents": 0,
+      "usesLaborRate": true,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 4.0,
+      "name": "Cleanup + punch list",
+      "taxable": false,
+      "qtySource": null,
+      "unitCostCents": 0,
+      "usesLaborRate": true,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Plumber: sink, faucet, disposal, DW, fridge water",
+      "taxable": false,
+      "qtySource": null,
+      "unitCostCents": 65000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Electrician: GFCI, microwave outlet, LED feed + driver",
+      "taxable": false,
+      "qtySource": null,
+      "unitCostCents": 95000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    },
+    {
+      "qty": 1.0,
+      "name": "Electrical permit + inspection",
+      "taxable": false,
+      "qtySource": null,
+      "unitCostCents": 15000,
+      "usesLaborRate": false,
+      "marginOverride": null,
+      "scalesWithCabinets": false
+    }
+  ],
+  "takeoff": {
+    "doors": 19,
+    "led_ft": 12,
+    "corners": 1,
+    "drawers": 6,
+    "crown_lf": 22,
+    "scribe_lf": 12,
+    "cabinet_lf": 29.5,
+    "openings_in": [30],
+    "toe_kick_lf": 14,
+    "led_driver_w": 60,
+    "light_rail_lf": 14,
+    "counter_runs_in": [120, 120],
+    "counter_depth_in": 25.5,
+    "led_watts_per_ft": 4,
+    "countertop_outlets": 5,
+    "extra_cover_plates": 1
+  },
+  "assumptions": {
+    "taxRate": 0.06,
+    "targetMargin": 0.35,
+    "laborRateCents": 5500,
+    "contingencyRate": 0.07
+  },
+  "expectedTotalPriceCents": 2412386
 }

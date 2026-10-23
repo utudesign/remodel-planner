@@ -86,7 +86,7 @@ function Quiet({ children }: { children: React.ReactNode }) {
 
 export default async function TodayPage() {
   const s = await getSession();
-  const office = s.role !== "field";
+  const office = s.role !== "crew";
   const d = await getToday(s);
   const now = new Date();
   const firstName = s.name.split(" ")[0];

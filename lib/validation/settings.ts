@@ -78,7 +78,7 @@ export const taskTemplateSchema = z.object({
 
 export const memberSchema = z.object({
   user_id: id,
-  role: z.enum(["admin", "designer", "field"]),
+  role: z.enum(["owner", "team", "crew"]),
   active: z.boolean(),
   is_default_owner: z.boolean(),
   phone: optText(40),

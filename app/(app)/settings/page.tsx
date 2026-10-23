@@ -7,7 +7,7 @@ import { getCostCategories, getLostReasons } from "@/server/queries/settings";
 export const metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
-  const s = await requirePageRole("admin");
+  const s = await requirePageRole("owner");
   const [categories, reasons] = await Promise.all([getCostCategories(s), getLostReasons(s)]);
   return (
     <div className="grid gap-5 lg:grid-cols-2">

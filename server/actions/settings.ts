@@ -29,7 +29,7 @@ export async function saveLookupRows(
 ): Promise<ActionState> {
   return run(async () => {
     const v = lookupRowsSchema.parse(input);
-    const s = await requireRole("admin");
+    const s = await requireRole("owner");
     const existing = must(await s.db.from(v.table).select("id, key"));
     const keys = new Set(existing.map((r) => r.key));
     const keyById = new Map(existing.map((r) => [r.id, r.key]));
@@ -75,7 +75,7 @@ export async function saveFollowUpRules(
 ): Promise<ActionState> {
   return run(async () => {
     const v = followUpRulesSchema.parse(input);
-    const s = await requireRole("admin");
+    const s = await requireRole("owner");
     ok(await s.db.from("follow_up_rules").delete().eq("stage_id", v.stage_id));
     if (v.rules.length) {
       ok(
@@ -98,7 +98,7 @@ export async function savePaymentTemplate(
 ): Promise<ActionState> {
   return run(async () => {
     const v = paymentTemplateSchema.parse(input);
-    const s = await requireRole("admin");
+    const s = await requireRole("owner");
     let templateId = v.id;
     if (templateId) {
       ok(
@@ -140,7 +140,7 @@ export async function saveTaskTemplate(
 ): Promise<ActionState> {
   return run(async () => {
     const v = taskTemplateSchema.parse(input);
-    const s = await requireRole("admin");
+    const s = await requireRole("owner");
     let templateId = v.id;
     if (v.is_default)
       ok(
@@ -190,9 +190,9 @@ export async function saveTaskTemplate(
 export async function saveMember(input: z.input<typeof memberSchema>): Promise<ActionState> {
   return run(async () => {
     const v = memberSchema.parse(input);
-    const s = await requireRole("admin");
-    if (v.user_id === s.userId && (v.role !== "admin" || !v.active)) {
-      throw new Error("You can't remove your own admin access. Ask another admin.");
+    const s = await requireRole("owner");
+    if (v.user_id === s.userId && (v.role !== "owner" || !v.active)) {
+      throw new Error("You can't remove your own owner access. Ask the other owner.");
     }
     if (v.is_default_owner) {
       ok(
@@ -221,7 +221,7 @@ export async function saveMember(input: z.input<typeof memberSchema>): Promise<A
 export async function saveCompany(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = companySchema.parse(formToObject(fd));
-    const s = await requireRole("admin");
+    const s = await requireRole("owner");
     const current = must(
       await s.db.from("companies").select("settings_json").eq("id", s.companyId).single(),
     );

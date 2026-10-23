@@ -30,7 +30,7 @@ export default async function ProjectPage({
 }) {
   const [{ id }, { tab }] = await Promise.all([params, searchParams]);
   const s = await getSession();
-  const office = s.role !== "field";
+  const office = s.role !== "crew";
   const detail = await getProjectDetail(s, id);
   const [team, categories] = await Promise.all([
     getTeam(s),
@@ -41,7 +41,7 @@ export default async function ProjectPage({
   const closed = project.status === "closed";
   const contact = project.contact!;
   const current = currentMilestone(milestones);
-  const canEdit = office && (!closed || s.role === "admin");
+  const canEdit = office && (!closed || s.role === "owner");
   const activeTeam = team
     .filter((u) => u.active)
     .map((u) => ({ id: u.id, name: u.name || u.email || "—", role: u.role }));
@@ -168,7 +168,7 @@ export default async function ProjectPage({
                 <ClosePanel
                   projectId={project.id}
                   blockers={blockers}
-                  isAdmin={s.role === "admin"}
+                  isOwner={s.role === "owner"}
                   closed={closed}
                 />
               </CardContent>

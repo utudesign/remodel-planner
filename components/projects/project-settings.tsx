@@ -35,7 +35,7 @@ export function ProjectSettings({
   const [state, action] = useActionWithSuccess(updateProjectHeader, () => setOpen(false));
   const [members, setMembers] = useState(memberIds);
   const [pending, start] = useTransition();
-  const field = team.filter((u) => u.role === "field");
+  const field = team.filter((u) => u.role === "crew");
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -72,7 +72,7 @@ export function ProjectSettings({
             >
               <option value="">—</option>
               {team
-                .filter((u) => u.role !== "field")
+                .filter((u) => u.role !== "crew")
                 .map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.name}

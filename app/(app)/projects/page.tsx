@@ -18,7 +18,7 @@ export default async function ProjectsPage() {
   const columns = defs
     .filter((d) => d.key !== "deposit_received" && d.key !== "closed")
     .map((d) => ({ key: d.key, label: d.label }));
-  const canDrag = s.role !== "field";
+  const canDrag = s.role !== "crew";
 
   return (
     <>

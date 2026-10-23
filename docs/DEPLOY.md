@@ -137,7 +137,7 @@ Each person: open the site on their phone → Share → **Add to Home Screen**.
 | 8   | Payments → Record that installment                                 | Moves to Received; Today no longer lists it                                  |
 | 9   | Project → Tasks → add a **punch item**; Overview                   | Close checklist shows punch list ✗                                           |
 | 10  | Costs → add lines with actuals; finish punch; record final payment | Close button enables (admin) → margin locks                                  |
-| 11  | As Office user, edit a cost on the closed project                  | Refused: "Only an admin can edit it"                                         |
+| 11  | As Office user, edit a cost on the closed project                  | Refused: "Only an owner can edit it"                                         |
 | 12  | Settings → Pipeline → change "Contacted" rules                     | Next logged touch suggests the new date                                      |
 
 ## 4. Changing the schema later

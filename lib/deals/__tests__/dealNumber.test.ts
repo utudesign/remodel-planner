@@ -1,44 +1,58 @@
 import { describe, expect, it } from 'vitest';
-import { dealLabel, dealStoragePath, easternDate, formatDealNumber, parseDealNumber, previewDealNumber } from '../dealNumber';
+import {
+  dealFileName, dealLabel, dealStoragePath, dealYearAt, formatDealNumber, formatDocNumber, parseDealNumber,
+} from '../dealNumber';
 
-describe('deal numbers', () => {
-  it('formats MMDD + sequence', () => {
-    expect(formatDealNumber(10, 23, 1)).toBe('10231');
-    expect(formatDealNumber(10, 23, 2)).toBe('10232');
-    expect(formatDealNumber(10, 24, 1)).toBe('10241');
-    expect(formatDealNumber(10, 23, 10)).toBe('102310');
-    expect(formatDealNumber(1, 5, 1)).toBe('01051');
+describe('deal numbers (YY-NNNN)', () => {
+  it('formats year + 4-digit sequence', () => {
+    expect(formatDealNumber(2026, 1001)).toBe('26-1001');
+    expect(formatDealNumber(2026, 1047)).toBe('26-1047');
+    expect(formatDealNumber(2027, 1001)).toBe('27-1001');
+    expect(formatDealNumber(2026, 7)).toBe('26-0007'); // custom start below 1000 still sorts
+    expect(formatDealNumber(2026, 10001)).toBe('26-10001');
+    expect(() => formatDealNumber(2026, 0)).toThrow(RangeError);
   });
 
-  it('never collides (date part is always 4 digits)', () => {
-    expect(formatDealNumber(1, 12, 31)).toBe('011231');
-    expect(formatDealNumber(11, 23, 1)).toBe('11231');
+  it('matches the database for the same inputs', () => {
+    // run_deal_tests.sql: first deals of 2026 → 26-1001…, Jan 1 2027 → 27-1001
+    expect(['26-1001', '26-1002', '27-1001']).toEqual([formatDealNumber(2026, 1001), formatDealNumber(2026, 1002), formatDealNumber(2027, 1001)]);
   });
 
-  it('uses the Eastern Time date, not UTC', () => {
-    // 11:30 PM Oct 23 in Virginia = 03:30 UTC Oct 24
-    expect(previewDealNumber(new Date('2026-10-24T03:30:00Z'), 3)).toEqual({ year: 2026, number: '10233' });
-    // New Year's Eve 11 PM ET is still the old year
-    expect(easternDate(new Date('2027-01-01T04:00:00Z'))).toEqual({ year: 2026, month: 12, day: 31 });
-    // across the Nov 1 DST change: 11:30 PM EST Nov 1 = 04:30 UTC Nov 2
-    expect(previewDealNumber(new Date('2026-11-02T04:30:00Z'), 1).number).toBe('11011');
+  it('sorts as text in creation order', () => {
+    const nums = [formatDealNumber(2027, 1001), formatDealNumber(2026, 1010), formatDealNumber(2026, 1002)];
+    expect([...nums].sort()).toEqual(['26-1002', '26-1010', '27-1001']);
+  });
+
+  it('uses the Eastern year, not UTC', () => {
+    // 11:30 PM Dec 31 in Virginia = 04:30 UTC Jan 1
+    expect(dealYearAt(new Date('2027-01-01T04:30:00Z'))).toBe(2026);
+    expect(dealYearAt(new Date('2027-01-01T05:10:00Z'))).toBe(2027);
+  });
+
+  it('builds document numbers', () => {
+    expect(formatDocNumber('26-1047', 'CO', 2)).toBe('26-1047-CO2');
+    expect(formatDocNumber('26-1047', 'E', 1)).toBe('26-1047-E1');
+    expect(parseDealNumber('26-1047-D1')?.doc).toEqual({ kind: 'D', n: 1 });
   });
 
   it('parses what people type in search', () => {
-    expect(parseDealNumber('10231')).toEqual({ month: 10, day: 23, seq: 1 });
-    expect(parseDealNumber('#102310')).toEqual({ month: 10, day: 23, seq: 10 });
-    expect(parseDealNumber('2025-01051')).toEqual({ year: 2025, month: 1, day: 5, seq: 1 });
-    expect(parseDealNumber('1023')).toBeNull();
-    expect(parseDealNumber('13011')).toBeNull();
+    expect(parseDealNumber('26-1047')).toEqual({ year: 2026, seq: 1047 });
+    expect(parseDealNumber('#26-1047')).toEqual({ year: 2026, seq: 1047 });
+    expect(parseDealNumber('261047')).toEqual({ year: 2026, seq: 1047 });
+    expect(parseDealNumber('26 1047')).toEqual({ year: 2026, seq: 1047 });
+    expect(parseDealNumber('1047')).toEqual({ seq: 1047 });
+    expect(parseDealNumber('26-1047-co2')).toEqual({ year: 2026, seq: 1047, doc: { kind: 'CO', n: 2 } });
+    expect(parseDealNumber('Lee')).toBeNull();
+    expect(parseDealNumber('47')).toBeNull();
   });
 
-  it('labels older years', () => {
-    expect(dealLabel('10231', 2026, 2026)).toBe('#10231');
-    expect(dealLabel('10231', 2025, 2026)).toBe('#10231 · 2025');
+  it('labels and names files', () => {
+    expect(dealLabel('26-1047')).toBe('#26-1047');
+    expect(dealFileName('26-1047', 'Lee', 'kitchen')).toBe('26-1047 Lee kitchen');
   });
 
   it('builds storage paths the database accepts', () => {
-    const p = dealStoragePath('c1', 2026, '10231', 'photos', 'IMG 2041 (1).JPG');
-    expect(p).toMatch(/^c1\/2026\/10231\/photos\/[0-9a-f-]{36}-img-2041-1-.jpg$/);
+    const p = dealStoragePath('c1', 2026, '26-1047', 'photos', 'IMG 2041 (1).JPG');
+    expect(p).toMatch(/^c1\/2026\/26-1047\/photos\/[0-9a-f-]{36}-img-2041-1-.jpg$/);
   });
 });

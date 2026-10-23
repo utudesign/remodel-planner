@@ -3,15 +3,15 @@ import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Remodel Planner", template: "%s · Remodel Planner" },
-  description: "Kitchen remodel leads, projects, payments and margin in one place.",
-  appleWebApp: { capable: true, title: "Remodel", statusBarStyle: "default" },
+  title: { default: "Kitchen Sales", template: "%s · Kitchen Sales" },
+  description: "My kitchen and cabinet deals, from first message to commission paid.",
+  appleWebApp: { capable: true, title: "Kitchen Sales", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f7f6f3",
+  themeColor: "#f5f3ee",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

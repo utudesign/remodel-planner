@@ -162,3 +162,24 @@ begin
 end $$;
 revoke execute on function public.bootstrap_owner(text, text, text, text) from public, anon, authenticated;
 grant execute on function public.bootstrap_owner(text, text, text, text) to service_role;
+
+-- ---------------------------------------------------------------------
+-- 5. Speed to lead: the first reply I log (call, text, message, email out)
+--    stamps first_response_at (0005 column); every touch moves the follow-up.
+-- ---------------------------------------------------------------------
+create or replace function private.activities_touch() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if new.type in ('call', 'text', 'email', 'fb_msg', 'visit') then
+    update public.deals d
+       set last_touch_at = greatest(coalesce(d.last_touch_at, new.occurred_at), new.occurred_at),
+           first_response_at = case
+             when d.first_response_at is null and new.direction = 'out' then new.occurred_at
+             else d.first_response_at end,
+           next_follow_up_at = case
+             when d.next_follow_up_at is null then null   -- lost / paid / cancelled stay off the queue
+             else private.next_follow_up(d.company_id, d.stage, new.occurred_at) end
+     where d.id = new.deal_id;
+  end if;
+  return null;
+end $$;

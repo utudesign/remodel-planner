@@ -1,14 +1,18 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useActionState, useRef, useState } from "react";
 import { Camera, Loader2, Paperclip } from "lucide-react";
+import { useFormStatus } from "react-dom";
+import { FormMessage } from "@/components/shared/form";
+import { NativeSelect } from "@/components/ui/native-select";
+import { PHOTO_TAGS } from "@/lib/deals/display";
 import { cn } from "@/lib/utils";
-import { addDealFiles } from "@/server/actions/deal-files";
+import { addDealFiles } from "@/server/actions/deals";
 
 const MAX_EDGE = 2560;
 
-/** Resize photos on the phone (DEALS.md §4: 2560px, JPEG ~0.82). Re-encoding also drops EXIF/GPS. */
-async function prepare(file: File): Promise<File> {
+/** Resize to 2560 px JPEG on the phone (DEALS §4) so uploads fit on weak signal. */
+async function compress(file: File): Promise<File> {
   if (!file.type.startsWith("image/") || file.type === "image/gif") return file;
   try {
     const bitmap = await createImageBitmap(file);
@@ -18,75 +22,98 @@ async function prepare(file: File): Promise<File> {
     canvas.height = Math.round(bitmap.height * scale);
     canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.82));
-    return blob ? new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" }) : file;
+    if (!blob) return file;
+    return new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" });
   } catch {
     return file;
   }
 }
 
-/**
- * One-tap upload into a deal folder (optionally satisfying a checklist requirement).
- * Phase 1: uploads immediately; the offline queue is PROMPT-deals Step 3.
- */
+function Busy({ label }: { label: string }) {
+  const { pending } = useFormStatus();
+  return pending ? (
+    <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+      <Loader2 className="size-4 animate-spin" /> Uploading…
+    </span>
+  ) : (
+    <span className="sr-only">{label}</span>
+  );
+}
+
+/** Camera / file picker that uploads as soon as files are chosen. */
 export function UploadButton({
   dealId,
   folder,
-  photoTag,
   requirementId,
   label,
-  camera,
-  className,
+  showTag = false,
+  defaultTag = "before",
+  compact = false,
 }: {
   dealId: string;
   folder: string;
-  photoTag?: string;
   requirementId?: string;
   label: string;
-  camera?: boolean;
-  className?: string;
+  showTag?: boolean;
+  defaultTag?: string;
+  compact?: boolean;
 }) {
-  const ref = useRef<HTMLInputElement>(null);
-  const [pending, start] = useTransition();
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [state, action] = useActionState(addDealFiles, null);
+  const form = useRef<HTMLFormElement>(null);
+  const [preparing, setPreparing] = useState(false);
+  const photo = folder === "photos";
 
-  function onChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
+  async function onChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const input = e.currentTarget;
+    const files = Array.from(input.files ?? []).slice(0, 8);
     if (!files.length) return;
-    start(async () => {
-      const fd = new FormData();
-      fd.set("deal_id", dealId);
-      fd.set("folder", folder);
-      if (photoTag) fd.set("photo_tag", photoTag);
-      if (requirementId) fd.set("requirement_id", requirementId);
-      for (const f of await Promise.all(files.map(prepare))) fd.append("files", f);
-      const r = await addDealFiles(null, fd);
-      setMsg({ ok: !!r?.ok, text: r?.ok ? (r.message ?? "Added") : (r?.error ?? "Upload failed") });
-      if (ref.current) ref.current.value = "";
-    });
+    setPreparing(true);
+    const small = await Promise.all(files.map(compress));
+    const dt = new DataTransfer();
+    small.forEach((f) => dt.items.add(f));
+    input.files = dt.files;
+    setPreparing(false);
+    form.current?.requestSubmit();
   }
 
-  const Icon = camera ? Camera : Paperclip;
+  const Icon = photo ? Camera : Paperclip;
   return (
-    <span className={cn("inline-flex flex-col gap-1", className)}>
-      <label
-        className={cn(
-          "inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-md border bg-card px-3 text-sm font-medium",
-          pending && "pointer-events-none opacity-60",
-        )}
-      >
-        {pending ? <Loader2 className="size-4 animate-spin" /> : <Icon className="size-4" />}
-        {pending ? "Uploading…" : label}
-        <input
-          ref={ref}
-          type="file"
-          className="sr-only"
-          multiple
-          accept={folder === "photos" ? "image/*" : "image/*,application/pdf,.doc,.docx,.xls,.xlsx"}
-          capture={camera ? "environment" : undefined}
-          onChange={onChange}
-        />
-      </label>
-      {msg ? <span className={msg.ok ? "text-xs text-success" : "text-xs text-destructive"}>{msg.text}</span> : null}
-    </span>
+    <form ref={form} action={action} className="flex flex-col gap-2">
+      <input type="hidden" name="deal_id" value={dealId} />
+      <input type="hidden" name="folder" value={folder} />
+      {requirementId ? <input type="hidden" name="requirement_id" value={requirementId} /> : null}
+      <div className="flex flex-wrap items-center gap-2">
+        {showTag ? (
+          <NativeSelect name="photo_tag" defaultValue={defaultTag} aria-label="Photo tag" className="w-auto">
+            {PHOTO_TAGS.map((t) => (
+              <option key={t.key} value={t.key}>
+                {t.label}
+              </option>
+            ))}
+          </NativeSelect>
+        ) : photo ? (
+          <input type="hidden" name="photo_tag" value={defaultTag} />
+        ) : null}
+        <label
+          className={cn(
+            "inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl font-semibold",
+            compact ? "h-10 bg-accent px-3.5 text-sm text-accent-foreground" : "h-11 bg-primary px-4 text-sm text-primary-foreground",
+          )}
+        >
+          <Icon className="size-4" /> {preparing ? "Preparing…" : label}
+          <input
+            type="file"
+            name="files"
+            multiple
+            accept={photo ? "image/*" : "image/*,application/pdf,.doc,.docx,.xls,.xlsx"}
+            {...(photo ? { capture: "environment" as const } : {})}
+            className="sr-only"
+            onChange={onChange}
+          />
+        </label>
+        <Busy label={label} />
+      </div>
+      <FormMessage state={state} />
+    </form>
   );
 }

@@ -6,6 +6,10 @@ const isPublic = createRouteMatcher([
   "/api/webhooks(.*)",
   "/api/cron(.*)",
   "/sw.js",
+  "/no-access",
+  "/l/(.*)", // public lead form (share link)
+  "/book/(.*)", // client books a visit
+  "/q/(.*)", // client view of an estimate
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

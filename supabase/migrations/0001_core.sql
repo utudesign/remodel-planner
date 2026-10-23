@@ -315,7 +315,7 @@ create table public.notifications (
   kind        text not null,
   title       text not null,
   body        text,
-  url         text,
+  url         text not null default '/today',
   deal_id     uuid references public.deals (id) on delete cascade,
   created_at  timestamptz not null default now(),
   read_at     timestamptz,
@@ -328,8 +328,7 @@ create table public.push_subscriptions (
   company_id  uuid not null references public.companies (id) on delete cascade,
   user_id     uuid not null references public.users (id) on delete cascade,
   endpoint    text not null unique,
-  p256dh      text not null,
-  auth        text not null,
+  keys        jsonb not null,              -- { p256dh, auth }
   user_agent  text,
   created_at  timestamptz not null default now()
 );

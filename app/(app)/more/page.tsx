@@ -1,43 +1,31 @@
 import Link from "next/link";
-import { BarChart3, Bell, ChevronRight, LayoutDashboard, Rss, Settings } from "lucide-react";
+import { Bell, ChevronRight, Handshake, Settings, SlidersHorizontal } from "lucide-react";
+import { SignOutButton } from "@clerk/nextjs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/states";
-import { MuteForm } from "@/components/team/mute-form";
-import { PushToggle } from "@/components/team/push-toggle";
-import { requirePageRole } from "@/lib/auth/require-role";
-import { NOTIFY_KINDS } from "@/lib/notify";
-import { must } from "@/server/action-utils";
+import { PushToggle } from "@/components/shared/push-toggle";
+import { requireOwner } from "@/lib/auth/require-role";
 
 export const metadata = { title: "More" };
 
 export default async function MorePage() {
-  const s = await requirePageRole("owner", "team");
-  const me = must(await s.db.from("users").select("notify_prefs").eq("id", s.userId).single());
-  const muted = ((me.notify_prefs ?? {}) as { mute?: string[] }).mute ?? [];
+  await requireOwner();
   const links = [
-    {
-      href: "/command",
-      label: "Command center",
-      icon: LayoutDashboard,
-      hint: "Shift queue, checklists, handoff",
-    },
-    { href: "/activity", label: "Activity", icon: Rss, hint: "Everything the team did" },
-    { href: "/notifications", label: "Notifications", icon: Bell, hint: "Your inbox" },
-    { href: "/analytics", label: "Analytics", icon: BarChart3, hint: "Margin per job" },
-    ...(s.role === "owner"
-      ? [{ href: "/settings", label: "Settings", icon: Settings, hint: "Team, windows, rules" }]
-      : []),
+    { href: "/partners", label: "Partners + commission plans", icon: Handshake, hint: "RenoDesign, plans, Crystal's login" },
+    { href: "/notifications", label: "Notifications", icon: Bell, hint: "Everything that happened" },
+    { href: "/settings", label: "Settings", icon: Settings, hint: "Hours, booking slots, tax, mileage, auto-reply" },
+    { href: "/settings/pipeline", label: "Stages + follow-ups", icon: SlidersHorizontal, hint: "My pipeline and cadence" },
   ];
   return (
     <>
       <PageHeader title="More" />
-      <ul className="mb-5 flex flex-col divide-y rounded-xl border bg-card">
+      <ul className="mb-5 flex flex-col divide-y rounded-2xl bg-card ring-1 ring-border">
         {links.map((l) => (
           <li key={l.href}>
-            <Link href={l.href} className="flex min-h-14 items-center gap-3 px-4">
+            <Link href={l.href} className="flex min-h-15 items-center gap-3 px-4 py-2">
               <l.icon className="size-5 text-muted-foreground" />
               <span className="flex-1">
-                <span className="block font-medium">{l.label}</span>
+                <span className="block font-semibold">{l.label}</span>
                 <span className="block text-xs text-muted-foreground">{l.hint}</span>
               </span>
               <ChevronRight className="size-4 text-muted-foreground" />
@@ -45,25 +33,20 @@ export default async function MorePage() {
           </li>
         ))}
       </ul>
-      <div className="grid gap-5 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Push on this phone</CardTitle>
-            <CardDescription>Each phone turns it on once.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <PushToggle vapidKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>What I get notified about</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <MuteForm kinds={NOTIFY_KINDS} muted={muted} />
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="mb-5">
+        <CardHeader>
+          <CardTitle>Push on this phone</CardTitle>
+          <CardDescription>
+            iPhone: Share → Add to Home Screen first, then open the app from the home screen and turn this on.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PushToggle vapidKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
+        </CardContent>
+      </Card>
+      <SignOutButton>
+        <button className="h-11 w-full rounded-xl bg-card text-sm font-semibold text-destructive ring-1 ring-border">Sign out</button>
+      </SignOutButton>
     </>
   );
 }

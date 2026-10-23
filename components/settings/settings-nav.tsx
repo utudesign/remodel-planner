@@ -5,11 +5,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const TABS = [
-  { href: "/settings", label: "Company & lists" },
-  { href: "/settings/team", label: "Team" },
-  { href: "/settings/routing", label: "Routing & alerts" },
-  { href: "/settings/pipeline", label: "Pipeline & follow-ups" },
-  { href: "/settings/templates", label: "Templates" },
+  { href: "/settings", label: "Me & my hours" },
+  { href: "/settings/pipeline", label: "Stages & follow-ups" },
 ];
 
 export function SettingsNav() {
@@ -21,7 +18,7 @@ export function SettingsNav() {
           key={t.href}
           href={t.href}
           className={cn(
-            "-mb-px whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground",
+            "-mb-px whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm text-muted-foreground",
             pathname === t.href && "border-primary font-medium text-foreground",
           )}
         >

@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { id, optText, reqText } from "@/lib/validation/common";
+import { reqText } from "@/lib/validation/common";
 
-export const LOOKUP_TABLES = ["pipeline_stages", "lost_reasons", "cost_categories"] as const;
+export const LOOKUP_TABLES = ["pipeline_stages", "lost_reasons"] as const;
 export type LookupTable = (typeof LOOKUP_TABLES)[number];
 
 export const lookupRowsSchema = z.object({
@@ -19,75 +19,35 @@ export const lookupRowsSchema = z.object({
 });
 
 export const followUpRulesSchema = z.object({
-  stage_id: id,
+  stage_key: z.string().min(1).max(60),
   rules: z
     .array(
       z.object({
         offset_days: z.number().int().min(0).max(365),
-        offset_hours: z
-          .number()
-          .int()
-          .min(0)
-          .max(23 * 24),
+        offset_hours: z.number().int().min(0).max(23 * 24),
         description: z.string().trim().max(200),
       }),
     )
     .max(10),
 });
 
-export const paymentTemplateSchema = z
+const hm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "use HH:MM");
+
+export const companySchema = z
   .object({
-    id: z.uuid().nullable(),
-    name: reqText(80),
-    active: z.boolean(),
-    items: z
-      .array(
-        z.object({
-          label: reqText(80),
-          kind: z.enum(["percent", "fixed"]),
-          percent_bps: z.number().int().min(0).max(10000).nullable(),
-          amount_cents: z.number().int().min(0).nullable(),
-          due_trigger: z.string().max(60).nullable(),
-        }),
-      )
-      .min(1, "add at least one installment")
-      .max(12),
+    name: reqText(120),
+    tax_set_aside_pct: z.coerce.number().min(0).max(60),
+    mileage_rate_cents: z.coerce.number().min(0).max(500),
+    workday_start: hm,
+    workday_end: hm,
+    booking_weekday_start: hm,
+    booking_weekday_end: hm,
+    booking_saturday_start: hm,
+    booking_saturday_end: hm,
+    booking_minutes: z.coerce.number().int().min(30).max(240),
+    auto_reply: z.string().trim().max(1500).optional().default(""),
   })
-  .refine(
-    (t) =>
-      t.items.some((i) => i.kind === "fixed") ||
-      t.items.reduce((s, i) => s + (i.percent_bps ?? 0), 0) === 10000,
-    { message: "Percentages must add up to 100%", path: ["items"] },
-  );
-
-export const taskTemplateSchema = z.object({
-  id: z.uuid().nullable(),
-  name: reqText(80),
-  is_default: z.boolean(),
-  active: z.boolean(),
-  items: z
-    .array(
-      z.object({
-        title: reqText(200),
-        milestone_key: z.string().max(60).nullable(),
-        kind: z.enum(["task", "punch"]),
-      }),
-    )
-    .max(80),
-});
-
-export const memberSchema = z.object({
-  user_id: id,
-  role: z.enum(["owner", "team", "crew"]),
-  active: z.boolean(),
-  is_default_owner: z.boolean(),
-  phone: optText(40),
-});
-
-export const companySchema = z.object({
-  name: reqText(120),
-  target_margin_pct: z.coerce.number().min(0).max(90),
-});
+  .refine((v) => v.workday_start < v.workday_end, { message: "day job must end after it starts", path: ["workday_end"] });
 
 export function slugify(label: string): string {
   return (

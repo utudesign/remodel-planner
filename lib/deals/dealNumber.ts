@@ -1,48 +1,69 @@
 /**
- * Deal numbers: MMDD (Eastern Time) + that day's sequence. Restarts every year.
- *   Oct 23 1st = "10231", 2nd = "10232", 10th = "102310"; Oct 24 1st = "10241"; Jan 5 1st = "01051"
- * The database assigns numbers (next_deal_number + deals trigger). This module only formats,
- * parses and previews them, using the same Eastern-Time date rule.
+ * Deal numbers: YY-NNNN, one series per company per year, starting at 1001.
+ *   First deal of 2026 = "26-1001", next = "26-1002" … first deal of 2027 = "27-1001".
+ * Why: short enough to say on the phone ("twenty-six ten forty-seven"), the year is visible,
+ * sorts correctly as text, never collides, and doesn't depend on which day a deal was opened.
+ * Documents inside a deal extend it: 26-1047-E2 (estimate v2), -D1 (vendor design request), -CO1 (change order),
+ * -R3 (payment receipt), -PO1 (purchase order), -INV1 (invoice), -W1 (warranty claim).
+ *
+ * The database assigns numbers (next_deal_number + deals trigger; next_deal_doc_number).
+ * This module formats, parses, labels and builds storage paths.
  */
 export const DEAL_TZ = 'America/New_York';
+export const DOC_KINDS = ['E', 'D', 'CO', 'R', 'PO', 'INV', 'W'] as const;
+export type DocKind = (typeof DOC_KINDS)[number];
+export const DOC_KIND_LABEL: Record<DocKind, string> = {
+  E: 'Estimate', D: 'Design request', CO: 'Change order', R: 'Receipt', PO: 'Purchase order', INV: 'Invoice', W: 'Warranty claim',
+};
 
-/** Calendar date of an instant in Eastern Time, as { year, month, day }. */
-export function easternDate(at: Date, timeZone = DEAL_TZ): { year: number; month: number; day: number } {
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' })
-    .formatToParts(at);
-  const get = (t: string) => Number(parts.find((p) => p.type === t)!.value);
-  return { year: get('year'), month: get('month'), day: get('day') };
+/** Calendar year of an instant in the company's time zone (Dec 31 11:30 PM ET is still that year). */
+export function dealYearAt(at: Date, timeZone = DEAL_TZ): number {
+  return Number(new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric' }).format(at));
 }
 
-export function formatDealNumber(month: number, day: number, seq: number): string {
-  if (month < 1 || month > 12 || day < 1 || day > 31 || seq < 1 || !Number.isInteger(seq)) {
-    throw new RangeError(`invalid deal number parts ${month}/${day}#${seq}`);
+export function formatDealNumber(year: number, seq: number): string {
+  if (!Number.isInteger(year) || year < 2000 || year > 2099 || !Number.isInteger(seq) || seq < 1) {
+    throw new RangeError(`invalid deal number parts ${year}#${seq}`);
   }
-  return `${String(month).padStart(2, '0')}${String(day).padStart(2, '0')}${seq}`;
+  return `${String(year % 100).padStart(2, '0')}-${String(seq).padStart(4, '0')}`;
 }
 
-/** What number a deal opened at `at` would get if it is the `seq`-th of its Eastern day. */
-export function previewDealNumber(at: Date, seq: number, timeZone = DEAL_TZ): { year: number; number: string } {
-  const d = easternDate(at, timeZone);
-  return { year: d.year, number: formatDealNumber(d.month, d.day, seq) };
+export function formatDocNumber(dealNumber: string, kind: DocKind, n: number): string {
+  if (!Number.isInteger(n) || n < 1) throw new RangeError(`invalid document number ${n}`);
+  return `${dealNumber}-${kind}${n}`;
 }
 
-/** "10231" → { month: 10, day: 23, seq: 1 }. Accepts "#10231" and "2026-10231". */
-export function parseDealNumber(input: string): { year?: number; month: number; day: number; seq: number } | null {
-  const m = input.trim().replace(/^#/, '').match(/^(?:(\d{4})-)?(\d{2})(\d{2})(\d+)$/);
+export type ParsedDealNumber = { year?: number; seq: number; doc?: { kind: DocKind; n: number } };
+
+/**
+ * What people type in search: "26-1047", "#26-1047", "261047", "26 1047", "1047" (no year → current
+ * year, decided by the caller), and document numbers "26-1047-CO2". Case-insensitive.
+ */
+export function parseDealNumber(input: string): ParsedDealNumber | null {
+  const t = input.trim().toUpperCase().replace(/^#/, '');
+  const m = t.match(/^(?:(\d{2})[\s-]?)?(\d{4,5})(?:-(E|D|CO|R|PO|INV|W)(\d+))?$/);
   if (!m) return null;
-  const [, y, mm, dd, s] = m;
-  const month = Number(mm), day = Number(dd), seq = Number(s);
-  if (month < 1 || month > 12 || day < 1 || day > 31 || seq < 1) return null;
-  return { ...(y ? { year: Number(y) } : {}), month, day, seq };
+  const [, yy, s, kind, n] = m;
+  const seq = Number(s);
+  if (seq < 1) return null;
+  return {
+    ...(yy ? { year: 2000 + Number(yy) } : {}),
+    seq,
+    ...(kind ? { doc: { kind: kind as DocKind, n: Number(n) } } : {}),
+  };
 }
 
-/** Display: "#10231"; add the year when it is not the current one ("#10231 · 2025"). */
-export function dealLabel(dealNumber: string, dealYear: number, currentYear: number): string {
-  return dealYear === currentYear ? `#${dealNumber}` : `#${dealNumber} · ${dealYear}`;
+/** Display label: always "#26-1047" (the year is already in the number). */
+export function dealLabel(dealNumber: string): string {
+  return `#${dealNumber}`;
 }
 
-/** Storage folder for a deal's files: {company}/{year}/{deal number}/{folder}/ */
+/** File/ZIP name: "26-1047 Lee kitchen". */
+export function dealFileName(dealNumber: string, customerLastName: string, scope: string): string {
+  return `${dealNumber} ${customerLastName} ${scope}`.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim();
+}
+
+/** Storage folders: {company}/{year}/{deal number}/{folder}/ */
 export const DEAL_FOLDERS = [
   'photos', 'estimates', 'design', 'contract', 'permits', 'invoices_receipts',
   'payments', 'change_orders', 'warranty', 'other',

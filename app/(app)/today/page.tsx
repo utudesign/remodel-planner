@@ -1,454 +1,220 @@
 import Link from "next/link";
-import {
-  BadgeDollarSign,
-  CalendarDays,
-  Hammer,
-  Hourglass,
-  ListChecks,
-  Lock,
-  MessageSquareText,
-  OctagonX,
-  PhoneCall,
-  Send,
-  Truck,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { EmptyState, PageHeader } from "@/components/shared/states";
-import { FeedList } from "@/components/team/feed-list";
-import { getSession } from "@/lib/auth/require-role";
-import { formatDate, formatDateTime, formatTime, relativeDays } from "@/lib/dates";
-import { formatCents } from "@/lib/money";
-import { responseMinutesLeft } from "@/lib/routing";
+import { CalendarClock, Check, Clock, MessageCircle, Navigation, Reply, Wallet } from "lucide-react";
+import { ScopeBadge } from "@/components/deals/deal-card";
+import { EmptyState } from "@/components/shared/states";
+import { requireOwner } from "@/lib/auth/require-role";
+import { formatTime } from "@/lib/dates";
+import { formatCents, formatCentsWhole } from "@/lib/money";
+import { nextStep } from "@/lib/deals/segments";
+import { isDayJob } from "@/lib/workday";
 import { cn } from "@/lib/utils";
 import { getToday } from "@/server/queries/today";
-import { getFeed } from "@/server/queries/team";
 
 export const metadata = { title: "Today" };
 
-const MEETING: Record<string, string> = {
-  initial: "In-home measure",
-  design_review: "Design presentation",
-  mid_check: "Mid-project check",
-  final: "Final walkthrough",
-};
-
-function Section({
-  id,
-  title,
-  icon: Icon,
-  count,
-  danger,
-  children,
-}: {
-  id?: string;
-  title: string;
-  icon: React.ComponentType<{ className?: string }>;
-  count?: number;
-  danger?: boolean;
-  children: React.ReactNode;
-}) {
-  const red = danger && !!count;
+function Section({ title, tone, children }: { title: string; tone?: "red"; children: React.ReactNode }) {
   return (
-    <section
-      id={id}
-      className={cn("rounded-xl border bg-card p-4", red && "border-destructive/40")}
-    >
-      <h2 className="mb-3 flex items-center gap-2 font-semibold">
-        <Icon className={cn("size-4 text-muted-foreground", red && "text-destructive")} />
+    <section className="flex flex-col gap-2">
+      <h2
+        className={cn(
+          "text-xs font-semibold tracking-wide uppercase",
+          tone === "red" ? "text-destructive" : "text-muted-foreground",
+        )}
+      >
         {title}
-        {count !== undefined ? (
-          <Badge variant={red ? "destructive" : "secondary"} className="ml-auto">
-            {count}
-          </Badge>
-        ) : null}
       </h2>
-      {children}
+      <div className="flex flex-col divide-y overflow-hidden rounded-2xl bg-card ring-1 ring-border">{children}</div>
     </section>
   );
 }
 
-const Quiet = ({ children }: { children: React.ReactNode }) => (
-  <p className="text-sm text-muted-foreground">{children}</p>
-);
-
-export default async function TodayPage({
-  searchParams,
+function Row({
+  d,
+  sub,
+  subTone,
+  right,
+  icon: Icon,
+  iconTone,
+  href,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  d: { deal_number: string | null; scope: string | null; title: string | null; contact: { name: string | null } | null };
+  sub: string;
+  subTone?: string;
+  right?: React.ReactNode;
+  icon: typeof Check;
+  iconTone: string;
+  href?: string;
 }) {
-  const { tab } = await searchParams;
-  const s = await getSession();
-  const crew = s.role === "crew";
-  const mine = crew || tab !== "team";
+  return (
+    <Link href={href ?? `/deals/${d.deal_number}`} className="flex min-h-16 items-center gap-3 px-3.5 py-2.5 active:bg-secondary">
+      <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl", iconTone)}>
+        <Icon className="size-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1.5">
+          <span className="truncate text-[15px] font-semibold">{d.contact?.name || d.title || "No name"}</span>
+          <ScopeBadge scope={d.scope} />
+        </span>
+        <span className={cn("block truncate text-[13px]", subTone ?? "text-muted-foreground")}>
+          #{d.deal_number} · {sub}
+        </span>
+      </span>
+      {right}
+    </Link>
+  );
+}
+
+export default async function TodayPage() {
+  const s = await requireOwner();
   const now = new Date();
-  const [d, feed] = await Promise.all([
-    getToday(s),
-    getFeed(s, { limit: 25, since: new Date(now.getTime() - 48 * 3600_000).toISOString() }),
-  ]);
-  const me = s.userId;
-  const isMyJob = (projectId: string | null) => d.pmOf(projectId) === me;
-
-  // Mine vs Team (CONTEXT §4)
-  const unanswered = d.unanswered.filter((l) => !mine || l.owner_id === me);
-  const followUps = d.followUps.filter((l) => !mine || l.owner_id === me);
-  const meetings = d.meetings.filter((m) => !mine || m.assignee_id === me);
-  const payments = d.overduePayments.filter(
-    (p) => !mine || s.role === "team" || isMyJob(p.project_id),
-  );
-  const blocked = d.blocked.filter(
-    (t) => !mine || crew || t.assignee_id === me || isMyJob(t.project_id),
-  );
-  const dueTasks = d.dueTasks.filter(
-    (t) => !mine || crew || t.assignee_id === me || isMyJob(t.project_id),
-  );
-  const starting = d.starting.filter((m) => !mine || crew || isMyJob(m.project_id));
-  const late = d.lateDeliveries.filter(
-    (m) => !mine || crew || s.role === "team" || isMyJob(m.project_id),
-  );
-  const messages = d.messages.filter((m) => !mine || m.created_by === me);
-  const closable = d.readyToClose.filter(
-    (p) => !mine || s.role === "owner" || p.project_manager_id === me,
-  );
-  const pinned = feed.filter((e) => e.pinned_until && new Date(e.pinned_until) > now);
-
-  const total =
-    unanswered.length +
-    followUps.length +
-    meetings.length +
-    payments.length +
-    blocked.length +
-    dueTasks.length +
-    starting.length +
-    late.length +
-    messages.length +
-    closable.length;
-  const firstName = s.name.split(" ")[0];
-  const callBtn =
-    "inline-flex h-11 items-center gap-1.5 rounded-md border px-3 text-sm font-medium";
+  const t = await getToday(s, now);
+  const dayJob = isDayJob(now, s.settings.workday, s.timezone);
+  const nothing =
+    !t.replyNow.length && !t.followUps.length && !t.meetings.length && !t.ready.length && !t.askPartner.length && !t.owed.length && !t.noTouch.length;
+  const dateLabel = new Date(`${t.today}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 
   return (
-    <>
-      <PageHeader
-        title={firstName ? `Today, ${firstName}` : "Today"}
-        description={`${formatDate(d.today)} · Eastern Time`}
-      />
-
-      {!crew ? (
-        <nav className="mb-4 grid grid-cols-2 rounded-lg bg-muted p-1 text-sm font-medium sm:w-72">
-          {[
-            { key: "mine", label: "Mine" },
-            { key: "team", label: "Team" },
-          ].map((t) => (
-            <Link
-              key={t.key}
-              href={`/today?tab=${t.key}`}
-              className={cn(
-                "flex h-9 items-center justify-center rounded-md text-muted-foreground",
-                (t.key === "mine") === mine && "bg-card text-foreground shadow-sm",
-              )}
-            >
-              {t.label}
-            </Link>
-          ))}
-        </nav>
-      ) : null}
-
-      {pinned.length ? (
-        <div className="mb-4">
-          <FeedList items={pinned} tz={s.timezone} now={now} />
+    <div className="flex flex-col gap-5">
+      <div>
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium text-muted-foreground">{dateLabel}</p>
+          {dayJob ? (
+            <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+              Day job until {s.settings.workday.end === "15:30" ? "3:30 PM" : s.settings.workday.end}
+            </span>
+          ) : null}
         </div>
-      ) : null}
-
-      {total === 0 ? (
-        <EmptyState
-          className="mb-4"
-          title="All clear"
-          description={mine ? "Nothing on your plate right now." : "Nothing due across the team."}
-        />
-      ) : null}
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        {!crew && unanswered.length ? (
-          <Section
-            title="New leads waiting for a reply"
-            icon={Hourglass}
-            count={unanswered.length}
-            danger
-          >
-            <ul className="flex flex-col divide-y">
-              {unanswered.map((l) => {
-                const left = responseMinutesLeft(new Date(l.created_at), s.rules, now);
-                return (
-                  <li key={l.id} className="flex items-center justify-between gap-2 py-2">
-                    <div className="min-w-0">
-                      <Link href={`/deal/${l.id}`} className="font-medium hover:underline">
-                        {l.contact?.name}
-                      </Link>
-                      <p
-                        className={cn(
-                          "text-xs",
-                          left < 0 ? "font-medium text-destructive" : "text-muted-foreground",
-                        )}
-                      >
-                        {left < 0
-                          ? `${-left} min past the reply goal`
-                          : `${left} min left to reply`}
-                        {l.waiting_for_live ? " · waiting for live shift" : ""}
-                      </p>
-                    </div>
-                    {l.contact?.phone ? (
-                      <a href={`tel:${l.contact.phone}`} className={callBtn}>
-                        <PhoneCall className="size-4" /> Call
-                      </a>
-                    ) : null}
-                  </li>
-                );
-              })}
-            </ul>
-          </Section>
-        ) : null}
-
-        {!crew ? (
-          <Section
-            id="follow-ups"
-            title="Follow-ups"
-            icon={PhoneCall}
-            count={followUps.length}
-            danger={followUps.some(
-              (l) => !l.next_follow_up_at || new Date(l.next_follow_up_at) < now,
-            )}
-          >
-            {followUps.length === 0 ? (
-              <Quiet>No one to call back today.</Quiet>
-            ) : (
-              <ul className="flex flex-col divide-y">
-                {followUps.map((l) => {
-                  const overdue = !l.next_follow_up_at || new Date(l.next_follow_up_at) < now;
-                  return (
-                    <li key={l.id} className="flex items-center justify-between gap-2 py-2">
-                      <div className="min-w-0">
-                        <Link href={`/deal/${l.id}#log`} className="font-medium hover:underline">
-                          {l.contact?.name}
-                        </Link>
-                        <p className="text-xs text-muted-foreground">
-                          {l.stage?.label} ·{" "}
-                          <span className={cn(overdue && "font-medium text-destructive")}>
-                            {l.next_follow_up_at
-                              ? `${overdue ? "overdue since " : "at "}${formatDateTime(l.next_follow_up_at, s.timezone)}`
-                              : "no follow-up set"}
-                          </span>
-                        </p>
-                      </div>
-                      {l.contact?.phone ? (
-                        <a href={`tel:${l.contact.phone}`} className={callBtn}>
-                          <PhoneCall className="size-4" /> Call
-                        </a>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </Section>
-        ) : null}
-
-        {!crew && messages.length ? (
-          <Section title="Messages to send now" icon={Send} count={messages.length}>
-            <ul className="flex flex-col divide-y">
-              {messages.map((m) => (
-                <li key={m.id} className="py-2">
-                  <Link
-                    href={`/deal/${m.deal_id}#messages`}
-                    className="font-medium hover:underline"
-                  >
-                    {d.leadName(m.deal_id)}
-                  </Link>
-                  <p className="truncate text-xs text-muted-foreground">{m.body}</p>
-                </li>
-              ))}
-            </ul>
-          </Section>
-        ) : null}
-
-        <Section title="Meetings today" icon={CalendarDays} count={meetings.length}>
-          {meetings.length === 0 ? (
-            <Quiet>No meetings today.</Quiet>
-          ) : (
-            <ul className="flex flex-col divide-y">
-              {meetings.map((m) => (
-                <li key={m.id} className="flex gap-3 py-2">
-                  <span className="w-16 shrink-0 text-sm font-semibold tabular-nums">
-                    {formatTime(m.scheduled_at, s.timezone)}
-                  </span>
-                  <div className="min-w-0">
-                    <Link
-                      href={m.project_id ? `/job/${m.project_id}` : `/deal/${m.deal_id}`}
-                      className="font-medium hover:underline"
-                    >
-                      {m.project_id ? d.jobName(m.project_id) : d.leadName(m.deal_id)}
-                    </Link>
-                    <p className="text-xs text-muted-foreground">{MEETING[m.type] ?? m.type}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Section>
-
-        <Section title="Blocked tasks" icon={OctagonX} count={blocked.length} danger>
-          {blocked.length === 0 ? (
-            <Quiet>Nothing blocked.</Quiet>
-          ) : (
-            <ul className="flex flex-col divide-y">
-              {blocked.map((t) => (
-                <li key={t.id} className="py-2">
-                  <Link
-                    href={`/job/${t.project_id}?tab=tasks`}
-                    className="font-medium hover:underline"
-                  >
-                    {t.title}
-                  </Link>
-                  <p className="text-xs text-muted-foreground">
-                    {d.jobName(t.project_id)}
-                    {t.trade ? ` · ${t.trade}` : ""}
-                    {t.description ? ` · ${t.description}` : ""}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Section>
-
-        {dueTasks.length ? (
-          <Section
-            title="Tasks due"
-            icon={ListChecks}
-            count={dueTasks.length}
-            danger={dueTasks.some((t) => !!t.due_date && t.due_date < d.today)}
-          >
-            <ul className="flex flex-col divide-y">
-              {dueTasks.map((t) => (
-                <li key={t.id} className="flex items-center justify-between gap-2 py-2">
-                  <div className="min-w-0">
-                    <Link
-                      href={`/job/${t.project_id}?tab=tasks`}
-                      className="font-medium hover:underline"
-                    >
-                      {t.title}
-                    </Link>
-                    <p className="text-xs text-muted-foreground">
-                      {d.jobName(t.project_id)}
-                      {t.trade ? ` · ${t.trade}` : ""}
-                    </p>
-                  </div>
-                  {t.due_date ? (
-                    <span
-                      className={cn(
-                        "text-xs",
-                        t.due_date < d.today
-                          ? "font-medium text-destructive"
-                          : "text-muted-foreground",
-                      )}
-                    >
-                      {relativeDays(t.due_date, d.today)}
-                    </span>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </Section>
-        ) : null}
-
-        {!crew ? (
-          <Section title="Overdue payments" icon={BadgeDollarSign} count={payments.length} danger>
-            {payments.length === 0 ? (
-              <Quiet>No overdue payments.</Quiet>
-            ) : (
-              <ul className="flex flex-col divide-y">
-                {payments.map((p) => (
-                  <li key={p.id} className="flex items-center justify-between gap-2 py-2">
-                    <div className="min-w-0">
-                      <Link
-                        href={`/job/${p.project_id}?tab=payments`}
-                        className="font-medium hover:underline"
-                      >
-                        {d.jobName(p.project_id)}
-                      </Link>
-                      <p className="text-xs text-muted-foreground">
-                        {p.label} · due {formatDate(p.due_date)}
-                        {p.due_date ? ` (${relativeDays(p.due_date, d.today)})` : ""}
-                      </p>
-                    </div>
-                    <span className="font-semibold tabular-nums text-destructive">
-                      {formatCents(p.amount_cents)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Section>
-        ) : null}
-
-        <Section title="Starting this week" icon={Hammer} count={starting.length}>
-          {starting.length === 0 ? (
-            <Quiet>No job starts this week.</Quiet>
-          ) : (
-            <ul className="flex flex-col divide-y">
-              {starting.map((m) => (
-                <li key={m.id} className="flex items-center justify-between gap-2 py-2">
-                  <Link href={`/job/${m.project_id}`} className="font-medium hover:underline">
-                    {d.jobName(m.project_id)}
-                  </Link>
-                  <span className="text-sm text-muted-foreground">
-                    {formatDate(m.planned_date)}
-                    {m.planned_date ? ` (${relativeDays(m.planned_date, d.today)})` : ""}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Section>
-
-        {late.length ? (
-          <Section title="Delivery overdue" icon={Truck} count={late.length} danger>
-            <ul className="flex flex-col divide-y">
-              {late.map((m) => (
-                <li key={m.id} className="flex items-center justify-between gap-2 py-2">
-                  <Link href={`/job/${m.project_id}`} className="font-medium hover:underline">
-                    {d.jobName(m.project_id)}
-                  </Link>
-                  <span className="text-sm text-destructive">
-                    expected {formatDate(m.planned_date)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Section>
-        ) : null}
-
-        {closable.length ? (
-          <Section title="Ready to close" icon={Lock} count={closable.length}>
-            <ul className="flex flex-col divide-y">
-              {closable.map((p) => (
-                <li key={p.id} className="flex items-center justify-between gap-2 py-2">
-                  <Link href={`/job/${p.id}`} className="font-medium hover:underline">
-                    {p.name}
-                  </Link>
-                  <span className="text-xs text-muted-foreground">
-                    Paid in full · punch list clear
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Section>
-        ) : null}
-
-        {!mine || crew ? (
-          <Section title="Team updates (last 48h)" icon={MessageSquareText}>
-            <FeedList items={feed.filter((e) => !pinned.includes(e))} tz={s.timezone} now={now} />
-          </Section>
-        ) : null}
+        <h1 className="text-[32px] leading-tight font-bold tracking-tight">Today</h1>
       </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <Tile label="New leads" value={String(t.replyNow.length)} />
+        <Tile label="Visits" value={String(t.meetings.length)} />
+        <Tile label="Owed to you" value={formatCentsWhole(t.owedTotal)} dark href="/money" />
+      </div>
+
+      {nothing ? <EmptyState title="All caught up" description="New leads, follow-ups and visits show up here." /> : null}
+
+      {t.replyNow.length ? (
+        <Section title="Reply now" tone="red">
+          {t.replyNow.map((d) => (
+            <Row
+              key={d.id}
+              d={d}
+              icon={Reply}
+              iconTone="bg-destructive text-white"
+              sub={nextStep({ ...d, stageKind: "open" }, now).label}
+              subTone="text-destructive font-semibold"
+            />
+          ))}
+        </Section>
+      ) : null}
+
+      {t.meetings.length ? (
+        <Section title="Visits today">
+          {t.meetings.map((m) =>
+            m.deal ? (
+              <Row
+                key={m.id}
+                d={m.deal}
+                icon={Navigation}
+                iconTone="bg-accent text-accent-foreground"
+                sub={`${formatTime(m.starts_at, s.timezone)}${m.deal.contact?.city ? ` · ${m.deal.contact.city}` : ""}`}
+              />
+            ) : null,
+          )}
+        </Section>
+      ) : null}
+
+      {t.followUps.length ? (
+        <Section title="Follow up">
+          {t.followUps.map((d) => {
+            const late = d.next_follow_up_at && new Date(d.next_follow_up_at) < now;
+            return (
+              <Row
+                key={d.id}
+                d={d}
+                icon={CalendarClock}
+                iconTone={late ? "bg-destructive/10 text-destructive" : "bg-secondary"}
+                sub={late ? nextStep({ ...d, stageKind: "open" }, now).label : `Due ${formatTime(d.next_follow_up_at!, s.timezone)}`}
+                subTone={late ? "text-destructive" : undefined}
+              />
+            );
+          })}
+        </Section>
+      ) : null}
+
+      {t.ready.length ? (
+        <Section title="Ready to hand off">
+          {t.ready.map((d) => (
+            <Row
+              key={d.id}
+              d={d}
+              icon={Check}
+              iconTone="bg-accent text-accent-foreground"
+              sub={d.estimated_value_cents ? formatCentsWhole(d.estimated_value_cents) : "Hand off"}
+              href={`/deals/${d.deal_number}?tab=partner`}
+            />
+          ))}
+        </Section>
+      ) : null}
+
+      {t.askPartner.length ? (
+        <Section title="Ask the partner">
+          {t.askPartner.map((d) => (
+            <Row
+              key={d.id}
+              d={d}
+              icon={MessageCircle}
+              iconTone="bg-warning/15 text-warning"
+              sub={nextStep({ ...d, stageKind: "handed_off" }, now).label.replace("Ask partner · ", "")}
+              subTone="text-warning"
+              href={`/deals/${d.deal_number}?tab=partner`}
+            />
+          ))}
+        </Section>
+      ) : null}
+
+      {t.owed.length ? (
+        <Section title="Commission owed">
+          {t.owed.map(({ deal, c, days }) => (
+            <Row
+              key={deal.id}
+              d={deal}
+              icon={Wallet}
+              iconTone={days > 14 ? "bg-destructive/10 text-destructive" : "bg-accent text-accent-foreground"}
+              sub={`${formatCents(c.owed_cents)} earned ${days} day${days === 1 ? "" : "s"} ago`}
+              subTone={days > 14 ? "text-destructive" : undefined}
+              href={`/deals/${deal.deal_number}?tab=partner`}
+            />
+          ))}
+        </Section>
+      ) : null}
+
+      {t.noTouch.length ? (
+        <Section title="No touch in 2 days">
+          {t.noTouch.slice(0, 10).map((d) => (
+            <Row key={d.id} d={d} icon={Clock} iconTone="bg-secondary" sub={nextStep({ ...d, stageKind: "open" }, now).label} />
+          ))}
+        </Section>
+      ) : null}
+    </div>
+  );
+}
+
+function Tile({ label, value, dark, href }: { label: string; value: string; dark?: boolean; href?: string }) {
+  const body = (
+    <>
+      <p className={cn("text-xs font-medium", dark ? "text-primary-foreground/80" : "text-muted-foreground")}>{label}</p>
+      <p className="mt-1 text-2xl font-bold tabular-nums">{value}</p>
     </>
+  );
+  const cls = cn("rounded-2xl p-3", dark ? "bg-primary text-primary-foreground" : "bg-card ring-1 ring-border");
+  return href ? (
+    <Link href={href} className={cls}>
+      {body}
+    </Link>
+  ) : (
+    <div className={cls}>{body}</div>
   );
 }

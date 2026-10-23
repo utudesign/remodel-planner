@@ -4,28 +4,29 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(0.985 0.002 90);
-  --foreground: oklch(0.2 0.01 60);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.01 60);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.01 60);
-  --primary: oklch(0.32 0.03 250);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.955 0.004 90);
-  --secondary-foreground: oklch(0.25 0.01 60);
-  --muted: oklch(0.955 0.004 90);
-  --muted-foreground: oklch(0.5 0.01 60);
-  --accent: oklch(0.94 0.01 90);
-  --accent-foreground: oklch(0.25 0.01 60);
-  --destructive: oklch(0.58 0.22 27);
-  --destructive-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.75 0.15 75);
-  --success: oklch(0.6 0.13 155);
-  --border: oklch(0.91 0.005 90);
-  --input: oklch(0.88 0.005 90);
-  --ring: oklch(0.55 0.05 250);
+  --radius: 0.875rem;
+  /* Warm field-tool palette (design board): off-white ground, dark ink, green = money to you, red = act now */
+  --background: #f5f3ee;
+  --foreground: #1c1b19;
+  --card: #ffffff;
+  --card-foreground: #1c1b19;
+  --popover: #ffffff;
+  --popover-foreground: #1c1b19;
+  --primary: #1f5c46;
+  --primary-foreground: #ffffff;
+  --secondary: #f0ede6;
+  --secondary-foreground: #1c1b19;
+  --muted: #ebe7de;
+  --muted-foreground: #5e5a52;
+  --accent: #e6efea;
+  --accent-foreground: #163f31;
+  --destructive: #b3261e;
+  --destructive-foreground: #ffffff;
+  --warning: #c26a14;
+  --success: #1f5c46;
+  --border: #e8e4da;
+  --input: #d9d4c8;
+  --ring: #1f5c46;
 }
 
 .dark {

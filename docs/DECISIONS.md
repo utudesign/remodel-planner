@@ -99,3 +99,26 @@ Format: date · decision · why. Times in ET.
 - What _was_ verified: migrations + seed apply on Postgres 16; `supabase/tests/rules_test.sql` passes (RLS per role,
   lead guards, convert, board moves → payments due, close gate, margin lock, audit, settings write protection);
   45 unit tests pass; lint, typecheck and production build are clean.
+
+---
+
+## Master prompt v2: the app is Tugu's sales tool (Oct 23, 2026)
+
+Approved plan: `docs/PLAN.md`. The team app built earlier (team engine, command center, projects board,
+payments schedule, close/margin lock screens) was removed; it's in git history before `9edbaff`.
+
+| Decision | Why |
+| --- | --- |
+| One new `0001_core.sql` replaces the five earlier migration files; `0002`–`0006` are the handoff files byte-for-byte; glue goes in `0007` | Nothing had been applied to a real database. The handoff's own SQL tests (41) pass on the real 0001 with identical output to the stub |
+| Contractor tables (`projects`, `payments`, `costs`, `change_orders`, `quotes`) use CONTEXT §5 names (`contract_value`, `amount`, `price_change`, …), not `*_cents` | 0004–0006 reference those names. No screens use these tables in sales-rep mode |
+| `deals.stage` is a text key checked against `pipeline_stages` (signed-in writes); stage kinds: open / handed_off / lost | The handoff tests insert `stage = 'new'`; settings still drive the stages |
+| Deal defaults trigger is named `deals_zz_defaults` | Triggers fire in name order; 0006's partner guard must run first or it rejects every partner update |
+| Identity = Clerk user id only (no Clerk Organizations). First sign-in creates the rep's company (`bootstrap_owner`), limited by `ALLOWED_OWNER_EMAILS` | 0002's helpers resolve the company from `users.clerk_id`; one rep = one account |
+| The TimberPeak list is imported by the app at first sign-in (`server/onboarding.ts`, same parser as `scripts/price-list-to-sql.ts`) | No psql step for the user |
+| `rep_year_summary(int, numeric)` overload in 0007 | IRS 2026 rate is 72.5¢; 0006 takes whole cents. Different parameter name so PostgREST can tell them apart |
+| First reply logged (`direction = out`) stamps `first_response_at` in the database | Speed-to-lead stats (`lead_source_stats`) stay honest without remembering to tap anything else |
+| Deal segments: Selling (open) · With partner (handed off, job or commission still open) · Closed (lost, cancelled with nothing owed, or paid in full + commission paid) | SALES-REP-MODE §2: "Closed = commission fully paid" |
+| "Could pay you $X" before a plan is picked uses the partner's cabinets plan for cabinets-only/countertops, else the other plan | PLAN.md Q10 |
+| Digest: Vercel cron 19:30 + 20:30 UTC Mon–Fri; the run that is 3:30 PM in New York sends it | DST-safe with two fixed UTC crons |
+| Buttons/inputs are 44 px tall on phones (h-11), 36 px on desktop | Master prompt: 44 px tap targets |
+| Photos in Step 1 upload through a server action (≤ 4 MB per request, compressed to 2560 px on the phone) | Vercel's 4.5 MB request cap; signed direct uploads + offline queue come in Step 3 |

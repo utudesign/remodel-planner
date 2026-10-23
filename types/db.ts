@@ -1837,7 +1837,7 @@ export type Database = {
           pushed_at: string | null
           read_at: string | null
           title: string
-          url: string | null
+          url: string
           user_id: string
         }
         ComputedFields: never
@@ -1851,7 +1851,7 @@ export type Database = {
           pushed_at?: string | null
           read_at?: string | null
           title: string
-          url?: string | null
+          url?: string
           user_id: string
         }
         Update: {
@@ -1864,7 +1864,7 @@ export type Database = {
           pushed_at?: string | null
           read_at?: string | null
           title?: string
-          url?: string | null
+          url?: string
           user_id?: string
         }
         Relationships: [
@@ -2419,33 +2419,30 @@ export type Database = {
       }
       push_subscriptions: {
         Row: {
-          auth: string
           company_id: string
           created_at: string
           endpoint: string
           id: string
-          p256dh: string
+          keys: NonNullable<Json>
           user_agent: string | null
           user_id: string
         }
         ComputedFields: never
         Insert: {
-          auth: string
           company_id: string
           created_at?: string
           endpoint: string
           id?: string
-          p256dh: string
+          keys: NonNullable<Json>
           user_agent?: string | null
           user_id: string
         }
         Update: {
-          auth?: string
           company_id?: string
           created_at?: string
           endpoint?: string
           id?: string
-          p256dh?: string
+          keys?: NonNullable<Json>
           user_agent?: string | null
           user_id?: string
         }

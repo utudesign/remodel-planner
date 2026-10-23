@@ -17,15 +17,13 @@ function configure(): boolean {
   return configured;
 }
 
-type Prefs = { mute?: string[] };
-
 export async function flushNotifications(
   companyId?: string,
 ): Promise<{ sent: number; skipped: number }> {
   const db = createAdminSupabase();
   let q = db
     .from("notifications")
-    .select("id, user_id, kind, title, body, url, user:users(notify_prefs)")
+    .select("id, user_id, kind, title, body, url")
     .is("pushed_at", null)
     .gte("created_at", new Date(Date.now() - 6 * 3600_000).toISOString())
     .limit(200);
@@ -52,8 +50,6 @@ export async function flushNotifications(
     .in("user_id", userIds);
   let sent = 0;
   for (const n of pending) {
-    const muted = ((n.user?.notify_prefs ?? {}) as Prefs).mute?.includes(n.kind);
-    if (muted) continue;
     for (const sub of (subs ?? []).filter((x) => x.user_id === n.user_id)) {
       try {
         await webpush.sendNotification(
@@ -86,14 +82,12 @@ export async function pushToUsers(
 ) {
   if (!configure() || userIds.length === 0) return 0;
   const db = createAdminSupabase();
-  const [{ data: subs }, { data: users }] = await Promise.all([
-    db.from("push_subscriptions").select("id, user_id, endpoint, keys").in("user_id", userIds),
-    db.from("users").select("id, notify_prefs").in("id", userIds),
-  ]);
+  const { data: subs } = await db
+    .from("push_subscriptions")
+    .select("id, user_id, endpoint, keys")
+    .in("user_id", userIds);
   let sent = 0;
   for (const sub of subs ?? []) {
-    const prefs = (users?.find((u) => u.id === sub.user_id)?.notify_prefs ?? {}) as Prefs;
-    if (prefs.mute?.includes(payload.kind)) continue;
     try {
       await webpush.sendNotification(
         { endpoint: sub.endpoint, keys: sub.keys as { p256dh: string; auth: string } },

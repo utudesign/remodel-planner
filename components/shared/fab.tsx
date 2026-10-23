@@ -2,50 +2,33 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ClipboardPaste, Hammer, PhoneCall, Plus, Ruler, UserPlus, Wallet, X } from "lucide-react";
+import { Calculator, Camera, PhoneCall, Plus, UserPlus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/** Floating + : New deal · Paste a message · Quick estimate · Take photos · Log call · Add expense · Log trip. */
 const ACTIONS = [
   { href: "/deals/new", label: "New deal", icon: UserPlus },
-  { href: "/deals/new?paste=1", label: "Paste a message", icon: ClipboardPaste },
-  { href: "/today?tab=mine#follow-ups", label: "Log call", icon: PhoneCall },
-  { href: "/payments?f=open", label: "Record payment", icon: Wallet },
+  { href: "/pick?for=estimate", label: "Quick estimate", icon: Calculator },
+  { href: "/pick?for=photos", label: "Take photos", icon: Camera },
+  { href: "/pick?for=log", label: "Log call", icon: PhoneCall },
 ] as const;
 
-const LATER = [
-  { label: "Quick estimate", icon: Ruler, phase: "Phase 3" },
-  { label: "Take photos", icon: Hammer, phase: "open a deal → Photos" },
-];
-
-/** Floating + (CONTEXT §6): New deal · Quick estimate · Take photos · Log call · Record payment. */
 export function Fab() {
   const [open, setOpen] = useState(false);
   return (
-    <div className="fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 lg:bottom-6">
+    <div className="fixed right-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-40 lg:bottom-6">
       {open ? (
         <>
-          <button
-            aria-label="Close"
-            className="fixed inset-0 -z-10 bg-black/30"
-            onClick={() => setOpen(false)}
-          />
+          <button aria-label="Close" className="fixed inset-0 -z-10 bg-black/30" onClick={() => setOpen(false)} />
           <ul className="mb-3 flex flex-col items-end gap-2">
-            {LATER.map((a) => (
-              <li key={a.label}>
-                <span className="flex h-11 items-center gap-2 rounded-full bg-card px-4 text-sm text-muted-foreground shadow-md">
-                  <a.icon className="size-4" /> {a.label}{" "}
-                  <span className="text-[10px]">({a.phase})</span>
-                </span>
-              </li>
-            ))}
             {ACTIONS.map((a) => (
               <li key={a.href}>
                 <Link
                   href={a.href}
                   onClick={() => setOpen(false)}
-                  className="flex h-11 items-center gap-2 rounded-full bg-card px-4 text-sm font-medium shadow-md"
+                  className="flex h-12 items-center gap-2 rounded-full bg-card px-4 text-[15px] font-semibold shadow-md"
                 >
-                  <a.icon className="size-4" /> {a.label}
+                  <a.icon className="size-5" /> {a.label}
                 </Link>
               </li>
             ))}
@@ -56,11 +39,11 @@ export function Fab() {
         aria-label={open ? "Close quick actions" : "Quick actions"}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "ml-auto flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform",
+          "ml-auto flex size-15 items-center justify-center rounded-2xl bg-foreground text-background shadow-lg transition-transform",
           open && "rotate-45",
         )}
       >
-        {open ? <X className="size-6 -rotate-45" /> : <Plus className="size-6" />}
+        {open ? <X className="size-6 -rotate-45" /> : <Plus className="size-7" />}
       </button>
     </div>
   );

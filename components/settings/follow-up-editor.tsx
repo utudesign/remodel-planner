@@ -8,13 +8,13 @@ import { saveFollowUpRules } from "@/server/actions/settings";
 
 type Rule = { offset_days: number; offset_hours: number; description: string };
 
-/** Follow-up cadence for one stage, counted from when the lead entered the stage. */
+/** Follow-up cadence for one stage, counted from entering the stage or the last logged touch. */
 export function FollowUpEditor({
-  stageId,
+  stageKey,
   stageLabel,
   rules: initial,
 }: {
-  stageId: string;
+  stageKey: string;
   stageLabel: string;
   rules: Rule[];
 }) {
@@ -27,7 +27,7 @@ export function FollowUpEditor({
     <div className="rounded-lg border p-3">
       <p className="mb-2 text-sm font-medium">{stageLabel}</p>
       {rules.length === 0 ? (
-        <p className="mb-2 text-xs text-muted-foreground">No rule: suggests +2 days.</p>
+        <p className="mb-2 text-xs text-muted-foreground">No rule: follow up in 1 day.</p>
       ) : null}
       <ul className="flex flex-col gap-2">
         {rules.map((r, i) => (
@@ -93,7 +93,7 @@ export function FollowUpEditor({
           disabled={pending}
           onClick={() =>
             start(async () => {
-              const r = await saveFollowUpRules({ stage_id: stageId, rules });
+              const r = await saveFollowUpRules({ stage_key: stageKey, rules });
               setMsg({ ok: !!r?.ok, text: r?.ok ? "Saved" : (r?.error ?? "Could not save") });
             })
           }

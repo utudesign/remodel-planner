@@ -2,33 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  BarChart3,
-  CalendarCheck,
-  FolderKanban,
-  LayoutDashboard,
-  Menu,
-  Rss,
-  Settings,
-  Wallet,
-  type LucideIcon,
-} from "lucide-react";
+import { CalendarCheck, FolderKanban, Menu, Wallet, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { NavIcon, NavItem } from "@/lib/nav";
 
 const ICONS: Record<NavIcon, LucideIcon> = {
   today: CalendarCheck,
-  command: LayoutDashboard,
   deals: FolderKanban,
-  payments: Wallet,
-  activity: Rss,
-  analytics: BarChart3,
-  settings: Settings,
+  money: Wallet,
   more: Menu,
 };
 
-const DEAL_PATHS = ["/deals", "/deal/", "/job/"];
-const MORE_PATHS = ["/more", "/activity", "/analytics", "/settings", "/command", "/notifications"];
+const MORE_PATHS = ["/more", "/settings", "/notifications", "/partners"];
 
 function isActive(pathname: string, href: string) {
   if (href === "/more")

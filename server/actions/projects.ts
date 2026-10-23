@@ -138,15 +138,13 @@ export async function setProjectMembers(input: {
     ok(await s.db.from("project_members").delete().eq("project_id", v.project_id));
     if (v.user_ids.length) {
       ok(
-        await s.db
-          .from("project_members")
-          .insert(
-            v.user_ids.map((user_id) => ({
-              project_id: v.project_id,
-              user_id,
-              company_id: s.companyId,
-            })),
-          ),
+        await s.db.from("project_members").insert(
+          v.user_ids.map((user_id) => ({
+            project_id: v.project_id,
+            user_id,
+            company_id: s.companyId,
+          })),
+        ),
       );
     }
     revalidateProject(v.project_id);

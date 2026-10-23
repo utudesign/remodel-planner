@@ -70,6 +70,13 @@ export type Database = {
             foreignKeyName: "activities_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "crew_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -169,6 +176,92 @@ export type Database = {
           },
           {
             foreignKeyName: "change_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "crew_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comments: {
+        Row: {
+          author_id: string
+          body: string
+          company_id: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          lead_id: string | null
+          mentions: string[]
+          photo_paths: string[]
+          project_id: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          author_id: string
+          body: string
+          company_id: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          lead_id?: string | null
+          mentions?: string[]
+          photo_paths?: string[]
+          project_id?: string | null
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          company_id?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          lead_id?: string | null
+          mentions?: string[]
+          photo_paths?: string[]
+          project_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "crew_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -348,7 +441,245 @@ export type Database = {
             foreignKeyName: "costs_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "crew_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "costs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      design_requests: {
+        Row: {
+          assignee_id: string | null
+          company_id: string
+          due_at: string | null
+          id: string
+          lead_id: string
+          paused_at: string | null
+          quote_id: string | null
+          ready_at: string | null
+          site_visit_id: string | null
+          status: string
+        }
+        ComputedFields: never
+        Insert: {
+          assignee_id?: string | null
+          company_id: string
+          due_at?: string | null
+          id?: string
+          lead_id: string
+          paused_at?: string | null
+          quote_id?: string | null
+          ready_at?: string | null
+          site_visit_id?: string | null
+          status?: string
+        }
+        Update: {
+          assignee_id?: string | null
+          company_id?: string
+          due_at?: string | null
+          id?: string
+          lead_id?: string
+          paused_at?: string | null
+          quote_id?: string | null
+          ready_at?: string | null
+          site_visit_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "design_requests_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "design_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "design_requests_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "design_requests_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "design_requests_site_visit_id_fkey"
+            columns: ["site_visit_id"]
+            isOneToOne: false
+            referencedRelation: "site_visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          actor_id: string | null
+          company_id: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          has_money: boolean
+          id: string
+          lead_id: string | null
+          pinned_until: string | null
+          project_id: string | null
+          publish_at: string
+          summary: string
+          verb: string
+        }
+        ComputedFields: never
+        Insert: {
+          actor_id?: string | null
+          company_id: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          has_money?: boolean
+          id?: string
+          lead_id?: string | null
+          pinned_until?: string | null
+          project_id?: string | null
+          publish_at?: string
+          summary: string
+          verb: string
+        }
+        Update: {
+          actor_id?: string | null
+          company_id?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          has_money?: boolean
+          id?: string
+          lead_id?: string | null
+          pinned_until?: string | null
+          project_id?: string | null
+          publish_at?: string
+          summary?: string
+          verb?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "crew_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      files: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          kind: string
+          lead_id: string | null
+          path: string
+          project_id: string | null
+          uploaded_by: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          lead_id?: string | null
+          path: string
+          project_id?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          lead_id?: string | null
+          path?: string
+          project_id?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "files_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "files_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "crew_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "files_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -399,6 +730,141 @@ export type Database = {
           },
         ]
       }
+      info_requests: {
+        Row: {
+          answered_at: string | null
+          asked_by: string | null
+          asked_of: string | null
+          company_id: string
+          created_at: string
+          design_request_id: string
+          id: string
+          items: NonNullable<Json>
+        }
+        ComputedFields: never
+        Insert: {
+          answered_at?: string | null
+          asked_by?: string | null
+          asked_of?: string | null
+          company_id: string
+          created_at?: string
+          design_request_id: string
+          id?: string
+          items?: NonNullable<Json>
+        }
+        Update: {
+          answered_at?: string | null
+          asked_by?: string | null
+          asked_of?: string | null
+          company_id?: string
+          created_at?: string
+          design_request_id?: string
+          id?: string
+          items?: NonNullable<Json>
+        }
+        Relationships: [
+          {
+            foreignKeyName: "info_requests_asked_by_fkey"
+            columns: ["asked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "info_requests_asked_of_fkey"
+            columns: ["asked_of"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "info_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "info_requests_design_request_id_fkey"
+            columns: ["design_request_id"]
+            isOneToOne: false
+            referencedRelation: "design_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      issues: {
+        Row: {
+          company_id: string
+          cost_impact_cents: number | null
+          created_at: string
+          description: string
+          id: string
+          photo_paths: string[]
+          project_id: string
+          reported_by: string | null
+          schedule_impact_days: number | null
+          status: string
+          type: string
+        }
+        ComputedFields: never
+        Insert: {
+          company_id: string
+          cost_impact_cents?: number | null
+          created_at?: string
+          description: string
+          id?: string
+          photo_paths?: string[]
+          project_id: string
+          reported_by?: string | null
+          schedule_impact_days?: number | null
+          status?: string
+          type: string
+        }
+        Update: {
+          company_id?: string
+          cost_impact_cents?: number | null
+          created_at?: string
+          description?: string
+          id?: string
+          photo_paths?: string[]
+          project_id?: string
+          reported_by?: string | null
+          schedule_impact_days?: number | null
+          status?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issues_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "issues_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "crew_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "issues_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "issues_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           budget_max_cents: number | null
@@ -407,6 +873,7 @@ export type Database = {
           contact_id: string
           created_at: string
           desired_timeline: string | null
+          first_response_at: string | null
           id: string
           lost_note: string | null
           lost_reason_id: string | null
@@ -418,6 +885,7 @@ export type Database = {
           stage_entered_at: string
           stage_id: string
           updated_at: string
+          waiting_for_live: boolean
         }
         ComputedFields: never
         Insert: {
@@ -427,6 +895,7 @@ export type Database = {
           contact_id: string
           created_at?: string
           desired_timeline?: string | null
+          first_response_at?: string | null
           id?: string
           lost_note?: string | null
           lost_reason_id?: string | null
@@ -438,6 +907,7 @@ export type Database = {
           stage_entered_at?: string
           stage_id: string
           updated_at?: string
+          waiting_for_live?: boolean
         }
         Update: {
           budget_max_cents?: number | null
@@ -446,6 +916,7 @@ export type Database = {
           contact_id?: string
           created_at?: string
           desired_timeline?: string | null
+          first_response_at?: string | null
           id?: string
           lost_note?: string | null
           lost_reason_id?: string | null
@@ -457,6 +928,7 @@ export type Database = {
           stage_entered_at?: string
           stage_id?: string
           updated_at?: string
+          waiting_for_live?: boolean
         }
         Relationships: [
           {
@@ -536,6 +1008,7 @@ export type Database = {
         Row: {
           assignee_id: string | null
           company_id: string
+          confirmed_at: string | null
           id: string
           lead_id: string | null
           notes: string | null
@@ -548,6 +1021,7 @@ export type Database = {
         Insert: {
           assignee_id?: string | null
           company_id: string
+          confirmed_at?: string | null
           id?: string
           lead_id?: string | null
           notes?: string | null
@@ -559,6 +1033,7 @@ export type Database = {
         Update: {
           assignee_id?: string | null
           company_id?: string
+          confirmed_at?: string | null
           id?: string
           lead_id?: string | null
           notes?: string | null
@@ -587,6 +1062,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meetings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "crew_projects"
             referencedColumns: ["id"]
           },
           {
@@ -675,7 +1157,89 @@ export type Database = {
             foreignKeyName: "milestones_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "crew_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milestones_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string
+          comment_id: string | null
+          company_id: string
+          created_at: string
+          event_id: string | null
+          id: string
+          kind: string
+          pushed_at: string | null
+          read_at: string | null
+          title: string
+          url: string
+          user_id: string
+        }
+        ComputedFields: never
+        Insert: {
+          body?: string
+          comment_id?: string | null
+          company_id: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          kind: string
+          pushed_at?: string | null
+          read_at?: string | null
+          title: string
+          url?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          comment_id?: string | null
+          company_id?: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          kind?: string
+          pushed_at?: string | null
+          read_at?: string | null
+          title?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -824,6 +1388,13 @@ export type Database = {
             foreignKeyName: "payments_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "crew_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -888,6 +1459,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "crew_projects"
             referencedColumns: ["id"]
           },
           {
@@ -1004,6 +1582,52 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          company_id: string
+          created_at: string
+          endpoint: string
+          id: string
+          keys: NonNullable<Json>
+          user_agent: string | null
+          user_id: string
+        }
+        ComputedFields: never
+        Insert: {
+          company_id: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          keys: NonNullable<Json>
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          keys?: NonNullable<Json>
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quotes: {
         Row: {
           approved_at: string | null
@@ -1058,6 +1682,250 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      record_views: {
+        Row: {
+          entity_id: string
+          entity_type: string
+          last_seen_at: string
+          user_id: string
+        }
+        ComputedFields: never
+        Insert: {
+          entity_id: string
+          entity_type: string
+          last_seen_at?: string
+          user_id: string
+        }
+        Update: {
+          entity_id?: string
+          entity_type?: string
+          last_seen_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "record_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scheduled_messages: {
+        Row: {
+          body: string
+          channel: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          lead_id: string | null
+          project_id: string | null
+          send_at: string
+          sent_at: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          body: string
+          channel: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lead_id?: string | null
+          project_id?: string | null
+          send_at: string
+          sent_at?: string | null
+        }
+        Update: {
+          body?: string
+          channel?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lead_id?: string | null
+          project_id?: string | null
+          send_at?: string
+          sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_messages_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_messages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_messages_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_messages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "crew_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_messages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_handoffs: {
+        Row: {
+          body: string
+          checklist: NonNullable<Json>
+          company_id: string
+          id: string
+          posted_at: string | null
+          publish_at: string | null
+          shift_date: string
+          shift_kind: string
+          user_id: string
+        }
+        ComputedFields: never
+        Insert: {
+          body?: string
+          checklist?: NonNullable<Json>
+          company_id: string
+          id?: string
+          posted_at?: string | null
+          publish_at?: string | null
+          shift_date: string
+          shift_kind: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          checklist?: NonNullable<Json>
+          company_id?: string
+          id?: string
+          posted_at?: string | null
+          publish_at?: string | null
+          shift_date?: string
+          shift_kind?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_handoffs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_handoffs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_visits: {
+        Row: {
+          appliances: NonNullable<Json>
+          ballpark_high_cents: number | null
+          ballpark_inputs: Json | null
+          ballpark_low_cents: number | null
+          checklist: NonNullable<Json>
+          client: NonNullable<Json>
+          company_id: string
+          completeness: number
+          id: string
+          lead_id: string
+          promised: string | null
+          scope: NonNullable<Json>
+          sketch_file_id: string | null
+          status: string
+          submitted_at: string | null
+          visited_at: string | null
+          visited_by: string[]
+          walls: NonNullable<Json>
+        }
+        ComputedFields: never
+        Insert: {
+          appliances?: NonNullable<Json>
+          ballpark_high_cents?: number | null
+          ballpark_inputs?: Json | null
+          ballpark_low_cents?: number | null
+          checklist?: NonNullable<Json>
+          client?: NonNullable<Json>
+          company_id: string
+          completeness?: number
+          id?: string
+          lead_id: string
+          promised?: string | null
+          scope?: NonNullable<Json>
+          sketch_file_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          visited_at?: string | null
+          visited_by?: string[]
+          walls?: NonNullable<Json>
+        }
+        Update: {
+          appliances?: NonNullable<Json>
+          ballpark_high_cents?: number | null
+          ballpark_inputs?: Json | null
+          ballpark_low_cents?: number | null
+          checklist?: NonNullable<Json>
+          client?: NonNullable<Json>
+          company_id?: string
+          completeness?: number
+          id?: string
+          lead_id?: string
+          promised?: string | null
+          scope?: NonNullable<Json>
+          sketch_file_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          visited_at?: string | null
+          visited_by?: string[]
+          walls?: NonNullable<Json>
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_visits_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_visits_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_visits_sketch_file_id_fkey"
+            columns: ["sketch_file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
             referencedColumns: ["id"]
           },
         ]
@@ -1217,6 +2085,13 @@ export type Database = {
             foreignKeyName: "tasks_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "crew_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -1225,6 +2100,7 @@ export type Database = {
       users: {
         Row: {
           active: boolean
+          avatar_url: string | null
           clerk_id: string
           company_id: string
           created_at: string
@@ -1232,12 +2108,14 @@ export type Database = {
           id: string
           is_default_owner: boolean
           name: string
+          notify_prefs: NonNullable<Json>
           phone: string | null
           role: string
         }
         ComputedFields: never
         Insert: {
           active?: boolean
+          avatar_url?: string | null
           clerk_id: string
           company_id: string
           created_at?: string
@@ -1245,11 +2123,13 @@ export type Database = {
           id?: string
           is_default_owner?: boolean
           name?: string
+          notify_prefs?: NonNullable<Json>
           phone?: string | null
           role?: string
         }
         Update: {
           active?: boolean
+          avatar_url?: string | null
           clerk_id?: string
           company_id?: string
           created_at?: string
@@ -1257,6 +2137,7 @@ export type Database = {
           id?: string
           is_default_owner?: boolean
           name?: string
+          notify_prefs?: NonNullable<Json>
           phone?: string | null
           role?: string
         }
@@ -1270,9 +2151,110 @@ export type Database = {
           },
         ]
       }
+      work_windows: {
+        Row: {
+          company_id: string
+          end_time: string
+          id: string
+          kind: string
+          start_time: string
+          user_id: string
+          weekday: number
+        }
+        ComputedFields: never
+        Insert: {
+          company_id: string
+          end_time: string
+          id?: string
+          kind: string
+          start_time: string
+          user_id: string
+          weekday: number
+        }
+        Update: {
+          company_id?: string
+          end_time?: string
+          id?: string
+          kind?: string
+          start_time?: string
+          user_id?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_windows_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_windows_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
-      [_ in never]: never
+      crew_projects: {
+        Row: {
+          closed_at: string | null
+          company_id: string | null
+          contact_id: string | null
+          created_at: string | null
+          id: string | null
+          name: string | null
+          project_manager_id: string | null
+          status: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          closed_at?: string | null
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          name?: string | null
+          project_manager_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          closed_at?: string | null
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          name?: string | null
+          project_manager_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_project_manager_id_fkey"
+            columns: ["project_manager_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       bootstrap_membership: {

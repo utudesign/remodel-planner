@@ -28,6 +28,13 @@ begin
     (u_f, c, 'seed_crew',    'Crew Lead (demo)',    'crew@example.com',    'crew',  false),
     ('00000000-0000-0000-0000-0000000000e1', c, 'seed_crystal', 'Crystal (demo)', 'crystal@example.com', 'owner', false);
 
+  -- Work windows (ET), FIELD-AND-OFFICE §2: admin split shift; owners' shared field time.
+  insert into public.work_windows (company_id, user_id, weekday, start_time, end_time, kind)
+  select c, u_d, d, time '11:00', time '15:00', 'live' from generate_series(1, 5) d
+  union all select c, u_d, d, time '23:00', time '03:00', 'back_office' from generate_series(1, 5) d
+  union all select c, '00000000-0000-0000-0000-0000000000e1', d, time '17:30', time '21:00', 'field' from generate_series(1, 5) d
+  union all select c, '00000000-0000-0000-0000-0000000000e1', d, time '09:00', time '18:00', 'field' from unnest(array[0, 6]) d;
+
   select id into s_new       from public.pipeline_stages where company_id = c and key = 'new';
   select id into s_contacted from public.pipeline_stages where company_id = c and key = 'contacted';
   select id into s_booked    from public.pipeline_stages where company_id = c and key = 'meeting_booked';

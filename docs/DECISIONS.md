@@ -133,3 +133,16 @@ payments schedule, close/margin lock screens) was removed; it's in git history b
 | Share link `/l/<slug>` and booking `/book/<token>` are public pages that write with the service role after validating the slug/token, a honeypot field and 5 submissions / hour / hashed IP | No anon database access at all; no CAPTCHA service (PLAN Q9) |
 | Booking slots: weekday 5:30–8:00 PM and Saturday 9–5, 90-minute visits, 30-minute drive buffer, nothing within 4 hours, Sundays off (Settings) | PLAN Q6 |
 | Pushes during the day job: only new leads; everything else is held and goes out with the 3:30 PM run. The push carries the unread count for the home-screen badge | PLAN Q2: iOS doesn't allow silent web pushes |
+
+### Step 3: visit, photos, quick estimate
+
+| Decision | Why |
+| --- | --- |
+| Photos go phone → IndexedDB queue → signed upload URL → `deal_files` row (`confirmUpload` checks the bytes exist first); a pill shows "N photos uploading / waiting for signal" | "Photos never lost"; also avoids Vercel's 4.5 MB request cap |
+| Photos are resized to 2560 px JPEG (0.82) on the phone; re-encoding drops EXIF, so GPS never leaves the phone. Capture time comes from EXIF `DateTimeOriginal` read before resizing (`lib/exif.ts`, no library) | DEALS §4 without a HEIC/EXIF dependency. No 400 px thumbnails yet (Supabase image transforms are a paid add-on) |
+| Site visit "Visit done" writes two small text files into the jacket (measurements → design, appliance list → other) linked to the hand-off checklist items | The hand-off gate counts files per requirement; this satisfies it from the form without retyping |
+| Required-photo checklist on the visit = tags: 4× before (walls/ceiling/floor), panel, under sink, appliance labels, sketch | SALES-REP-MODE §4 |
+| Quick estimate changes save on every tap (server action) and totals come from the `quote_totals` / `quote_section_totals` views | Views are the source of truth (PROMPT-estimating rules). Client-side live preview with `quoteTotals()` can be added if signal is too weak at houses |
+| "Show the client" numbers the estimate once (`share_quote()` → `26-1047-E1`), marks it sent, and updates the deal's value | DEALS §1 document numbers |
+| Client view `/q/<token>`: section totals only, no tax line (tax sits inside the absorbing section), "Estimate. Final price and contract from RenoDesign Inc." + license number, valid 30 days. PDF = the phone's Print → Save as PDF | No PDF library yet (PLAN Q4); a one-tap PDF comes with the hand-off packet |
+| `supabase/seed_timberpeak_demo.sql` = the price list import with the demo company id filled in | `supabase db reset` can't pass psql variables |

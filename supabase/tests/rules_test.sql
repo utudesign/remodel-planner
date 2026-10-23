@@ -197,5 +197,36 @@ do $$ begin
   raise notice 'OK: share link per account, owner-only; booking tokens unique';
 end $$;
 
+-- 7. Quick estimate (0002/0003 + 0009) ----------------------------------------------
+reset role;
+set role authenticated;
+select pg_temp.act_as('seed_tugu');
+do $$
+declare
+  v_deal uuid := '00000000-0000-0000-0000-0000000000d5';  -- Patel
+  v_q uuid; v_g1 uuid; v_line uuid; v_qz3 uuid; v_doc text; v_doc2 text; t record; missing int;
+begin
+  v_q := public.create_quote_from_template(v_deal, (select id from public.quote_templates limit 1), 'Quick estimate');
+  select id into v_g1 from public.catalog_collections order by sort_order limit 1;
+  select count(*) filter (where status <> 'swapped') into missing from public.set_quote_collection(v_q, v_g1);
+  select id into v_line from public.quote_line_items where quote_id = v_q and code like 'QZ%' limit 1;
+  select id into v_qz3 from public.catalog_items where code = 'QZ3';
+  perform public.swap_line_item(v_line, v_qz3);
+  select * into t from public.quote_totals where quote_id = v_q;
+  if t.total_price_cents <= 0 then raise exception 'estimate total'; end if;
+  v_doc := public.share_quote(v_q);
+  v_doc2 := public.share_quote(v_q);
+  if v_doc !~ '^\d{2}-\d{4}-E1$' or v_doc <> v_doc2 then raise exception 'doc number % / %', v_doc, v_doc2; end if;
+  if (select status from public.quotes where id = v_q) <> 'sent' then raise exception 'shared quote is sent'; end if;
+  raise notice 'OK: quick estimate % = % (group 1, Level 3 quartz, % codes missing in group)', v_doc, t.total_price_cents, missing;
+end $$;
+select pg_temp.act_as('seed_crystal');
+do $$ begin
+  if (select count(*) from public.quotes) + (select count(*) from public.quote_line_items) <> 0 then
+    raise exception 'partner sees my estimates'; end if;
+  raise notice 'OK: partner never sees my estimates';
+end $$;
+select pg_temp.expect_error($$select public.share_quote((select id from public.quotes limit 1))$$, 'Only the owner%');
+
 reset role;
 \echo ALL RULE TESTS PASSED

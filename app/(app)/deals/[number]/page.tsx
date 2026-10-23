@@ -13,7 +13,10 @@ import {
   StageForm,
 } from "@/components/deals/jacket-forms";
 import { UploadButton } from "@/components/deals/upload-button";
+import { PhotoCapture } from "@/components/photos/photo-capture";
 import { AutoReplyCard } from "@/components/deals/auto-reply-card";
+import { NewEstimateForm } from "@/components/estimates/builder";
+import { getTemplates, listQuotes } from "@/server/queries/estimates";
 import { CopyButton } from "@/components/shared/copy-button";
 import { appUrl } from "@/lib/app-url";
 import { fillAutoReply } from "@/lib/leads/auto-reply";
@@ -235,7 +238,7 @@ export default async function DealJacket({
               </CardContent>
             </Card>
 
-            <Visits dealId={deal.id} tz={s.timezone} minutes={s.settings.booking.minutes} bookingLink={bookingLink} />
+            <Visits dealId={deal.id} number={deal.deal_number} tz={s.timezone} minutes={s.settings.booking.minutes} bookingLink={bookingLink} />
 
             <Card>
               <CardHeader>
@@ -261,14 +264,17 @@ export default async function DealJacket({
           </>
         ) : null}
 
-        {tab === "estimate" ? (
-          <EmptyState
-            title="Quick estimate"
-            description="The phone estimate builder (template → measure → color group → quartz → items) is the next build step. Until then, put a rough value under Overview → Qualify."
+        {tab === "estimate" ? <EstimateTab dealId={deal.id} number={deal.deal_number} /> : null}
+
+        {tab === "photos" ? (
+          <PhotosTab
+            dealId={deal.id}
+            number={deal.deal_number}
+            files={photos}
+            companyId={s.companyId}
+            requirementId={checklist.find((i) => i.folder === "photos")?.requirement_id ?? null}
           />
         ) : null}
-
-        {tab === "photos" ? <PhotosTab dealId={deal.id} files={photos} companyId={s.companyId} /> : null}
 
         {tab === "files" ? (
           <FilesTab dealId={deal.id} files={files} checklist={checklist} companyId={s.companyId} />
@@ -393,7 +399,19 @@ function Checklist({ items, dealId }: { items: ChecklistItem[]; dealId: string }
   );
 }
 
-async function Visits({ dealId, tz, minutes, bookingLink }: { dealId: string; tz: string; minutes: number; bookingLink: string }) {
+async function Visits({
+  dealId,
+  number,
+  tz,
+  minutes,
+  bookingLink,
+}: {
+  dealId: string;
+  number: string;
+  tz: string;
+  minutes: number;
+  bookingLink: string;
+}) {
   const s = await requireOwner();
   const meetings = await getMeetings(s, dealId);
   const upcoming = meetings.filter((m) => m.status === "scheduled");
@@ -421,6 +439,12 @@ async function Visits({ dealId, tz, minutes, bookingLink }: { dealId: string; tz
             </p>
           ))}
         <BookVisitForm dealId={dealId} minutes={minutes} />
+        <Link
+          href={`/deals/${number}/visit`}
+          className="flex h-12 items-center justify-center rounded-xl bg-primary font-semibold text-primary-foreground"
+        >
+          Open the site visit form
+        </Link>
         <div className="flex items-center justify-between gap-2 rounded-xl bg-secondary p-3">
           <p className="min-w-0 text-sm">
             <span className="block font-medium">Client booking link</span>
@@ -433,14 +457,26 @@ async function Visits({ dealId, tz, minutes, bookingLink }: { dealId: string; tz
   );
 }
 
-async function PhotosTab({ dealId, files, companyId }: { dealId: string; files: Awaited<ReturnType<typeof getDealFiles>>; companyId: string }) {
+async function PhotosTab({
+  dealId,
+  number,
+  files,
+  companyId,
+  requirementId,
+}: {
+  dealId: string;
+  number: string;
+  files: Awaited<ReturnType<typeof getDealFiles>>;
+  companyId: string;
+  requirementId: string | null;
+}) {
   const urls = await signedUrls(files.map((f) => f.storage_path), companyId);
   const groups = PHOTO_TAGS.map((t) => ({ ...t, items: files.filter((f) => (f.photo_tag ?? "other") === t.key) })).filter(
     (g) => g.items.length,
   );
   return (
     <>
-      <UploadButton dealId={dealId} folder="photos" label="Take photos" showTag />
+      <PhotoCapture dealId={dealId} dealNumber={number} requirementId={requirementId} />
       {files.length === 0 ? (
         <EmptyState title="No photos yet" description="Every wall, ceiling, floor, the panel and under the sink." />
       ) : (
@@ -571,6 +607,44 @@ async function ActivityTab({ dealId, tz }: { dealId: string; tz: string }) {
           ))}
         </ol>
       )}
+    </>
+  );
+}
+
+async function EstimateTab({ dealId, number }: { dealId: string; number: string }) {
+  const s = await requireOwner();
+  const [quotes, templates] = await Promise.all([listQuotes(s, dealId), getTemplates(s)]);
+  return (
+    <>
+      {quotes.length ? (
+        <ul className="flex flex-col gap-2">
+          {quotes.map((q) => (
+            <li key={q.id}>
+              <Link
+                href={`/deals/${number}/estimate/${q.id}`}
+                className="flex items-center justify-between gap-3 rounded-2xl bg-card p-4 ring-1 ring-border"
+              >
+                <span>
+                  <span className="block font-semibold">{q.doc_number ?? `Draft v${q.version}`}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {q.name ?? "Estimate"} · {q.status}
+                    {q.totals ? ` · ${Math.round(Number(q.totals.gross_margin) * 1000) / 10}% margin` : ""}
+                  </span>
+                </span>
+                <span className="text-lg font-bold tabular-nums">{q.totals ? formatCentsWhole(q.totals.total_price_cents) : "—"}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <Card>
+        <CardHeader>
+          <CardTitle>{quotes.length ? "Another estimate" : "Quick estimate"}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <NewEstimateForm dealId={dealId} templates={templates} />
+        </CardContent>
+      </Card>
     </>
   );
 }

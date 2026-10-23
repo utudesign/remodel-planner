@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Calculator, Camera, ClipboardPaste, PhoneCall, PhoneMissed, Plus, UserPlus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,8 @@ const ACTIONS = [
 
 export function Fab() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  if (pathname.includes("/estimate/") || pathname.includes("/visit")) return null; // those screens have their own bottom bar
   return (
     <div className="fixed right-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-40 lg:bottom-6">
       {open ? (

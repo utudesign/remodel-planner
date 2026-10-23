@@ -40,7 +40,7 @@ echo "== pass 2: all migrations + seed + rules_test"
 fresh rp_rules
 args=(-f test/0000_supabase_internals.sql)
 for f in $M/*.sql; do args+=(-f "$f"); done
-args+=(-f supabase/seed.sql -f supabase/tests/rules_test.sql)
+args+=(-f supabase/seed.sql -f supabase/seed_timberpeak_demo.sql -f supabase/tests/rules_test.sql)
 $PSQL -d rp_rules "${args[@]}" > "$OUT/rules.txt" 2>&1
 rc=$?
 if [ $rc -ne 0 ] || grep -qE 'FAIL|ERROR' "$OUT/rules.txt"; then

@@ -2881,17 +2881,20 @@ export type Database = {
           approved_at: string | null
           approved_cost_cents: number | null
           approved_price_cents: number | null
+          client_token: string
           collection_id: string | null
           company_id: string
           contingency_rate: number
           created_at: string
           created_by: string | null
           deal_id: string
+          doc_number: string | null
           file_url: string | null
           id: string
           labor_rate_cents: number
           name: string | null
           sent_at: string | null
+          site_visit_id: string | null
           status: string
           takeoff: NonNullable<Json>
           target_margin: number
@@ -2905,17 +2908,20 @@ export type Database = {
           approved_at?: string | null
           approved_cost_cents?: number | null
           approved_price_cents?: number | null
+          client_token?: string
           collection_id?: string | null
           company_id: string
           contingency_rate: number
           created_at?: string
           created_by?: string | null
           deal_id: string
+          doc_number?: string | null
           file_url?: string | null
           id?: string
           labor_rate_cents: number
           name?: string | null
           sent_at?: string | null
+          site_visit_id?: string | null
           status?: string
           takeoff?: NonNullable<Json>
           target_margin: number
@@ -2928,17 +2934,20 @@ export type Database = {
           approved_at?: string | null
           approved_cost_cents?: number | null
           approved_price_cents?: number | null
+          client_token?: string
           collection_id?: string | null
           company_id?: string
           contingency_rate?: number
           created_at?: string
           created_by?: string | null
           deal_id?: string
+          doc_number?: string | null
           file_url?: string | null
           id?: string
           labor_rate_cents?: number
           name?: string | null
           sent_at?: string | null
+          site_visit_id?: string | null
           status?: string
           takeoff?: NonNullable<Json>
           target_margin?: number
@@ -3005,6 +3014,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "quotes_site_visit_id_fkey"
+            columns: ["site_visit_id"]
+            isOneToOne: false
+            referencedRelation: "site_visits"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "quotes_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
@@ -3018,6 +3034,7 @@ export type Database = {
           appliances: NonNullable<Json>
           ballpark_high_cents: number | null
           ballpark_low_cents: number | null
+          ceiling_in: number | null
           checklist: NonNullable<Json>
           company_id: string | null
           created_at: string
@@ -3034,6 +3051,7 @@ export type Database = {
           appliances?: NonNullable<Json>
           ballpark_high_cents?: number | null
           ballpark_low_cents?: number | null
+          ceiling_in?: number | null
           checklist?: NonNullable<Json>
           company_id?: string | null
           created_at?: string
@@ -3049,6 +3067,7 @@ export type Database = {
           appliances?: NonNullable<Json>
           ballpark_high_cents?: number | null
           ballpark_low_cents?: number | null
+          ceiling_in?: number | null
           checklist?: NonNullable<Json>
           company_id?: string | null
           created_at?: string
@@ -3961,6 +3980,7 @@ export type Database = {
           status: string
         }[]
       }
+      share_quote: { Args: { p_quote_id: string }; Returns: string }
       swap_line_item: {
         Args: { p_catalog_item_id: string; p_line_id: string }
         Returns: undefined

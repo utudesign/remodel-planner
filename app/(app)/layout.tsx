@@ -3,6 +3,7 @@ import { UserButton } from "@clerk/nextjs";
 import { Bell } from "lucide-react";
 import { BottomNav, SidebarNav } from "@/components/shared/nav";
 import { Fab } from "@/components/shared/fab";
+import { PhotoQueueRunner } from "@/components/photos/photo-queue-runner";
 import { TAB_ITEMS } from "@/lib/nav";
 import { getSession } from "@/lib/auth/require-role";
 
@@ -60,6 +61,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-5 pb-40 lg:px-8 lg:pt-8 lg:pb-12">{children}</main>
       </div>
       {s.role === "owner" ? <Fab /> : null}
+      {s.role === "owner" ? <PhotoQueueRunner /> : null}
       <BottomNav items={TAB_ITEMS} />
     </div>
   );

@@ -297,6 +297,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
                   messages={must(messages)}
                   tz={s.timezone}
                   quietNow={isQuietHours(now, s.rules, s.timezone)}
+                  nowIso={now.toISOString()}
                 />
               </CardContent>
             </Card>

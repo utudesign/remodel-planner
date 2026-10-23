@@ -17,18 +17,16 @@ export async function savePushSubscription(input: z.input<typeof subSchema>): Pr
     const v = subSchema.parse(input);
     const s = await requireRole("owner", "team", "crew");
     ok(
-      await s.db
-        .from("push_subscriptions")
-        .upsert(
-          {
-            company_id: s.companyId,
-            user_id: s.userId,
-            endpoint: v.endpoint,
-            keys: v.keys,
-            user_agent: v.userAgent ?? null,
-          },
-          { onConflict: "endpoint" },
-        ),
+      await s.db.from("push_subscriptions").upsert(
+        {
+          company_id: s.companyId,
+          user_id: s.userId,
+          endpoint: v.endpoint,
+          keys: v.keys,
+          user_agent: v.userAgent ?? null,
+        },
+        { onConflict: "endpoint" },
+      ),
     );
     return { ok: true, message: "Notifications on for this phone" };
   });

@@ -84,17 +84,15 @@ export async function createLead(_: ActionState, fd: FormData): Promise<ActionSt
     if (photos.length) {
       const paths = await uploadImages(photos, s.companyId, `leads/${lead.id}`);
       ok(
-        await s.db
-          .from("files")
-          .insert(
-            paths.map((path) => ({
-              company_id: s.companyId,
-              lead_id: lead.id,
-              kind: "photo",
-              path,
-              uploaded_by: s.userId,
-            })),
-          ),
+        await s.db.from("files").insert(
+          paths.map((path) => ({
+            company_id: s.companyId,
+            lead_id: lead.id,
+            kind: "photo",
+            path,
+            uploaded_by: s.userId,
+          })),
+        ),
       );
     }
     newId = lead.id;

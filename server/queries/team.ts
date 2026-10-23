@@ -38,14 +38,12 @@ export async function getComments(
 
 /** Remember when I last looked at a record (unread dots). Called during render, non-blocking. */
 export async function recordView(s: Session, entityType: "lead" | "project", entityId: string) {
-  await s.db
-    .from("record_views")
-    .upsert({
-      user_id: s.userId,
-      entity_type: entityType,
-      entity_id: entityId,
-      last_seen_at: new Date().toISOString(),
-    });
+  await s.db.from("record_views").upsert({
+    user_id: s.userId,
+    entity_type: entityType,
+    entity_id: entityId,
+    last_seen_at: new Date().toISOString(),
+  });
 }
 
 /**

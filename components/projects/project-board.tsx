@@ -16,6 +16,7 @@ import {
 import { AlertTriangle, CalendarClock, OctagonX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ErrorState } from "@/components/shared/states";
+import { Avatar } from "@/components/shared/avatar";
 import { formatDate, relativeDays } from "@/lib/dates";
 import { formatCentsWhole } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -29,12 +30,15 @@ export function ProjectBoard({
   projects: initial,
   today,
   canDrag,
+  unread = [],
 }: {
   columns: Column[];
   projects: BoardProject[];
   today: string;
   canDrag: boolean;
+  unread?: string[];
 }) {
+  const unreadSet = useMemo(() => new Set(unread), [unread]);
   const [projects, setProjects] = useState(initial);
   const [prev, setPrev] = useState(initial);
   if (prev !== initial) {
@@ -112,7 +116,7 @@ export function ProjectBoard({
               {(byColumn.get(c.key) ?? []).map((p) =>
                 canDrag ? (
                   <Draggable key={p.id} id={p.id}>
-                    <ProjectCard project={p} today={today} />
+                    <ProjectCard project={p} today={today} unread={unreadSet.has(p.id)} />
                   </Draggable>
                 ) : (
                   <ProjectCard key={p.id} project={p} today={today} />
@@ -182,20 +186,41 @@ function Draggable({ id, children }: { id: string; children: React.ReactNode }) 
   );
 }
 
-export function ProjectCard({ project: p, today }: { project: BoardProject; today: string }) {
+export function ProjectCard({
+  project: p,
+  today,
+  unread = false,
+}: {
+  project: BoardProject;
+  today: string;
+  unread?: boolean;
+}) {
   const planned = p.current?.planned_date ?? null;
   const late = planned !== null && planned < today;
   const delivery = p.milestones.find((m) => m.key === "materials_delivered");
   const deliveryOverdue =
     !!delivery?.planned_date && !delivery.actual_date && delivery.planned_date < today;
   return (
-    <article className="rounded-lg border bg-card p-3 shadow-xs">
-      <Link href={`/projects/${p.id}`} className="font-medium leading-tight hover:underline">
-        {p.name}
-      </Link>
+    <article className="relative rounded-lg border bg-card p-3 shadow-xs">
+      {unread ? (
+        <span
+          aria-label="Updated"
+          className="absolute top-2 -left-1 size-2.5 rounded-full bg-primary"
+        />
+      ) : null}
+      <div className="flex items-start justify-between gap-2">
+        <Link
+          href={`/projects/${p.id}`}
+          className="min-w-0 font-medium leading-tight hover:underline"
+        >
+          {p.name}
+        </Link>
+        <Avatar id={p.manager?.id} name={p.manager?.name ?? "No PM"} />
+      </div>
       <p className="text-xs text-muted-foreground">
         {p.client}
-        {p.city ? ` · ${p.city}` : ""} · {formatCentsWhole(p.contract_value_cents)}
+        {p.city ? ` · ${p.city}` : ""}
+        {p.balanceDueCents !== null ? ` · balance ${formatCentsWhole(p.balanceDueCents)}` : ""}
       </p>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {planned ? (

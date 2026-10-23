@@ -7,12 +7,17 @@ import { formatDateTime, todayIn } from "@/lib/dates";
 import { formatBps } from "@/lib/money";
 import { getBoardProjects } from "@/server/queries/projects";
 import { getMilestoneDefinitions } from "@/server/queries/settings";
+import { getUnread } from "@/server/queries/team";
 
-export const metadata = { title: "Projects" };
+export const metadata = { title: "Jobs" };
 
 export default async function ProjectsPage() {
   const s = await getSession();
-  const [projects, defs] = await Promise.all([getBoardProjects(s), getMilestoneDefinitions(s)]);
+  const [projects, defs, unread] = await Promise.all([
+    getBoardProjects(s),
+    getMilestoneDefinitions(s),
+    getUnread(s),
+  ]);
   const active = projects.filter((p) => p.status === "active");
   const closed = projects.filter((p) => p.status === "closed").slice(0, 10);
   const columns = defs
@@ -23,7 +28,7 @@ export default async function ProjectsPage() {
   return (
     <>
       <PageHeader
-        title="Projects"
+        title="Jobs"
         description={
           canDrag
             ? `${active.length} active. Each column is the next step; drag a card when a step is done.`
@@ -52,6 +57,7 @@ export default async function ProjectsPage() {
           projects={active}
           today={todayIn(s.timezone)}
           canDrag={canDrag}
+          unread={[...unread.projects]}
         />
       )}
 

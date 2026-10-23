@@ -23,6 +23,7 @@ export function ScheduleMessage({
   messages,
   tz,
   quietNow,
+  nowIso,
 }: {
   leadId: string;
   phone: string | null;
@@ -30,11 +31,12 @@ export function ScheduleMessage({
   messages: Msg[];
   tz: string;
   quietNow: boolean;
+  nowIso: string;
 }) {
   const ref = useRef<HTMLFormElement>(null);
   const [state, action] = useActionWithSuccess(scheduleMessage, () => ref.current?.reset());
   const [pending, start] = useTransition();
-  const now = Date.now();
+  const now = new Date(nowIso).getTime();
   return (
     <div id="messages" className="flex flex-col gap-3">
       {quietNow ? (

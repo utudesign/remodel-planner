@@ -12,7 +12,7 @@ import {
   taskTemplateSchema,
 } from "@/lib/validation/settings";
 import { formToObject, must, ok, run, type ActionState } from "@/server/action-utils";
-import type { z } from "zod";
+import { z } from "zod";
 
 /** Stages the app's logic depends on (lead creation, reopen, booking, convert, lost). */
 const SYSTEM_STAGES = ["new", "contacted", "meeting_booked", "won", "lost"];
@@ -238,5 +238,100 @@ export async function saveCompany(_: ActionState, fd: FormData): Promise<ActionS
         .eq("id", s.companyId),
     );
     return done("/settings");
+  });
+}
+
+// ---------------------------------------------------------------- routing, quiet hours, alerts
+const hhmm = z.string().regex(/^\d{2}:\d{2}$/, "use HH:MM");
+
+const windowsSchema = z.object({
+  user_id: z.uuid(),
+  windows: z
+    .array(
+      z.object({
+        weekday: z.number().int().min(0).max(6),
+        start_time: hhmm,
+        end_time: hhmm,
+        kind: z.enum(["live", "back_office", "field"]),
+      }),
+    )
+    .max(40)
+    .refine(
+      (ws) => ws.every((w) => w.start_time !== w.end_time),
+      "start and end can't be the same",
+    ),
+});
+
+export async function saveWorkWindows(input: z.input<typeof windowsSchema>): Promise<ActionState> {
+  return run(async () => {
+    const v = windowsSchema.parse(input);
+    const s = await requireRole("owner");
+    ok(await s.db.from("work_windows").delete().eq("user_id", v.user_id));
+    if (v.windows.length) {
+      ok(
+        await s.db
+          .from("work_windows")
+          .insert(v.windows.map((w) => ({ ...w, user_id: v.user_id, company_id: s.companyId }))),
+      );
+    }
+    return done("/settings/routing");
+  });
+}
+
+const rulesSchema = z.object({
+  quiet_hours_start: hhmm,
+  quiet_hours_end: hhmm,
+  lead_response_minutes: z.coerce
+    .number()
+    .int()
+    .min(5)
+    .max(24 * 60),
+  design_due_days: z.coerce.number().int().min(1).max(30),
+  visit_buffer_minutes: z.coerce.number().int().min(0).max(180),
+});
+
+export async function saveRules(_: ActionState, fd: FormData): Promise<ActionState> {
+  return run(async () => {
+    const v = rulesSchema.parse(formToObject(fd));
+    const s = await requireRole("owner");
+    const current = must(
+      await s.db.from("companies").select("settings_json").eq("id", s.companyId).single(),
+    );
+    ok(
+      await s.db
+        .from("companies")
+        .update({
+          settings_json: { ...((current.settings_json as Record<string, unknown>) ?? {}), ...v },
+        })
+        .eq("id", s.companyId),
+    );
+    return done("/settings/routing");
+  });
+}
+
+const notifySchema = z.record(z.string().max(30), z.array(z.enum(["owner", "team", "crew"])));
+
+/** Company defaults: which roles get each kind (the lead owner / PM / mentioned person always do). */
+export async function saveNotifyDefaults(
+  input: z.input<typeof notifySchema>,
+): Promise<ActionState> {
+  return run(async () => {
+    const v = notifySchema.parse(input);
+    const s = await requireRole("owner");
+    const current = must(
+      await s.db.from("companies").select("settings_json").eq("id", s.companyId).single(),
+    );
+    ok(
+      await s.db
+        .from("companies")
+        .update({
+          settings_json: {
+            ...((current.settings_json as Record<string, unknown>) ?? {}),
+            notify: v,
+          },
+        })
+        .eq("id", s.companyId),
+    );
+    return done("/settings/routing");
   });
 }

@@ -35,7 +35,7 @@ create table public.users (
   unique (company_id, clerk_id)
 );
 create index users_clerk_id_idx on public.users (clerk_id);
--- At most one default lead owner per company.
+-- At most one default deal owner per company.
 create unique index users_one_default_owner on public.users (company_id) where is_default_owner;
 
 -- ---------------------------------------------------------------------------
@@ -147,7 +147,7 @@ create table public.contacts (
   created_at  timestamptz not null default now()
 );
 
-create table public.leads (
+create table public.deals (
   id                 uuid primary key default gen_random_uuid(),
   company_id         uuid not null references public.companies (id) on delete cascade,
   contact_id         uuid not null references public.contacts (id) on delete restrict,
@@ -167,13 +167,13 @@ create table public.leads (
   updated_at         timestamptz not null default now(),
   check (budget_min_cents is null or budget_max_cents is null or budget_min_cents <= budget_max_cents)
 );
-create index leads_company_stage_idx on public.leads (company_id, stage_id);
-create index leads_follow_up_idx on public.leads (company_id, next_follow_up_at);
+create index deals_company_stage_idx on public.deals (company_id, stage_id);
+create index deals_follow_up_idx on public.deals (company_id, next_follow_up_at);
 
 create table public.quotes (
   id               uuid primary key default gen_random_uuid(),
   company_id       uuid not null references public.companies (id) on delete cascade,
-  lead_id          uuid not null references public.leads (id) on delete cascade,
+  deal_id          uuid not null references public.deals (id) on delete cascade,
   version          int  not null default 1,
   line_items_json  jsonb not null default '[]'::jsonb,
   subtotal_cents   bigint not null default 0,
@@ -182,7 +182,7 @@ create table public.quotes (
   sent_at          timestamptz,
   approved_at      timestamptz,
   file_url         text,
-  unique (lead_id, version)
+  unique (deal_id, version)
 );
 
 -- ---------------------------------------------------------------------------
@@ -191,7 +191,7 @@ create table public.quotes (
 create table public.projects (
   id                    uuid primary key default gen_random_uuid(),
   company_id            uuid not null references public.companies (id) on delete cascade,
-  lead_id               uuid unique references public.leads (id) on delete set null,
+  deal_id               uuid unique references public.deals (id) on delete set null,
   contact_id            uuid not null references public.contacts (id) on delete restrict,
   name                  text not null,
   status                text not null default 'active' check (status in ('active', 'closed')),
@@ -293,34 +293,34 @@ create table public.costs (
 create index costs_project_idx on public.costs (project_id);
 
 -- ---------------------------------------------------------------------------
--- Activity + meetings (lead OR project)
+-- Activity + meetings (deal OR project)
 -- ---------------------------------------------------------------------------
 create table public.activities (
   id           uuid primary key default gen_random_uuid(),
   company_id   uuid not null references public.companies (id) on delete cascade,
-  lead_id      uuid references public.leads (id) on delete cascade,
+  deal_id      uuid references public.deals (id) on delete cascade,
   project_id   uuid references public.projects (id) on delete cascade,
   type         text not null check (type in ('call', 'text', 'email', 'fb_msg', 'meeting', 'note', 'stage_change', 'system')),
   direction    text check (direction in ('in', 'out')),
   summary      text not null default '',
   created_by   uuid references public.users (id) on delete set null,
   occurred_at  timestamptz not null default now(),
-  check (num_nonnulls(lead_id, project_id) >= 1)
+  check (num_nonnulls(deal_id, project_id) >= 1)
 );
-create index activities_lead_idx on public.activities (lead_id, occurred_at desc);
+create index activities_deal_idx on public.activities (deal_id, occurred_at desc);
 create index activities_project_idx on public.activities (project_id, occurred_at desc);
 
 create table public.meetings (
   id            uuid primary key default gen_random_uuid(),
   company_id    uuid not null references public.companies (id) on delete cascade,
-  lead_id       uuid references public.leads (id) on delete cascade,
+  deal_id       uuid references public.deals (id) on delete cascade,
   project_id    uuid references public.projects (id) on delete cascade,
   type          text not null check (type in ('initial', 'design_review', 'mid_check', 'final')),
   scheduled_at  timestamptz not null,
   status        text not null default 'scheduled' check (status in ('scheduled', 'done', 'canceled')),
   assignee_id   uuid references public.users (id) on delete set null,
   notes         text,
-  check (num_nonnulls(lead_id, project_id) >= 1)
+  check (num_nonnulls(deal_id, project_id) >= 1)
 );
 create index meetings_company_time_idx on public.meetings (company_id, scheduled_at);
 

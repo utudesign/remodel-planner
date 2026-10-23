@@ -1,11 +1,11 @@
 -- =============================================================================
 -- 0003 Business rules, automations and RPCs.
---   * Lead guards: follow-up required while open, lost reason required, won only via deposit.
+--   * Deal guards: follow-up required while open, lost reason required, won only via deposit.
 --   * Stage changes are logged as activities.
 --   * Milestone done → linked installment becomes "due".
 --   * All installments received → "Final Payment" milestone done.
 --   * Closed projects: only owners can edit children; every edit is audited.
---   * RPCs: convert_lead_to_project, move_project_to_milestone, close_project.
+--   * RPCs: convert_deal_to_project, move_project_to_milestone, close_project.
 --   * Company bootstrap + default settings (service role only).
 -- =============================================================================
 
@@ -23,9 +23,9 @@ language sql stable
 as $$ select (auth.jwt() ->> 'sub') is null $$;
 
 -- ---------------------------------------------------------------------------
--- Leads
+-- Deals
 -- ---------------------------------------------------------------------------
-create or replace function private.leads_guard() returns trigger
+create or replace function private.deals_guard() returns trigger
 language plpgsql security definer set search_path = ''
 as $$
 declare
@@ -63,8 +63,8 @@ begin
     end if;
     new.next_follow_up_at := null;
   elsif v_key = 'won' then
-    if not exists (select 1 from public.projects p where p.lead_id = new.id) then
-      raise exception 'A lead is won only when the deposit is recorded (Convert to project)'
+    if not exists (select 1 from public.projects p where p.deal_id = new.id) then
+      raise exception 'A deal is won only when the deposit is recorded (use “Deposit received”)'
         using errcode = 'check_violation';
     end if;
     new.next_follow_up_at := null;
@@ -72,30 +72,30 @@ begin
     new.lost_reason_id := null;
     new.lost_note := null;
     if new.next_follow_up_at is null then
-      raise exception 'Open leads need a next follow-up date' using errcode = 'check_violation';
+      raise exception 'Open deals need a next follow-up date' using errcode = 'check_violation';
     end if;
   end if;
   return new;
 end $$;
 
-create trigger leads_guard before insert or update on public.leads
-  for each row execute function private.leads_guard();
+create trigger deals_guard before insert or update on public.deals
+  for each row execute function private.deals_guard();
 
-create or replace function private.leads_log_stage_change() returns trigger
+create or replace function private.deals_log_stage_change() returns trigger
 language plpgsql security definer set search_path = ''
 as $$
 declare v_from text; v_to text;
 begin
   select label into v_from from public.pipeline_stages where id = old.stage_id;
   select label into v_to   from public.pipeline_stages where id = new.stage_id;
-  insert into public.activities (company_id, lead_id, type, summary, created_by)
+  insert into public.activities (company_id, deal_id, type, summary, created_by)
   values (new.company_id, new.id, 'stage_change', format('%s → %s', v_from, v_to), private.user_id());
   return null;
 end $$;
 
-create trigger leads_log_stage_change after update of stage_id on public.leads
+create trigger deals_log_stage_change after update of stage_id on public.deals
   for each row when (old.stage_id is distinct from new.stage_id)
-  execute function private.leads_log_stage_change();
+  execute function private.deals_log_stage_change();
 
 -- ---------------------------------------------------------------------------
 -- Payments ↔ milestones
@@ -201,11 +201,11 @@ create trigger users_audit_role after update of role on public.users
   execute function private.users_audit_role();
 
 -- ---------------------------------------------------------------------------
--- RPC: convert a lead into a project when the deposit arrives (atomic).
+-- RPC: convert a deal into a project when the deposit arrives (atomic).
 -- Installments are computed in TypeScript (lib/payment-schedule.ts) and re-checked here.
 -- ---------------------------------------------------------------------------
-create or replace function public.convert_lead_to_project(
-  p_lead_id              uuid,
+create or replace function public.convert_deal_to_project(
+  p_deal_id              uuid,
   p_name                 text,
   p_contract_value_cents bigint,
   p_payment_template_id  uuid,
@@ -220,7 +220,7 @@ create or replace function public.convert_lead_to_project(
 language plpgsql security invoker set search_path = ''
 as $$
 declare
-  v_lead     public.leads%rowtype;
+  v_deal     public.deals%rowtype;
   v_project  uuid;
   v_won      uuid;
   v_sum      bigint;
@@ -228,16 +228,16 @@ declare
   v_inst     jsonb;
   v_i        int := 0;
 begin
-  select * into v_lead from public.leads where id = p_lead_id for update;
-  if not found then raise exception 'Lead not found'; end if;
-  if not private.is_team(v_lead.company_id) then
+  select * into v_deal from public.deals where id = p_deal_id for update;
+  if not found then raise exception 'Deal not found'; end if;
+  if not private.is_team(v_deal.company_id) then
     raise exception 'Not allowed' using errcode = 'insufficient_privilege';
   end if;
-  if exists (select 1 from public.projects where lead_id = p_lead_id) then
-    raise exception 'This lead is already a project';
+  if exists (select 1 from public.projects where deal_id = p_deal_id) then
+    raise exception 'This deal already has a job started';
   end if;
-  if exists (select 1 from public.pipeline_stages where id = v_lead.stage_id and key = 'lost') then
-    raise exception 'Lost leads cannot be converted. Move it back to an open stage first.';
+  if exists (select 1 from public.pipeline_stages where id = v_deal.stage_id and key = 'lost') then
+    raise exception 'Lost deals cannot be converted. Move it back to an open stage first.';
   end if;
 
   select count(*), coalesce(sum((e ->> 'amount_cents')::bigint), 0)
@@ -247,23 +247,23 @@ begin
     raise exception 'Installments (% cents) must add up to the contract value (% cents)', v_sum, p_contract_value_cents;
   end if;
 
-  insert into public.projects (company_id, lead_id, contact_id, name, contract_value_cents,
+  insert into public.projects (company_id, deal_id, contact_id, name, contract_value_cents,
                                payment_template_id, project_manager_id)
-  values (v_lead.company_id, v_lead.id, v_lead.contact_id, p_name, p_contract_value_cents,
-          p_payment_template_id, coalesce(p_project_manager_id, v_lead.owner_id))
+  values (v_deal.company_id, v_deal.id, v_deal.contact_id, p_name, p_contract_value_cents,
+          p_payment_template_id, coalesce(p_project_manager_id, v_deal.owner_id))
   returning id into v_project;
 
   insert into public.milestones (company_id, project_id, key, name, sort_order, planned_date, actual_date)
-  select v_lead.company_id, v_project, d.key, d.label, d.sort_order,
+  select v_deal.company_id, v_project, d.key, d.label, d.sort_order,
          case when d.key = 'project_start' then p_planned_start_date end,
          case when d.key = 'deposit_received' then p_deposit_received_on end
-    from public.milestone_definitions d where d.company_id = v_lead.company_id;
+    from public.milestone_definitions d where d.company_id = v_deal.company_id;
 
   if p_task_template_id is not null then
     insert into public.tasks (company_id, project_id, milestone_id, title, kind, sort_order)
-    select v_lead.company_id, v_project, m.id, i.title, i.kind, i.sort_order
+    select v_deal.company_id, v_project, m.id, i.title, i.kind, i.sort_order
       from public.task_template_items i
-      join public.task_templates t on t.id = i.template_id and t.company_id = v_lead.company_id
+      join public.task_templates t on t.id = i.template_id and t.company_id = v_deal.company_id
       left join public.milestones m on m.project_id = v_project and m.key = i.milestone_key
      where i.template_id = p_task_template_id;
   end if;
@@ -273,21 +273,21 @@ begin
     if v_i = 1 then
       insert into public.payments (company_id, project_id, label, amount_cents, due_trigger, due_date,
                                    received_on, method, check_number, status, sort_order)
-      values (v_lead.company_id, v_project, v_inst ->> 'label', (v_inst ->> 'amount_cents')::bigint,
+      values (v_deal.company_id, v_project, v_inst ->> 'label', (v_inst ->> 'amount_cents')::bigint,
               'deposit_received', p_deposit_received_on, p_deposit_received_on, p_deposit_method,
               nullif(p_deposit_check_number, ''), 'received', v_i);
     else
       insert into public.payments (company_id, project_id, label, amount_cents, due_trigger, status, sort_order)
-      values (v_lead.company_id, v_project, v_inst ->> 'label', (v_inst ->> 'amount_cents')::bigint,
+      values (v_deal.company_id, v_project, v_inst ->> 'label', (v_inst ->> 'amount_cents')::bigint,
               nullif(v_inst ->> 'due_trigger', ''), 'pending', v_i);
     end if;
   end loop;
 
-  select id into v_won from public.pipeline_stages where company_id = v_lead.company_id and key = 'won';
-  update public.leads set stage_id = v_won where id = v_lead.id;
+  select id into v_won from public.pipeline_stages where company_id = v_deal.company_id and key = 'won';
+  update public.deals set stage_id = v_won where id = v_deal.id;
 
-  insert into public.activities (company_id, lead_id, project_id, type, summary, created_by)
-  values (v_lead.company_id, v_lead.id, v_project, 'system',
+  insert into public.activities (company_id, deal_id, project_id, type, summary, created_by)
+  values (v_deal.company_id, v_deal.id, v_project, 'system',
           'Deposit received. Project created.', private.user_id());
 
   return v_project;
@@ -390,7 +390,7 @@ end $$;
 -- The closed-guard skips projects whose OLD status is active, and milestone updates above run
 -- after status = 'closed' — let the owner's closing write through (it is audited, which is fine).
 
-grant execute on function public.convert_lead_to_project(uuid, text, bigint, uuid, uuid, jsonb, date, text, text, date, uuid) to authenticated;
+grant execute on function public.convert_deal_to_project(uuid, text, bigint, uuid, uuid, jsonb, date, text, text, date, uuid) to authenticated;
 grant execute on function public.move_project_to_milestone(uuid, text) to authenticated;
 grant execute on function public.close_project(uuid) to authenticated;
 
@@ -409,7 +409,7 @@ begin
   end if;
 
   insert into public.pipeline_stages (company_id, key, label, sort_order) values
-    (p_company, 'new',             'New Lead',               1),
+    (p_company, 'new',             'New Deal',               1),
     (p_company, 'contacted',       'Contacted / Qualifying', 2),
     (p_company, 'meeting_booked',  'Meeting Booked',         3),
     (p_company, 'meeting_done',    'Initial Meeting Done',   4),
@@ -511,6 +511,7 @@ begin
     ) as t(title, mk, ord);
 
   perform v_stage; -- silence unused warning
+  perform public.seed_default_deal_jacket(p_company);  -- defined in 0005
 end $$;
 
 revoke execute on function public.seed_company_defaults(uuid) from public, anon, authenticated;
@@ -519,7 +520,7 @@ grant execute on function public.seed_company_defaults(uuid) to service_role;
 -- ---------------------------------------------------------------------------
 -- Clerk → DB bootstrap (webhook + first sign-in). Service role only.
 -- Creates the company (with defaults) if needed and upserts the member.
--- The first member of a company becomes owner + default lead owner.
+-- The first member of a company becomes owner + default deal owner.
 -- Existing roles are never overwritten (DB is the source of truth for roles).
 -- ---------------------------------------------------------------------------
 create or replace function public.bootstrap_membership(

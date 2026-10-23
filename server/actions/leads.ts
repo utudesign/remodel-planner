@@ -18,16 +18,16 @@ import {
 import { formToObject, maybe, must, ok, run, type ActionState } from "@/server/action-utils";
 import { countOutboundSince } from "@/server/queries/leads";
 import { routeNewLead, nextSendTime } from "@/lib/routing";
-import { uploadImages } from "@/lib/storage";
+import { uploadDealFiles } from "@/lib/storage";
 import { flushNotifications } from "@/server/push";
 import { getFollowUpRules } from "@/server/queries/settings";
 
 const TEAM_ROLES = ["owner", "team"] as const;
 
 function revalidateLead(leadId?: string) {
-  revalidatePath("/leads");
+  revalidatePath("/deals", "layout");
   revalidatePath("/today");
-  if (leadId) revalidatePath(`/leads/${leadId}`);
+  if (leadId) revalidatePath("/deals", "layout");
 }
 
 export async function createLead(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -63,7 +63,7 @@ export async function createLead(_: ActionState, fd: FormData): Promise<ActionSt
     // next_follow_up_at (now + 1h, rule 6) is set by the DB.
     const lead = must(
       await s.db
-        .from("leads")
+        .from("deals")
         .insert({
           company_id: s.companyId,
           contact_id: contact.id,
@@ -82,24 +82,16 @@ export async function createLead(_: ActionState, fd: FormData): Promise<ActionSt
     );
     const photos = fd.getAll("photos").filter((f): f is File => f instanceof File && f.size > 0);
     if (photos.length) {
-      const paths = await uploadImages(photos, s.companyId, `leads/${lead.id}`);
-      ok(
-        await s.db.from("files").insert(
-          paths.map((path) => ({
-            company_id: s.companyId,
-            lead_id: lead.id,
-            kind: "photo",
-            path,
-            uploaded_by: s.userId,
-          })),
-        ),
+      const deal = must(
+        await s.db.from("deals").select("id, company_id, deal_year, deal_number").eq("id", lead.id).single(),
       );
+      await uploadDealFiles(s.db, deal, photos, { folder: "photos", photoTag: "other", title: "Message screenshot" });
     }
     newId = lead.id;
     after(() => flushNotifications(s.companyId));
     revalidateLead();
   });
-  if (res?.ok && newId) redirect(`/leads/${newId}`);
+  if (res?.ok && newId) redirect(`/deal/${newId}`);
   return res;
 }
 
@@ -122,7 +114,7 @@ export async function updateLead(_: ActionState, fd: FormData): Promise<ActionSt
     );
     ok(
       await s.db
-        .from("leads")
+        .from("deals")
         .update({
           source: v.source,
           scope: v.scope ?? null,
@@ -132,9 +124,9 @@ export async function updateLead(_: ActionState, fd: FormData): Promise<ActionSt
           notes: v.notes,
           owner_id: v.owner_id,
         })
-        .eq("id", v.lead_id),
+        .eq("id", v.deal_id),
     );
-    revalidateLead(v.lead_id);
+    revalidateLead(v.deal_id);
     return { ok: true, message: "Saved" };
   });
 }
@@ -147,7 +139,7 @@ export async function logActivity(_: ActionState, fd: FormData): Promise<ActionS
     ok(
       await s.db.from("activities").insert({
         company_id: s.companyId,
-        lead_id: v.lead_id,
+        deal_id: v.deal_id,
         type: v.type,
         direction: v.type === "note" ? null : (v.direction ?? "out"),
         summary: v.summary ?? "",
@@ -156,20 +148,20 @@ export async function logActivity(_: ActionState, fd: FormData): Promise<ActionS
     );
     ok(
       await s.db
-        .from("leads")
+        .from("deals")
         .update({
           next_follow_up_at: datetimeLocalToUtc(v.next_follow_up_at, s.timezone).toISOString(),
         })
-        .eq("id", v.lead_id),
+        .eq("id", v.deal_id),
     );
-    revalidateLead(v.lead_id);
+    revalidateLead(v.deal_id);
     return { ok: true, message: "Logged" };
   });
 }
 
 /** Drag on the board / stage picker. Won and Lost have their own flows. */
 export async function moveLeadStage(input: {
-  lead_id: string;
+  deal_id: string;
   stage_id: string;
 }): Promise<ActionState> {
   return run(async () => {
@@ -194,11 +186,11 @@ export async function moveLeadStage(input: {
     });
     ok(
       await s.db
-        .from("leads")
+        .from("deals")
         .update({ stage_id: stage.id, next_follow_up_at: next.toISOString() })
-        .eq("id", v.lead_id),
+        .eq("id", v.deal_id),
     );
-    revalidateLead(v.lead_id);
+    revalidateLead(v.deal_id);
     return { ok: true, message: `Moved to ${stage.label}` };
   });
 }
@@ -210,23 +202,23 @@ export async function markLost(_: ActionState, fd: FormData): Promise<ActionStat
     const lost = must(await s.db.from("pipeline_stages").select("id").eq("key", "lost").single());
     ok(
       await s.db
-        .from("leads")
+        .from("deals")
         .update({ stage_id: lost.id, lost_reason_id: v.lost_reason_id, lost_note: v.lost_note })
-        .eq("id", v.lead_id),
+        .eq("id", v.deal_id),
     );
-    revalidateLead(v.lead_id);
+    revalidateLead(v.deal_id);
     return { ok: true, message: "Marked lost" };
   });
 }
 
-export async function reopenLead(input: { lead_id: string }): Promise<ActionState> {
+export async function reopenLead(input: { deal_id: string }): Promise<ActionState> {
   return run(async () => {
-    const v = moveStageSchema.pick({ lead_id: true }).parse(input);
+    const v = moveStageSchema.pick({ deal_id: true }).parse(input);
     const s = await requireRole(...TEAM_ROLES);
     const contacted = must(
       await s.db.from("pipeline_stages").select("id").eq("key", "contacted").single(),
     );
-    return moveLeadStage({ lead_id: v.lead_id, stage_id: contacted.id });
+    return moveLeadStage({ deal_id: v.deal_id, stage_id: contacted.id });
   });
 }
 
@@ -238,7 +230,7 @@ export async function bookMeeting(_: ActionState, fd: FormData): Promise<ActionS
     ok(
       await s.db.from("meetings").insert({
         company_id: s.companyId,
-        lead_id: v.lead_id,
+        deal_id: v.deal_id,
         type: v.type,
         scheduled_at: at.toISOString(),
         notes: v.notes,
@@ -248,7 +240,7 @@ export async function bookMeeting(_: ActionState, fd: FormData): Promise<ActionS
     ok(
       await s.db.from("activities").insert({
         company_id: s.companyId,
-        lead_id: v.lead_id,
+        deal_id: v.deal_id,
         type: "meeting",
         summary: `Meeting booked (${v.type.replace("_", " ")})`,
         created_by: s.userId,
@@ -267,13 +259,13 @@ export async function bookMeeting(_: ActionState, fd: FormData): Promise<ActionS
         const remind = new Date(Math.max(at.getTime() - 24 * 3600_000, Date.now() + 3600_000));
         ok(
           await s.db
-            .from("leads")
+            .from("deals")
             .update({ stage_id: booked.id, next_follow_up_at: remind.toISOString() })
-            .eq("id", v.lead_id),
+            .eq("id", v.deal_id),
         );
       }
     }
-    revalidateLead(v.lead_id);
+    revalidateLead(v.deal_id);
     after(() => flushNotifications(s.companyId));
     return { ok: true, message: "Meeting booked" };
   });
@@ -287,10 +279,10 @@ export async function setMeetingStatus(input: { meeting_id: string; status: "don
         .from("meetings")
         .update({ status: input.status })
         .eq("id", input.meeting_id)
-        .select("lead_id")
+        .select("deal_id")
         .single(),
     );
-    revalidateLead(m.lead_id ?? undefined);
+    revalidateLead(m.deal_id ?? undefined);
   });
 }
 
@@ -298,7 +290,7 @@ export async function setMeetingStatus(input: { meeting_id: string; status: "don
 export async function suggestFollowUpFor(leadId: string): Promise<string> {
   const s = await requireRole(...TEAM_ROLES);
   const lead = must(
-    await s.db.from("leads").select("stage_id, stage_entered_at").eq("id", leadId).single(),
+    await s.db.from("deals").select("stage_id, stage_entered_at").eq("id", leadId).single(),
   );
   const [rules, attempt] = await Promise.all([
     getFollowUpRules(s, lead.stage_id),
@@ -315,21 +307,21 @@ export async function suggestFollowUpFor(leadId: string): Promise<string> {
 
 // ---------------------------------------------------------------- reassign (one tap)
 export async function reassignLead(input: {
-  lead_id: string;
+  deal_id: string;
   owner_id: string;
 }): Promise<ActionState> {
   return run(async () => {
-    const v = z.object({ lead_id: z.uuid(), owner_id: z.uuid() }).parse(input);
+    const v = z.object({ deal_id: z.uuid(), owner_id: z.uuid() }).parse(input);
     const s = await requireRole(...TEAM_ROLES);
-    ok(await s.db.from("leads").update({ owner_id: v.owner_id }).eq("id", v.lead_id));
+    ok(await s.db.from("deals").update({ owner_id: v.owner_id }).eq("id", v.deal_id));
     after(() => flushNotifications(s.companyId));
-    revalidateLead(v.lead_id);
+    revalidateLead(v.deal_id);
   });
 }
 
 // ---------------------------------------------------------------- scheduled client messages
 const scheduleSchema = z.object({
-  lead_id: z.uuid(),
+  deal_id: z.uuid(),
   channel: z.enum(["sms", "email", "call_reminder"]),
   body: z.string().trim().min(1, "write the message").max(1600),
   send_at: z.string().optional(), // datetime-local; empty = now, or 8:00 AM if it's quiet hours
@@ -345,14 +337,14 @@ export async function scheduleMessage(_: ActionState, fd: FormData): Promise<Act
     ok(
       await s.db.from("scheduled_messages").insert({
         company_id: s.companyId,
-        lead_id: v.lead_id,
+        deal_id: v.deal_id,
         channel: v.channel,
         body: v.body,
         send_at: sendAt.toISOString(),
         created_by: s.userId,
       }),
     );
-    revalidateLead(v.lead_id);
+    revalidateLead(v.deal_id);
     revalidatePath("/command");
     const moved = sendAt.getTime() - wanted.getTime() > 60_000;
     return { ok: true, message: moved ? "Quiet hours — saved for the morning" : "Saved" };
@@ -368,14 +360,14 @@ export async function markMessageSent(input: { message_id: string }): Promise<Ac
         .from("scheduled_messages")
         .update({ sent_at: new Date().toISOString() })
         .eq("id", v.message_id)
-        .select("lead_id, channel, body")
+        .select("deal_id, channel, body")
         .single(),
     );
-    if (m.lead_id && m.channel !== "call_reminder") {
+    if (m.deal_id && m.channel !== "call_reminder") {
       ok(
         await s.db.from("activities").insert({
           company_id: s.companyId,
-          lead_id: m.lead_id,
+          deal_id: m.deal_id,
           type: m.channel === "sms" ? "text" : "email",
           direction: "out",
           summary: m.body.slice(0, 200),
@@ -383,7 +375,7 @@ export async function markMessageSent(input: { message_id: string }): Promise<Ac
         }),
       );
     }
-    revalidateLead(m.lead_id ?? undefined);
+    revalidateLead(m.deal_id ?? undefined);
     revalidatePath("/command");
   });
 }

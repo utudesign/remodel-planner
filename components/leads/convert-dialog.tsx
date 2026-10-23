@@ -72,7 +72,7 @@ export function ConvertDialog({
           </DialogDescription>
         </DialogHeader>
         <form action={action} className="grid grid-cols-2 gap-3">
-          <input type="hidden" name="lead_id" value={leadId} />
+          <input type="hidden" name="deal_id" value={leadId} />
           <Field label="Project name" htmlFor="name" className="col-span-2">
             <Input id="name" name="name" defaultValue={defaultName} required />
           </Field>

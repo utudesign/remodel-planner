@@ -14,7 +14,7 @@ export async function getCommandCenter(s: Session) {
   const [openLeads, upcoming, tomorrowMeetings, jobsNoPm, tasksNoDue, messages, myWindows] =
     await Promise.all([
       s.db
-        .from("leads")
+        .from("deals")
         .select(
           "id, created_at, first_response_at, waiting_for_live, next_follow_up_at, owner:users(id, name), contact:contacts(name, phone), stage:pipeline_stages!inner(key, label)",
         )
@@ -22,13 +22,13 @@ export async function getCommandCenter(s: Session) {
         .order("created_at"),
       s.db
         .from("meetings")
-        .select("lead_id")
+        .select("deal_id")
         .eq("status", "scheduled")
         .gte("scheduled_at", now.toISOString()),
       s.db
         .from("meetings")
         .select(
-          "id, type, scheduled_at, confirmed_at, lead:leads(id, contact:contacts(name, phone))",
+          "id, type, scheduled_at, confirmed_at, deal:deals(id, contact:contacts(name, phone))",
         )
         .eq("status", "scheduled")
         .gte("scheduled_at", tmr.start.toISOString())
@@ -47,7 +47,7 @@ export async function getCommandCenter(s: Session) {
         .eq("project.status", "active"),
       s.db
         .from("scheduled_messages")
-        .select("id, body, channel, send_at, lead_id")
+        .select("id, body, channel, send_at, deal_id")
         .is("sent_at", null)
         .lte("send_at", now.toISOString())
         .order("send_at"),
@@ -58,7 +58,7 @@ export async function getCommandCenter(s: Session) {
     ]);
 
   const leads = must(openLeads);
-  const booked = new Set(must(upcoming).map((m) => m.lead_id));
+  const booked = new Set(must(upcoming).map((m) => m.deal_id));
   const shift = currentShift(must(myWindows), now, s.timezone);
   const handoff = maybe(
     await s.db
@@ -116,13 +116,13 @@ export async function draftHandoff(s: Session, sinceIso: string, kind: "live" | 
       .limit(20),
     s.db
       .from("scheduled_messages")
-      .select("lead:leads(contact:contacts(name)), send_at")
+      .select("deal:deals(contact:contacts(name)), send_at")
       .is("sent_at", null)
       .gte("send_at", new Date().toISOString())
       .lt("send_at", day.end.toISOString()),
     s.db
       .from("meetings")
-      .select("scheduled_at, lead:leads(contact:contacts(name))")
+      .select("scheduled_at, deal:deals(contact:contacts(name))")
       .eq("status", "scheduled")
       .gte("scheduled_at", day.start.toISOString())
       .lt("scheduled_at", day.end.toISOString())
@@ -133,7 +133,7 @@ export async function draftHandoff(s: Session, sinceIso: string, kind: "live" | 
   if (q.length)
     lines.push(
       `• ${q.length} message${q.length === 1 ? "" : "s"} queued (${q
-        .map((m) => m.lead?.contact?.name)
+        .map((m) => m.deal?.contact?.name)
         .filter(Boolean)
         .join(", ")})`,
     );
@@ -144,7 +144,7 @@ export async function draftHandoff(s: Session, sinceIso: string, kind: "live" | 
       `• Visits: ${v
         .map(
           (m) =>
-            `${new Date(m.scheduled_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: s.timezone })} ${m.lead?.contact?.name ?? ""}`,
+            `${new Date(m.scheduled_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: s.timezone })} ${m.deal?.contact?.name ?? ""}`,
         )
         .join(", ")}`,
     );

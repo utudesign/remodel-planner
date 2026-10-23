@@ -36,7 +36,7 @@ export function LeadEditForm({ lead, contact, team }: Props) {
   const [state, action] = useActionState(updateLead, null);
   return (
     <form action={action} className="grid grid-cols-2 gap-3">
-      <input type="hidden" name="lead_id" value={lead.id} />
+      <input type="hidden" name="deal_id" value={lead.id} />
       <input type="hidden" name="contact_id" value={contact.id} />
       <Field label="Name" htmlFor="name" className="col-span-2">
         <Input id="name" name="name" defaultValue={contact.name} required />

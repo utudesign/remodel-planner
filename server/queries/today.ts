@@ -28,7 +28,7 @@ export async function getToday(s: Session) {
     s.db.from("crew_projects").select("id, name, status, project_manager_id"),
     team
       ? s.db
-          .from("leads")
+          .from("deals")
           .select(
             "id, owner_id, created_at, first_response_at, waiting_for_live, next_follow_up_at, contact:contacts(name, phone), stage:pipeline_stages!inner(key, label)",
           )
@@ -40,7 +40,7 @@ export async function getToday(s: Session) {
       : empty,
     s.db
       .from("meetings")
-      .select("id, type, scheduled_at, assignee_id, lead_id, project_id")
+      .select("id, type, scheduled_at, assignee_id, deal_id, project_id")
       .eq("status", "scheduled")
       .gte("scheduled_at", start.toISOString())
       .lt("scheduled_at", end.toISOString())
@@ -75,7 +75,7 @@ export async function getToday(s: Session) {
     team
       ? s.db
           .from("scheduled_messages")
-          .select("id, channel, body, send_at, created_by, lead_id")
+          .select("id, channel, body, send_at, created_by, deal_id")
           .is("sent_at", null)
           .lte("send_at", new Date().toISOString())
           .order("send_at")
@@ -99,15 +99,15 @@ export async function getToday(s: Session) {
   const fu = must(followUps);
   for (const l of fu) leadNames.set(l.id, l.contact?.name ?? "");
   const meetingLeadIds = must(meetings)
-    .map((m) => m.lead_id)
+    .map((m) => m.deal_id)
     .filter((x): x is string => !!x && !leadNames.has(x));
   const msgLeadIds = must(messages)
-    .map((m) => m.lead_id)
+    .map((m) => m.deal_id)
     .filter((x): x is string => !!x && !leadNames.has(x));
   if (team && (meetingLeadIds.length || msgLeadIds.length)) {
     const extra = must(
       await s.db
-        .from("leads")
+        .from("deals")
         .select("id, contact:contacts(name)")
         .in("id", [...new Set([...meetingLeadIds, ...msgLeadIds])]),
     );

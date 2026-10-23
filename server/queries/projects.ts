@@ -30,6 +30,8 @@ type BoardRow = {
   milestones: MilestoneRow[];
   tasks: { status: string; kind: string }[];
   balanceDueCents: number | null;
+  deal_year: number | null;
+  deal_number: string | null;
 };
 
 /** Team: full rows incl. money. Crew: crew_projects view (no money) + separate reads. */
@@ -39,7 +41,7 @@ async function boardRows(s: Session): Promise<BoardRow[]> {
       await s.db
         .from("projects")
         .select(
-          "id, name, status, contract_value_cents, closed_at, locked_margin_bps, contact:contacts(name, city), manager:users!projects_project_manager_id_fkey(id, name), milestones(id, key, name, sort_order, planned_date, actual_date), tasks(status, kind), payments(amount_cents, status), change_orders(price_change_cents, approved_at)",
+          "id, name, status, contract_value_cents, closed_at, locked_margin_bps, deal:deals(deal_year, deal_number), contact:contacts(name, city), manager:users!projects_project_manager_id_fkey(id, name), milestones(id, key, name, sort_order, planned_date, actual_date), tasks(status, kind), payments(amount_cents, status), change_orders(price_change_cents, approved_at)",
         )
         .order("created_at", { ascending: false }),
     );
@@ -63,13 +65,15 @@ async function boardRows(s: Session): Promise<BoardRow[]> {
         milestones: p.milestones,
         tasks: p.tasks,
         balanceDueCents: revenue - collected,
+        deal_year: p.deal?.deal_year ?? null,
+        deal_number: p.deal?.deal_number ?? null,
       };
     });
   }
   const jobs = must(
     await s.db
       .from("crew_projects")
-      .select("id, name, status, contact_id, project_manager_id, closed_at")
+      .select("id, name, status, contact_id, project_manager_id, closed_at, deal_year, deal_number")
       .order("created_at", { ascending: false }),
   );
   const ids = jobs.map((j) => j.id!);
@@ -108,6 +112,8 @@ async function boardRows(s: Session): Promise<BoardRow[]> {
       milestones: m.filter((x) => x.project_id === j.id),
       tasks: t.filter((x) => x.project_id === j.id),
       balanceDueCents: null,
+      deal_year: j.deal_year,
+      deal_number: j.deal_number,
     };
   });
 }
@@ -202,7 +208,7 @@ async function teamProject(s: Session, projectId: string) {
     await s.db
       .from("projects")
       .select(
-        "*, contact:contacts(*), manager:users!projects_project_manager_id_fkey(id, name), lead:leads(id)",
+        "*, contact:contacts(*), manager:users!projects_project_manager_id_fkey(id, name), deal:deals(id, deal_year, deal_number)",
       )
       .eq("id", projectId)
       .maybeSingle(),
@@ -239,7 +245,7 @@ async function crewProject(s: Session, projectId: string) {
     locked_margin_bps: null,
     contact,
     manager,
-    lead: null as { id: string } | null,
+    deal: null as { id: string; deal_year: number; deal_number: string } | null,
   };
 }
 

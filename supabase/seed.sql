@@ -25,7 +25,7 @@ begin
 
   insert into public.users (id, company_id, clerk_id, name, email, role, is_default_owner) values
     (u_d, c, 'seed_office',  'Office Admin (demo)', 'office@example.com',  'team',  true),
-    (u_f, c, 'seed_crew',    'Crew Lead (demo)',    'crew@example.com',    'crew',  false),
+    (u_f, c, 'seed_crew',    'Crew Deal (demo)',    'crew@example.com',    'crew',  false),
     ('00000000-0000-0000-0000-0000000000e1', c, 'seed_crystal', 'Crystal (demo)', 'crystal@example.com', 'owner', false);
 
   -- Work windows (ET), FIELD-AND-OFFICE §2: admin split shift; owners' shared field time.
@@ -59,41 +59,41 @@ begin
   insert into public.contacts (company_id, name, phone, email, address, city, zip) values
     (c, 'Ahmed Karimi',   '(571) 555-0123', 'ahmed@example.com', '310 Cedar Ln',  'McLean',     '22101') returning id into ct5;
 
-  -- 3 open leads ------------------------------------------------------------------
-  insert into public.leads (company_id, contact_id, source, stage_id, owner_id, scope,
+  -- 3 open deals ------------------------------------------------------------------
+  insert into public.deals (company_id, contact_id, source, stage_id, owner_id, scope,
                             budget_min_cents, budget_max_cents, desired_timeline, next_follow_up_at, created_at)
   values (c, ct1, 'fb_marketplace', s_new, u_d, 'cabinets', 800000, 1200000, 'Next month',
           now() - interval '30 minutes', now() - interval '90 minutes');
 
-  insert into public.leads (company_id, contact_id, source, stage_id, owner_id, scope,
+  insert into public.deals (company_id, contact_id, source, stage_id, owner_id, scope,
                             budget_min_cents, budget_max_cents, desired_timeline, next_follow_up_at,
                             stage_entered_at, created_at)
   values (c, ct2, 'referral', s_contacted, u_d, 'full', 2500000, 4000000, 'Spring',
           (today::timestamp + time '14:00') at time zone 'America/New_York',
           now() - interval '3 days', now() - interval '4 days');
 
-  insert into public.leads (company_id, contact_id, source, stage_id, owner_id, scope,
+  insert into public.deals (company_id, contact_id, source, stage_id, owner_id, scope,
                             budget_min_cents, budget_max_cents, desired_timeline, next_follow_up_at,
                             stage_entered_at, created_at)
   values (c, ct3, 'call', s_quote, u_d, 'full', 3000000, 4500000, 'ASAP',
           now() - interval '1 day', now() - interval '6 days', now() - interval '14 days');
 
-  insert into public.meetings (company_id, lead_id, type, scheduled_at, assignee_id)
+  insert into public.meetings (company_id, deal_id, type, scheduled_at, assignee_id)
   select c, l.id, 'design_review', (today::timestamp + time '16:30') at time zone 'America/New_York', u_d
-    from public.leads l where l.contact_id = ct3;
+    from public.deals l where l.contact_id = ct3;
 
-  insert into public.activities (company_id, lead_id, type, direction, summary, created_by, occurred_at)
+  insert into public.activities (company_id, deal_id, type, direction, summary, created_by, occurred_at)
   select c, l.id, 'call', 'out', 'Left voicemail about the quote', u_d, now() - interval '1 day'
-    from public.leads l where l.contact_id = ct3;
+    from public.deals l where l.contact_id = ct3;
 
-  -- Won leads backing the 2 sample projects ---------------------------------------
-  insert into public.leads (company_id, contact_id, source, stage_id, owner_id, scope, next_follow_up_at, created_at)
+  -- Won deals backing the 2 sample projects ---------------------------------------
+  insert into public.deals (company_id, contact_id, source, stage_id, owner_id, scope, next_follow_up_at, created_at)
   values (c, ct4, 'web', s_booked, u_d, 'full', now(), now() - interval '40 days') returning id into l4;
-  insert into public.leads (company_id, contact_id, source, stage_id, owner_id, scope, next_follow_up_at, created_at)
+  insert into public.deals (company_id, contact_id, source, stage_id, owner_id, scope, next_follow_up_at, created_at)
   values (c, ct5, 'referral', s_booked, u_d, 'cabinets', now(), now() - interval '75 days') returning id into l5;
 
   -- Project 1: full remodel, starts this week ---------------------------------------
-  insert into public.projects (id, company_id, lead_id, contact_id, name, contract_value_cents,
+  insert into public.projects (id, company_id, deal_id, contact_id, name, contract_value_cents,
                                payment_template_id, project_manager_id, created_at)
   values (p1, c, l4, ct4, 'Reed kitchen — full remodel', 3600000, tpl_full, u_d, now() - interval '20 days');
 
@@ -140,7 +140,7 @@ begin
   insert into public.project_members (project_id, user_id, company_id) values (p1, u_f, c);
 
   -- Project 2: cabinets only, at final inspection; final payment overdue ------------
-  insert into public.projects (id, company_id, lead_id, contact_id, name, contract_value_cents,
+  insert into public.projects (id, company_id, deal_id, contact_id, name, contract_value_cents,
                                payment_template_id, project_manager_id, created_at)
   values (p2, c, l5, ct5, 'Karimi — cabinet replacement', 1450000, tpl_cab, u_d, now() - interval '60 days');
 
@@ -162,5 +162,5 @@ begin
     (c, p2, 'Adjust pantry door hinge', 'punch', 'todo', 1),
     (c, p2, 'Touch-up paint on end panel', 'punch', 'done', 2);
 
-  update public.leads set stage_id = s_won where id in (l4, l5);
+  update public.deals set stage_id = s_won where id in (l4, l5);
 end $$;

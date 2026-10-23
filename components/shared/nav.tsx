@@ -10,7 +10,6 @@ import {
   Menu,
   Rss,
   Settings,
-  Users,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -20,8 +19,7 @@ import type { NavIcon, NavItem } from "@/lib/nav";
 const ICONS: Record<NavIcon, LucideIcon> = {
   today: CalendarCheck,
   command: LayoutDashboard,
-  leads: Users,
-  projects: FolderKanban,
+  deals: FolderKanban,
   payments: Wallet,
   activity: Rss,
   analytics: BarChart3,
@@ -29,6 +27,7 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   more: Menu,
 };
 
+const DEAL_PATHS = ["/deals", "/deal/", "/job/"];
 const MORE_PATHS = ["/more", "/activity", "/analytics", "/settings", "/command", "/notifications"];
 
 function isActive(pathname: string, href: string) {

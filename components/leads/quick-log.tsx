@@ -30,7 +30,7 @@ export function QuickLog({ leadId, suggested }: { leadId: string; suggested: str
 
   return (
     <form ref={formRef} action={action} className="flex flex-col gap-3">
-      <input type="hidden" name="lead_id" value={leadId} />
+      <input type="hidden" name="deal_id" value={leadId} />
       <input type="hidden" name="type" value={type} />
       <input type="hidden" name="direction" value={direction} />
       <div className="grid grid-cols-6 gap-1.5">

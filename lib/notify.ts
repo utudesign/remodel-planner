@@ -1,6 +1,6 @@
 /** Notification kinds a person can mute (More → Notifications). Matrix: CONTEXT §4. */
 export const NOTIFY_KINDS = [
-  { key: "new_lead", label: "New lead" },
+  { key: "new_deal", label: "New lead" },
   { key: "assigned", label: "Lead assigned to me" },
   { key: "mention", label: "@mentions and replies" },
   { key: "money", label: "Deposits and payments received" },

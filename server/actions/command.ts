@@ -102,7 +102,7 @@ export async function confirmMeeting(input: { meeting_id: string }): Promise<Act
     const m = must(
       await s.db
         .from("meetings")
-        .select("id, scheduled_at, lead_id, lead:leads(contact:contacts(name))")
+        .select("id, scheduled_at, deal_id, deal:deals(contact:contacts(name))")
         .eq("id", v.meeting_id)
         .single(),
     );
@@ -112,15 +112,15 @@ export async function confirmMeeting(input: { meeting_id: string }): Promise<Act
       minute: "2-digit",
       timeZone: s.timezone,
     });
-    const first = (m.lead?.contact?.name ?? "").split(" ")[0];
+    const first = (m.deal?.contact?.name ?? "").split(" ")[0];
     // 9:00 AM ET today, or right away if that's already passed (and it isn't quiet hours).
     const nine = localToUtc(todayIn(s.timezone), "09:00", s.timezone);
     const at = nextSendTime(nine > new Date() ? nine : new Date(), s.rules, s.timezone);
-    if (m.lead_id) {
+    if (m.deal_id) {
       ok(
         await s.db.from("scheduled_messages").insert({
           company_id: s.companyId,
-          lead_id: m.lead_id,
+          deal_id: m.deal_id,
           channel: "sms",
           body: `Hi ${first}, this is RenoDesign confirming your in-home visit ${when}. Reply YES to confirm or call us to reschedule.`,
           send_at: at.toISOString(),

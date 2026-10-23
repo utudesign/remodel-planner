@@ -10,7 +10,7 @@ export const metadata = { title: "Routing & alerts" };
 
 // Defaults mirror private.notify_roles() in 0004.
 const KINDS = [
-  { key: "new_lead", label: "New lead", always: "lead owner", def: ["team"] },
+  { key: "new_deal", label: "New lead", always: "lead owner", def: ["team"] },
   { key: "money", label: "Deposit / payment received", always: "—", def: ["owner", "team"] },
   { key: "meeting", label: "Meeting booked or moved", always: "—", def: ["owner"] },
   { key: "blocked", label: "Task blocked", always: "job PM", def: [] as string[] },

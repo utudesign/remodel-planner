@@ -57,7 +57,7 @@ export const newLeadSchema = z
 
 export const updateLeadSchema = z
   .object({
-    lead_id: id,
+    deal_id: id,
     contact_id: id,
     name: reqText(120),
     phone: optText(40),
@@ -78,23 +78,23 @@ export const updateLeadSchema = z
   });
 
 export const logActivitySchema = z.object({
-  lead_id: id,
+  deal_id: id,
   type: z.enum(["call", "text", "fb_msg", "email", "meeting", "note"]),
   direction: z.enum(["in", "out"]).optional(),
   summary: optText(2000),
   next_follow_up_at: reqDateTimeLocal,
 });
 
-export const moveStageSchema = z.object({ lead_id: id, stage_id: id });
+export const moveStageSchema = z.object({ deal_id: id, stage_id: id });
 
 export const markLostSchema = z.object({
-  lead_id: id,
+  deal_id: id,
   lost_reason_id: id,
   lost_note: optText(1000),
 });
 
 export const bookMeetingSchema = z.object({
-  lead_id: id,
+  deal_id: id,
   type: z.enum(["initial", "design_review", "mid_check", "final"]),
   scheduled_at: reqDateTimeLocal,
   notes: optText(1000),

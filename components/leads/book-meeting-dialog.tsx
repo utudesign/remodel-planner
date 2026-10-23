@@ -39,7 +39,7 @@ export function BookMeetingDialog({
           <DialogDescription>Shows on Today for the day of the meeting.</DialogDescription>
         </DialogHeader>
         <form action={action} className="flex flex-col gap-3">
-          <input type="hidden" name="lead_id" value={leadId} />
+          <input type="hidden" name="deal_id" value={leadId} />
           <Field label="Type" htmlFor="type">
             <NativeSelect id="type" name="type" defaultValue="initial">
               <option value="initial">In-home measure</option>

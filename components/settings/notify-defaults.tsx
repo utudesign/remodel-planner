@@ -44,7 +44,7 @@ export function NotifyDefaults({
                       type="checkbox"
                       className="size-5"
                       aria-label={`${k.label}: ${LABEL[r]}`}
-                      disabled={r === "crew" && (k.key === "money" || k.key === "new_lead")}
+                      disabled={r === "crew" && (k.key === "money" || k.key === "new_deal")}
                       checked={(v[k.key] ?? []).includes(r)}
                       onChange={(e) =>
                         setV((cur) => {

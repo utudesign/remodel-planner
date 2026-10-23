@@ -181,7 +181,7 @@ export default async function TodayPage({
                 return (
                   <li key={l.id} className="flex items-center justify-between gap-2 py-2">
                     <div className="min-w-0">
-                      <Link href={`/leads/${l.id}`} className="font-medium hover:underline">
+                      <Link href={`/deal/${l.id}`} className="font-medium hover:underline">
                         {l.contact?.name}
                       </Link>
                       <p
@@ -227,7 +227,7 @@ export default async function TodayPage({
                   return (
                     <li key={l.id} className="flex items-center justify-between gap-2 py-2">
                       <div className="min-w-0">
-                        <Link href={`/leads/${l.id}#log`} className="font-medium hover:underline">
+                        <Link href={`/deal/${l.id}#log`} className="font-medium hover:underline">
                           {l.contact?.name}
                         </Link>
                         <p className="text-xs text-muted-foreground">
@@ -258,10 +258,10 @@ export default async function TodayPage({
               {messages.map((m) => (
                 <li key={m.id} className="py-2">
                   <Link
-                    href={`/leads/${m.lead_id}#messages`}
+                    href={`/deal/${m.deal_id}#messages`}
                     className="font-medium hover:underline"
                   >
-                    {d.leadName(m.lead_id)}
+                    {d.leadName(m.deal_id)}
                   </Link>
                   <p className="truncate text-xs text-muted-foreground">{m.body}</p>
                 </li>
@@ -282,10 +282,10 @@ export default async function TodayPage({
                   </span>
                   <div className="min-w-0">
                     <Link
-                      href={m.project_id ? `/projects/${m.project_id}` : `/leads/${m.lead_id}`}
+                      href={m.project_id ? `/job/${m.project_id}` : `/deal/${m.deal_id}`}
                       className="font-medium hover:underline"
                     >
-                      {m.project_id ? d.jobName(m.project_id) : d.leadName(m.lead_id)}
+                      {m.project_id ? d.jobName(m.project_id) : d.leadName(m.deal_id)}
                     </Link>
                     <p className="text-xs text-muted-foreground">{MEETING[m.type] ?? m.type}</p>
                   </div>
@@ -303,7 +303,7 @@ export default async function TodayPage({
               {blocked.map((t) => (
                 <li key={t.id} className="py-2">
                   <Link
-                    href={`/projects/${t.project_id}?tab=tasks`}
+                    href={`/job/${t.project_id}?tab=tasks`}
                     className="font-medium hover:underline"
                   >
                     {t.title}
@@ -331,7 +331,7 @@ export default async function TodayPage({
                 <li key={t.id} className="flex items-center justify-between gap-2 py-2">
                   <div className="min-w-0">
                     <Link
-                      href={`/projects/${t.project_id}?tab=tasks`}
+                      href={`/job/${t.project_id}?tab=tasks`}
                       className="font-medium hover:underline"
                     >
                       {t.title}
@@ -369,7 +369,7 @@ export default async function TodayPage({
                   <li key={p.id} className="flex items-center justify-between gap-2 py-2">
                     <div className="min-w-0">
                       <Link
-                        href={`/projects/${p.project_id}?tab=payments`}
+                        href={`/job/${p.project_id}?tab=payments`}
                         className="font-medium hover:underline"
                       >
                         {d.jobName(p.project_id)}
@@ -396,7 +396,7 @@ export default async function TodayPage({
             <ul className="flex flex-col divide-y">
               {starting.map((m) => (
                 <li key={m.id} className="flex items-center justify-between gap-2 py-2">
-                  <Link href={`/projects/${m.project_id}`} className="font-medium hover:underline">
+                  <Link href={`/job/${m.project_id}`} className="font-medium hover:underline">
                     {d.jobName(m.project_id)}
                   </Link>
                   <span className="text-sm text-muted-foreground">
@@ -414,7 +414,7 @@ export default async function TodayPage({
             <ul className="flex flex-col divide-y">
               {late.map((m) => (
                 <li key={m.id} className="flex items-center justify-between gap-2 py-2">
-                  <Link href={`/projects/${m.project_id}`} className="font-medium hover:underline">
+                  <Link href={`/job/${m.project_id}`} className="font-medium hover:underline">
                     {d.jobName(m.project_id)}
                   </Link>
                   <span className="text-sm text-destructive">
@@ -431,7 +431,7 @@ export default async function TodayPage({
             <ul className="flex flex-col divide-y">
               {closable.map((p) => (
                 <li key={p.id} className="flex items-center justify-between gap-2 py-2">
-                  <Link href={`/projects/${p.id}`} className="font-medium hover:underline">
+                  <Link href={`/job/${p.id}`} className="font-medium hover:underline">
                     {p.name}
                   </Link>
                   <span className="text-xs text-muted-foreground">

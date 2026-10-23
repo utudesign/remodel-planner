@@ -93,7 +93,7 @@ export default async function CommandPage() {
                 return (
                   <li key={l.id} className="flex items-center justify-between gap-2 py-2">
                     <div className="min-w-0">
-                      <Link href={`/leads/${l.id}#log`} className="font-medium hover:underline">
+                      <Link href={`/deal/${l.id}#log`} className="font-medium hover:underline">
                         {l.contact?.name}
                       </Link>
                       <p
@@ -128,7 +128,7 @@ export default async function CommandPage() {
               {c.followUpsDue.map((l) => (
                 <li key={l.id} className="flex items-center justify-between gap-2 py-2">
                   <div className="min-w-0">
-                    <Link href={`/leads/${l.id}#log`} className="font-medium hover:underline">
+                    <Link href={`/deal/${l.id}#log`} className="font-medium hover:underline">
                       {l.contact?.name}
                     </Link>
                     <p className="text-xs text-muted-foreground">
@@ -141,7 +141,7 @@ export default async function CommandPage() {
                       <PhoneCall className="size-4" /> Call
                     </a>
                   ) : (
-                    <Link href={`/leads/${l.id}#messages`} className={callBtn}>
+                    <Link href={`/deal/${l.id}#messages`} className={callBtn}>
                       <Send className="size-4" /> Queue
                     </Link>
                   )}
@@ -158,10 +158,10 @@ export default async function CommandPage() {
             <ul className="flex flex-col divide-y">
               {c.toBook.map((l) => (
                 <li key={l.id} className="flex items-center justify-between gap-2 py-2">
-                  <Link href={`/leads/${l.id}`} className="font-medium hover:underline">
+                  <Link href={`/deal/${l.id}`} className="font-medium hover:underline">
                     {l.contact?.name}
                   </Link>
-                  <Link href={`/leads/${l.id}`} className={callBtn}>
+                  <Link href={`/deal/${l.id}`} className={callBtn}>
                     <CalendarPlus className="size-4" /> Book
                   </Link>
                 </li>
@@ -179,8 +179,8 @@ export default async function CommandPage() {
               {c.toConfirm.map((m) => (
                 <li key={m.id} className="flex items-center justify-between gap-2 py-2">
                   <div className="min-w-0">
-                    <Link href={`/leads/${m.lead?.id}`} className="font-medium hover:underline">
-                      {m.lead?.contact?.name}
+                    <Link href={`/deal/${m.deal?.id}`} className="font-medium hover:underline">
+                      {m.deal?.contact?.name}
                     </Link>
                     <p className="text-xs text-muted-foreground">
                       {formatTime(m.scheduled_at, s.timezone)} tomorrow
@@ -197,7 +197,7 @@ export default async function CommandPage() {
               <ul className="flex flex-col divide-y">
                 {c.messages.map((m) => (
                   <li key={m.id} className="py-2">
-                    <Link href={`/leads/${m.lead_id}#messages`} className="text-sm hover:underline">
+                    <Link href={`/deal/${m.deal_id}#messages`} className="text-sm hover:underline">
                       {m.body}
                     </Link>
                   </li>
@@ -215,21 +215,21 @@ export default async function CommandPage() {
             <ul className="flex flex-col gap-1.5 text-sm">
               {c.hygiene.noFollowUp.map((l) => (
                 <li key={l.id}>
-                  <Link href={`/leads/${l.id}#log`} className="hover:underline">
+                  <Link href={`/deal/${l.id}#log`} className="hover:underline">
                     {l.contact?.name}: no next follow-up
                   </Link>
                 </li>
               ))}
               {c.hygiene.jobsNoPm.map((p) => (
                 <li key={p.id}>
-                  <Link href={`/projects/${p.id}`} className="hover:underline">
+                  <Link href={`/job/${p.id}`} className="hover:underline">
                     {p.name}: no PM
                   </Link>
                 </li>
               ))}
               {c.hygiene.tasksNoDue.map((p) => (
                 <li key={p.id}>
-                  <Link href={`/projects/${p.id}?tab=tasks`} className="hover:underline">
+                  <Link href={`/job/${p.id}?tab=tasks`} className="hover:underline">
                     {p.name}: {p.count} task{p.count === 1 ? "" : "s"} with no due date
                   </Link>
                 </li>

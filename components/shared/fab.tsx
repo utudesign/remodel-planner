@@ -6,18 +6,18 @@ import { ClipboardPaste, Hammer, PhoneCall, Plus, Ruler, UserPlus, Wallet, X } f
 import { cn } from "@/lib/utils";
 
 const ACTIONS = [
-  { href: "/leads/new", label: "New lead", icon: UserPlus },
-  { href: "/leads/new?paste=1", label: "Paste a message", icon: ClipboardPaste },
+  { href: "/deals/new", label: "New deal", icon: UserPlus },
+  { href: "/deals/new?paste=1", label: "Paste a message", icon: ClipboardPaste },
   { href: "/today?tab=mine#follow-ups", label: "Log call", icon: PhoneCall },
   { href: "/payments?f=open", label: "Record payment", icon: Wallet },
 ] as const;
 
 const LATER = [
-  { label: "Start site visit", icon: Hammer, phase: "Phase 2" },
-  { label: "Ballpark", icon: Ruler, phase: "Phase 3" },
+  { label: "Quick estimate", icon: Ruler, phase: "Phase 3" },
+  { label: "Take photos", icon: Hammer, phase: "open a deal → Photos" },
 ];
 
-/** Floating + on every screen (CONTEXT §6). Site visit / ballpark arrive with Phases 2–3. */
+/** Floating + (CONTEXT §6): New deal · Quick estimate · Take photos · Log call · Record payment. */
 export function Fab() {
   const [open, setOpen] = useState(false);
   return (

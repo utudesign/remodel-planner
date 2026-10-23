@@ -12,7 +12,7 @@ export type CommentView = {
 
 export async function getComments(
   s: Session,
-  entityType: "lead" | "project" | "task",
+  entityType: "deal" | "project" | "task",
   entityId: string,
 ): Promise<CommentView[]> {
   const rows = must(
@@ -37,7 +37,7 @@ export async function getComments(
 }
 
 /** Remember when I last looked at a record (unread dots). Called during render, non-blocking. */
-export async function recordView(s: Session, entityType: "lead" | "project", entityId: string) {
+export async function recordView(s: Session, entityType: "deal" | "project", entityId: string) {
   await s.db.from("record_views").upsert({
     user_id: s.userId,
     entity_type: entityType,
@@ -57,7 +57,7 @@ export async function getUnread(
   const [events, views] = await Promise.all([
     s.db
       .from("events")
-      .select("lead_id, project_id, actor_id, created_at")
+      .select("deal_id, project_id, actor_id, created_at")
       .gte("created_at", since)
       .neq("actor_id", s.userId),
     s.db
@@ -69,9 +69,9 @@ export async function getUnread(
   const leads = new Set<string>();
   const projects = new Set<string>();
   for (const e of must(events)) {
-    if (e.lead_id) {
-      const t = seen.get(`lead:${e.lead_id}`);
-      if (!t || t < e.created_at) leads.add(e.lead_id);
+    if (e.deal_id) {
+      const t = seen.get(`deal:${e.deal_id}`);
+      if (!t || t < e.created_at) leads.add(e.deal_id);
     }
     if (e.project_id) {
       const t = seen.get(`project:${e.project_id}`);
@@ -90,7 +90,7 @@ export type FeedItem = {
   pinned_until: string | null;
   has_money: boolean;
   actor: { id: string; name: string } | null;
-  lead_id: string | null;
+  deal_id: string | null;
   project_id: string | null;
 };
 
@@ -107,12 +107,14 @@ export async function getFeed(
   let q = s.db
     .from("events")
     .select(
-      "id, verb, summary, created_at, publish_at, pinned_until, has_money, lead_id, project_id, actor:users(id, name)",
+      "id, verb, summary, created_at, publish_at, pinned_until, has_money, deal_id, project_id, actor:users(id, name)",
     )
     .order("publish_at", { ascending: false })
     .limit(opts.limit ?? 50);
   if (opts.actorId) q = q.eq("actor_id", opts.actorId);
-  if (opts.projectId) q = q.eq("project_id", opts.projectId);
+  if (opts.projectId && opts.dealId) q = q.or(`project_id.eq.${opts.projectId},deal_id.eq.${opts.dealId}`);
+  else if (opts.projectId) q = q.eq("project_id", opts.projectId);
+  else if (opts.dealId) q = q.eq("deal_id", opts.dealId);
   if (opts.money) q = q.eq("has_money", true);
   if (opts.since) q = q.gte("publish_at", opts.since);
   return must(await q);

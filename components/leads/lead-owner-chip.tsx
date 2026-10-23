@@ -17,7 +17,7 @@ export function LeadOwnerChip({
       current={owner}
       people={people}
       label="Owner"
-      onAssign={(owner_id) => reassignLead({ lead_id: leadId, owner_id })}
+      onAssign={(owner_id) => reassignLead({ deal_id: leadId, owner_id })}
     />
   );
 }

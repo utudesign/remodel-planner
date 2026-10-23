@@ -24,9 +24,9 @@ export function FeedList({ items, tz, now }: { items: FeedItem[]; tz: string; no
       <ol className="flex flex-col gap-2.5">
         {rest.map((e) => {
           const href = e.project_id
-            ? `/projects/${e.project_id}`
-            : e.lead_id
-              ? `/leads/${e.lead_id}`
+            ? `/job/${e.project_id}`
+            : e.deal_id
+              ? `/deal/${e.deal_id}`
               : null;
           const body = (
             <span className={cn("text-sm", e.has_money && "font-medium")}>{e.summary}</span>

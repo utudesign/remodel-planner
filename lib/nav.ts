@@ -1,26 +1,16 @@
 import type { Role } from "@/lib/auth/roles";
 
-export type NavIcon =
-  | "today"
-  | "command"
-  | "leads"
-  | "projects"
-  | "payments"
-  | "activity"
-  | "analytics"
-  | "settings"
-  | "more";
+export type NavIcon = "today" | "command" | "deals" | "payments" | "activity" | "analytics" | "settings" | "more";
 
 export type NavItem = { href: string; label: string; icon: NavIcon; roles: Role[] };
 
 const ALL: Role[] = ["owner", "team", "crew"];
 const TEAM: Role[] = ["owner", "team"];
 
-/** Phone bottom bar (CONTEXT §6): Today · Leads · Jobs · Money · More. Crew: Today · Jobs. */
+/** Phone bottom bar (CONTEXT §6): Today · Deals · Money · More. Crew: Today · Deals (their assigned ones). */
 export const TAB_ITEMS: NavItem[] = [
   { href: "/today", label: "Today", icon: "today", roles: ALL },
-  { href: "/leads", label: "Leads", icon: "leads", roles: TEAM },
-  { href: "/projects", label: "Jobs", icon: "projects", roles: ALL },
+  { href: "/deals", label: "Deals", icon: "deals", roles: ALL },
   { href: "/payments", label: "Money", icon: "payments", roles: TEAM },
   { href: "/more", label: "More", icon: "more", roles: TEAM },
 ];
@@ -29,8 +19,7 @@ export const TAB_ITEMS: NavItem[] = [
 export const NAV_ITEMS: NavItem[] = [
   { href: "/today", label: "Today", icon: "today", roles: ALL },
   { href: "/command", label: "Command center", icon: "command", roles: TEAM },
-  { href: "/leads", label: "Leads", icon: "leads", roles: TEAM },
-  { href: "/projects", label: "Jobs", icon: "projects", roles: ALL },
+  { href: "/deals", label: "Deals", icon: "deals", roles: ALL },
   { href: "/payments", label: "Money", icon: "payments", roles: TEAM },
   { href: "/activity", label: "Activity", icon: "activity", roles: TEAM },
   { href: "/analytics", label: "Analytics", icon: "analytics", roles: TEAM },

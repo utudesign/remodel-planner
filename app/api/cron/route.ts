@@ -25,19 +25,19 @@ export async function GET(req: NextRequest) {
   // Scheduled messages that are due → remind the person who wrote them + the lead owner.
   const { data: due } = await db
     .from("scheduled_messages")
-    .select("id, body, channel, created_by, lead:leads(id, owner_id, contact:contacts(name))")
+    .select("id, body, channel, created_by, deal:deals(id, owner_id, contact:contacts(name))")
     .is("sent_at", null)
     .is("reminded_at", null)
     .lte("send_at", now.toISOString())
     .limit(100);
   let reminded = 0;
   for (const m of due ?? []) {
-    const who = [m.created_by, m.lead?.owner_id].filter((x): x is string => !!x);
+    const who = [m.created_by, m.deal?.owner_id].filter((x): x is string => !!x);
     reminded += await pushToUsers([...new Set(who)], {
       kind: "reminder",
-      title: `Send now: ${m.channel === "sms" ? "text" : m.channel === "email" ? "email" : "call"} to ${m.lead?.contact?.name ?? "client"}`,
+      title: `Send now: ${m.channel === "sms" ? "text" : m.channel === "email" ? "email" : "call"} to ${m.deal?.contact?.name ?? "client"}`,
       body: m.body.slice(0, 140),
-      url: m.lead ? `/leads/${m.lead.id}#messages` : "/command",
+      url: m.deal ? `/deal/${m.deal.id}#messages` : "/command",
     });
     await db.from("scheduled_messages").update({ reminded_at: now.toISOString() }).eq("id", m.id);
   }
@@ -56,7 +56,7 @@ async function sendDigests(now: Date) {
   const [{ data: users }, { data: leads }, { data: meetings }] = await Promise.all([
     db.from("users").select("id, company_id, role").eq("active", true).neq("role", "crew"),
     db
-      .from("leads")
+      .from("deals")
       .select("owner_id, company_id, next_follow_up_at, stage:pipeline_stages!inner(key)")
       .not("stage.key", "in", "(won,lost)")
       .lt("next_follow_up_at", end.toISOString()),

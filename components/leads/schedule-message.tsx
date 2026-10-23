@@ -96,7 +96,7 @@ export function ScheduleMessage({
         </ul>
       ) : null}
       <form ref={ref} action={action} className="grid grid-cols-2 gap-2">
-        <input type="hidden" name="lead_id" value={leadId} />
+        <input type="hidden" name="deal_id" value={leadId} />
         <Textarea
           name="body"
           rows={2}

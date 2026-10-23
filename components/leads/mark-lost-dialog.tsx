@@ -35,7 +35,7 @@ export function MarkLostDialog({
           </DialogDescription>
         </DialogHeader>
         <form action={action} className="flex flex-col gap-4">
-          <input type="hidden" name="lead_id" value={leadId ?? ""} />
+          <input type="hidden" name="deal_id" value={leadId ?? ""} />
           <Field label="Reason" htmlFor="lost_reason_id">
             <NativeSelect id="lost_reason_id" name="lost_reason_id" required defaultValue="">
               <option value="" disabled>

@@ -33,7 +33,7 @@ export function StageControl({
         disabled={pending}
         onClick={() =>
           start(async () => {
-            const r = await reopenLead({ lead_id: leadId });
+            const r = await reopenLead({ deal_id: leadId });
             if (!r?.ok) setError(r?.error ?? "Could not reopen");
           })
         }
@@ -54,7 +54,7 @@ export function StageControl({
             const value = e.target.value;
             setError(null);
             start(async () => {
-              const r = await moveLeadStage({ lead_id: leadId, stage_id: value });
+              const r = await moveLeadStage({ deal_id: leadId, stage_id: value });
               if (!r?.ok) setError(r?.error ?? "Could not change stage");
             });
           }}

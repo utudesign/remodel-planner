@@ -21,7 +21,7 @@ const method = z.enum(["check", "zelle", "card", "cash", "other"]);
 const emptyToNull = (v: unknown) => (v === "" ? null : v);
 
 export const convertLeadSchema = z.object({
-  lead_id: id,
+  deal_id: id,
   name: reqText(160),
   contract_value: reqMoney,
   payment_template_id: z.preprocess(emptyToNull, id.nullable()),

@@ -17,11 +17,11 @@ import { z } from "zod";
 const TEAM_ROLES = ["owner", "team"] as const;
 
 function revalidateProject(projectId?: string) {
-  revalidatePath("/projects");
+  revalidatePath("/deals", "layout");
   revalidatePath("/today");
   revalidatePath("/payments");
   revalidatePath("/analytics");
-  if (projectId) revalidatePath(`/projects/${projectId}`);
+  if (projectId) revalidatePath("/deals", "layout");
 }
 
 /** "Deposit received" → project + milestones + tasks + payment schedule, atomically (DB function). */
@@ -43,8 +43,8 @@ export async function convertLead(_: ActionState, fd: FormData): Promise<ActionS
       items.map((i) => ({ ...i, kind: i.kind as "percent" | "fixed" })),
     );
     projectId = must(
-      await s.db.rpc("convert_lead_to_project", {
-        p_lead_id: v.lead_id,
+      await s.db.rpc("convert_deal_to_project", {
+        p_deal_id: v.deal_id,
         p_name: v.name,
         p_contract_value_cents: v.contract_value,
         p_payment_template_id: v.payment_template_id as string,
@@ -58,10 +58,10 @@ export async function convertLead(_: ActionState, fd: FormData): Promise<ActionS
     );
     after(() => flushNotifications(s.companyId));
     revalidateProject();
-    revalidatePath("/leads");
-    revalidatePath(`/leads/${v.lead_id}`);
+    revalidatePath("/deals", "layout");
+    revalidatePath("/deals", "layout");
   });
-  if (res?.ok && projectId) redirect(`/projects/${projectId}`);
+  if (res?.ok && projectId) redirect(`/job/${projectId}`);
   return res;
 }
 

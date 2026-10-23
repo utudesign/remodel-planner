@@ -11,7 +11,7 @@ export function CommentThread({
   tz,
 }: {
   comments: CommentView[];
-  entityType: "lead" | "project" | "task";
+  entityType: "deal" | "project" | "task";
   entityId: string;
   people: { id: string; name: string }[];
   tz: string;

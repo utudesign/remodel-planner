@@ -11,7 +11,7 @@ export function CommentForm({
   entityId,
   people,
 }: {
-  entityType: "lead" | "project" | "task";
+  entityType: "deal" | "project" | "task";
   entityId: string;
   people: { id: string; name: string }[];
 }) {

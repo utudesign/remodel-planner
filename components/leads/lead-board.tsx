@@ -87,7 +87,7 @@ export function LeadBoard({
       ),
     );
     startTransition(async () => {
-      const res = await moveLeadStage({ lead_id: leadId, stage_id: stageId });
+      const res = await moveLeadStage({ deal_id: leadId, stage_id: stageId });
       if (!res?.ok) {
         setLeads(before);
         setError(res?.error ?? "Could not move the lead");

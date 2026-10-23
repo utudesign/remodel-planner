@@ -210,9 +210,12 @@ export function ProjectCard({
       ) : null}
       <div className="flex items-start justify-between gap-2">
         <Link
-          href={`/projects/${p.id}`}
+          href={p.deal_number ? `/deals/${p.deal_year}/${p.deal_number}` : `/job/${p.id}`}
           className="min-w-0 font-medium leading-tight hover:underline"
         >
+          {p.deal_number ? (
+            <span className="mr-1.5 text-xs font-semibold text-muted-foreground tabular-nums">#{p.deal_number}</span>
+          ) : null}
           {p.name}
         </Link>
         <Avatar id={p.manager?.id} name={p.manager?.name ?? "No PM"} />

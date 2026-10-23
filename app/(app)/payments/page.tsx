@@ -101,7 +101,7 @@ export default async function PaymentsPage({
             <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 p-3">
               <div className="min-w-0">
                 <Link
-                  href={`/projects/${p.project?.id}?tab=payments`}
+                  href={`/job/${p.project?.id}?tab=payments`}
                   className="font-medium hover:underline"
                 >
                   {p.project?.name}

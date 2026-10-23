@@ -77,7 +77,7 @@ begin
   foreach t in array array[
     'companies','users','pipeline_stages','follow_up_rules','lost_reasons','cost_categories',
     'milestone_definitions','payment_templates','payment_template_items','task_templates',
-    'task_template_items','contacts','leads','quotes','projects','project_members','milestones',
+    'task_template_items','contacts','deals','quotes','projects','project_members','milestones',
     'tasks','change_orders','payments','costs','activities','meetings','audit_log'
   ] loop
     execute format('alter table public.%I enable row level security', t);
@@ -117,7 +117,7 @@ end $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['leads','quotes'] loop
+  foreach t in array array['deals','quotes'] loop
     execute format($f$create policy %1$s_office on public.%1$I for all to authenticated
                       using (private.is_team(company_id)) with check (private.is_team(company_id))$f$, t);
   end loop;
@@ -172,7 +172,7 @@ create policy activities_office on public.activities for all to authenticated
 create policy activities_field_select on public.activities for select to authenticated
   using (project_id is not null and private.can_see_project(project_id));
 create policy activities_field_insert on public.activities for insert to authenticated
-  with check (project_id is not null and lead_id is null and private.can_see_project(project_id)
+  with check (project_id is not null and deal_id is null and private.can_see_project(project_id)
               and private.is_member(company_id));
 
 create policy meetings_office on public.meetings for all to authenticated

@@ -16,8 +16,8 @@ import { formToObject, maybe, must, ok, run, type ActionState } from "@/server/a
 const TEAM_ROLES = ["owner", "team"] as const;
 
 function revalidate(projectId: string) {
-  revalidatePath(`/projects/${projectId}`);
-  revalidatePath("/projects");
+  revalidatePath("/deals", "layout");
+  revalidatePath("/deals", "layout");
   revalidatePath("/today");
   revalidatePath("/payments");
   revalidatePath("/analytics");

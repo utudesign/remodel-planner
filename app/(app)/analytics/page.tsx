@@ -115,7 +115,7 @@ export default async function AnalyticsPage() {
                 return (
                   <TableRow key={p.id}>
                     <TableCell className="max-w-56 truncate">
-                      <Link href={`/projects/${p.id}`} className="font-medium hover:underline">
+                      <Link href={`/job/${p.id}`} className="font-medium hover:underline">
                         {p.name}
                       </Link>
                       {p.f.isLocked ? (

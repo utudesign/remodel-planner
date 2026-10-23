@@ -41,9 +41,10 @@ export function LeadCard({
       ) : null}
       <div className="flex items-start justify-between gap-2">
         <Link
-          href={`/leads/${lead.id}`}
+          href={`/deals/${lead.deal_year}/${lead.deal_number}`}
           className="min-w-0 font-medium leading-tight hover:underline"
         >
+          <span className="mr-1.5 text-xs font-semibold text-muted-foreground tabular-nums">#{lead.deal_number}</span>
           {lead.name}
         </Link>
         <div className="flex shrink-0 items-center gap-1">

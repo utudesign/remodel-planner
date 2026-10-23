@@ -1726,6 +1726,7 @@ export type Database = {
           id: string
           lead_id: string | null
           project_id: string | null
+          reminded_at: string | null
           send_at: string
           sent_at: string | null
         }
@@ -1739,6 +1740,7 @@ export type Database = {
           id?: string
           lead_id?: string | null
           project_id?: string | null
+          reminded_at?: string | null
           send_at: string
           sent_at?: string | null
         }
@@ -1751,6 +1753,7 @@ export type Database = {
           id?: string
           lead_id?: string | null
           project_id?: string | null
+          reminded_at?: string | null
           send_at?: string
           sent_at?: string | null
         }

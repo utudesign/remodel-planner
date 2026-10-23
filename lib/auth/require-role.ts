@@ -89,7 +89,8 @@ export const getSession = cache(async (): Promise<Session> => {
     role: member.role,
     name: member.name,
     settings: {
-      targetMarginBps: typeof settings.target_margin_bps === "number" ? settings.target_margin_bps : 3500,
+      targetMarginBps:
+        typeof settings.target_margin_bps === "number" ? settings.target_margin_bps : 3500,
       designDueDays: typeof settings.design_due_days === "number" ? settings.design_due_days : 5,
       raw: settings,
     },

@@ -12,13 +12,16 @@ function configure(): boolean {
   const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const priv = process.env.VAPID_PRIVATE_KEY;
   configured = !!(pub && priv);
-  if (configured) webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:owner@example.com", pub!, priv!);
+  if (configured)
+    webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:owner@example.com", pub!, priv!);
   return configured;
 }
 
 type Prefs = { mute?: string[] };
 
-export async function flushNotifications(companyId?: string): Promise<{ sent: number; skipped: number }> {
+export async function flushNotifications(
+  companyId?: string,
+): Promise<{ sent: number; skipped: number }> {
   const db = createAdminSupabase();
   let q = db
     .from("notifications")
@@ -32,12 +35,21 @@ export async function flushNotifications(companyId?: string): Promise<{ sent: nu
 
   const now = new Date().toISOString();
   if (!configure()) {
-    await db.from("notifications").update({ pushed_at: now }).in("id", pending.map((n) => n.id));
+    await db
+      .from("notifications")
+      .update({ pushed_at: now })
+      .in(
+        "id",
+        pending.map((n) => n.id),
+      );
     return { sent: 0, skipped: pending.length };
   }
 
   const userIds = [...new Set(pending.map((n) => n.user_id))];
-  const { data: subs } = await db.from("push_subscriptions").select("id, user_id, endpoint, keys").in("user_id", userIds);
+  const { data: subs } = await db
+    .from("push_subscriptions")
+    .select("id, user_id, endpoint, keys")
+    .in("user_id", userIds);
   let sent = 0;
   for (const n of pending) {
     const muted = ((n.user?.notify_prefs ?? {}) as Prefs).mute?.includes(n.kind);
@@ -52,16 +64,26 @@ export async function flushNotifications(companyId?: string): Promise<{ sent: nu
         sent++;
       } catch (e) {
         const code = (e as { statusCode?: number }).statusCode;
-        if (code === 404 || code === 410) await db.from("push_subscriptions").delete().eq("id", sub.id);
+        if (code === 404 || code === 410)
+          await db.from("push_subscriptions").delete().eq("id", sub.id);
       }
     }
   }
-  await db.from("notifications").update({ pushed_at: now }).in("id", pending.map((n) => n.id));
+  await db
+    .from("notifications")
+    .update({ pushed_at: now })
+    .in(
+      "id",
+      pending.map((n) => n.id),
+    );
   return { sent, skipped: pending.length - sent };
 }
 
 /** Push to specific users right now (digest, scheduled-message reminders). */
-export async function pushToUsers(userIds: string[], payload: { title: string; body: string; url: string; kind: string }) {
+export async function pushToUsers(
+  userIds: string[],
+  payload: { title: string; body: string; url: string; kind: string },
+) {
   if (!configure() || userIds.length === 0) return 0;
   const db = createAdminSupabase();
   const [{ data: subs }, { data: users }] = await Promise.all([
@@ -81,7 +103,8 @@ export async function pushToUsers(userIds: string[], payload: { title: string; b
       sent++;
     } catch (e) {
       const code = (e as { statusCode?: number }).statusCode;
-      if (code === 404 || code === 410) await db.from("push_subscriptions").delete().eq("id", sub.id);
+      if (code === 404 || code === 410)
+        await db.from("push_subscriptions").delete().eq("id", sub.id);
     }
   }
   return sent;

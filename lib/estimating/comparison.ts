@@ -7,7 +7,7 @@
  * Lines with no retailer product (labor, quartz, subs, permits) are "not covered" and are
  * shown as such; they are never guessed. Adjustments are real retailer quotes/fees entered by hand.
  */
-import { divRound, toBasisPoints } from './pricing';
+import { divRound, toBasisPoints } from "./pricing";
 
 export interface ComparisonLineInput {
   qty: number;
@@ -36,12 +36,20 @@ export interface ComparisonResult {
 export function packsNeeded(qty: number, packQty: number): number {
   const q = Math.round(qty * 100);
   const p = Math.round(packQty * 100);
-  if (p <= 0) throw new RangeError('pack size must be > 0');
+  if (p <= 0) throw new RangeError("pack size must be > 0");
   return Math.ceil(q / p);
 }
 
-export function retailerLineCost(qty: number, packQty: number, packPriceCents: number, taxRate: number): number {
-  return divRound(packsNeeded(qty, packQty) * packPriceCents * (10000 + toBasisPoints(taxRate)), 10000);
+export function retailerLineCost(
+  qty: number,
+  packQty: number,
+  packPriceCents: number,
+  taxRate: number,
+): number {
+  return divRound(
+    packsNeeded(qty, packQty) * packPriceCents * (10000 + toBasisPoints(taxRate)),
+    10000,
+  );
 }
 
 export function compareQuote(
@@ -50,9 +58,15 @@ export function compareQuote(
   adjustmentsCents = 0,
 ): ComparisonResult {
   const r: ComparisonResult = {
-    coveredLines: 0, uncoveredLines: 0, unverifiedLines: 0, substituteLines: 0,
-    retailerMaterialsCents: 0, ourPriceCoveredCents: 0, adjustmentsCents,
-    retailerTotalCents: 0, oldestPriceDate: null,
+    coveredLines: 0,
+    uncoveredLines: 0,
+    unverifiedLines: 0,
+    substituteLines: 0,
+    retailerMaterialsCents: 0,
+    ourPriceCoveredCents: 0,
+    adjustmentsCents,
+    retailerTotalCents: 0,
+    oldestPriceDate: null,
   };
   for (const line of lines) {
     if (line.qty <= 0) continue;

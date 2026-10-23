@@ -1,6 +1,13 @@
 import { cn } from "@/lib/utils";
 
-const COLORS = ["bg-sky-600", "bg-emerald-600", "bg-amber-600", "bg-rose-600", "bg-violet-600", "bg-teal-600"];
+const COLORS = [
+  "bg-sky-600",
+  "bg-emerald-600",
+  "bg-amber-600",
+  "bg-rose-600",
+  "bg-violet-600",
+  "bg-teal-600",
+];
 
 export function initials(name: string | null | undefined) {
   const parts = (name ?? "?").trim().split(/\s+/);
@@ -13,7 +20,15 @@ function colorFor(id: string | null | undefined) {
   return COLORS[h % COLORS.length];
 }
 
-export function Avatar({ id, name, className }: { id?: string | null; name?: string | null; className?: string }) {
+export function Avatar({
+  id,
+  name,
+  className,
+}: {
+  id?: string | null;
+  name?: string | null;
+  className?: string;
+}) {
   return (
     <span
       title={name ?? "Unassigned"}

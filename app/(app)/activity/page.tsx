@@ -7,7 +7,11 @@ import { getFeed, getTeamMembers } from "@/server/queries/team";
 
 export const metadata = { title: "Activity" };
 
-export default async function ActivityPage({ searchParams }: { searchParams: Promise<{ who?: string; money?: string }> }) {
+export default async function ActivityPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ who?: string; money?: string }>;
+}) {
   const { who, money } = await searchParams;
   const s = await requirePageRole("owner", "team");
   const [team, items] = await Promise.all([

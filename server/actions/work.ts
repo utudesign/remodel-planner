@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { flushNotifications } from "@/server/push";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/require-role";
 import {
@@ -80,6 +82,7 @@ export async function setTaskStatus(input: {
         .select("project_id, title")
         .single(),
     );
+    after(() => flushNotifications(s.companyId));
     revalidate(t.project_id);
   });
 }
@@ -115,6 +118,7 @@ export async function receivePayment(_: ActionState, fd: FormData): Promise<Acti
         .single(),
     );
     revalidate(p.project_id);
+    after(() => flushNotifications(s.companyId));
     return { ok: true, message: "Payment recorded" };
   });
 }

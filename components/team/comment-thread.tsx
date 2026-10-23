@@ -19,7 +19,9 @@ export function CommentThread({
   return (
     <div id="comments" className="flex flex-col gap-4">
       {comments.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No comments yet. Notes here replace side texts about the job.</p>
+        <p className="text-sm text-muted-foreground">
+          No comments yet. Notes here replace side texts about the job.
+        </p>
       ) : (
         <ol className="flex flex-col gap-3">
           {comments.map((c) => (

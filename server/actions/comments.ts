@@ -28,7 +28,9 @@ export async function addComment(_: ActionState, fd: FormData): Promise<ActionSt
     } else if (v.entity_type === "project") {
       projectId = v.entity_id;
     } else {
-      const t = maybe(await s.db.from("tasks").select("project_id").eq("id", v.entity_id).maybeSingle());
+      const t = maybe(
+        await s.db.from("tasks").select("project_id").eq("id", v.entity_id).maybeSingle(),
+      );
       if (!t) throw new Error("Task not found");
       projectId = t.project_id;
     }

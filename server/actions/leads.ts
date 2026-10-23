@@ -84,9 +84,17 @@ export async function createLead(_: ActionState, fd: FormData): Promise<ActionSt
     if (photos.length) {
       const paths = await uploadImages(photos, s.companyId, `leads/${lead.id}`);
       ok(
-        await s.db.from("files").insert(
-          paths.map((path) => ({ company_id: s.companyId, lead_id: lead.id, kind: "photo", path, uploaded_by: s.userId })),
-        ),
+        await s.db
+          .from("files")
+          .insert(
+            paths.map((path) => ({
+              company_id: s.companyId,
+              lead_id: lead.id,
+              kind: "photo",
+              path,
+              uploaded_by: s.userId,
+            })),
+          ),
       );
     }
     newId = lead.id;
@@ -268,6 +276,7 @@ export async function bookMeeting(_: ActionState, fd: FormData): Promise<ActionS
       }
     }
     revalidateLead(v.lead_id);
+    after(() => flushNotifications(s.companyId));
     return { ok: true, message: "Meeting booked" };
   });
 }
@@ -306,9 +315,11 @@ export async function suggestFollowUpFor(leadId: string): Promise<string> {
   }).toISOString();
 }
 
-
 // ---------------------------------------------------------------- reassign (one tap)
-export async function reassignLead(input: { lead_id: string; owner_id: string }): Promise<ActionState> {
+export async function reassignLead(input: {
+  lead_id: string;
+  owner_id: string;
+}): Promise<ActionState> {
   return run(async () => {
     const v = z.object({ lead_id: z.uuid(), owner_id: z.uuid() }).parse(input);
     const s = await requireRole(...TEAM_ROLES);

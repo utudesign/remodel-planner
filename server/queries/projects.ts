@@ -47,7 +47,9 @@ async function boardRows(s: Session): Promise<BoardRow[]> {
       const revenue =
         p.contract_value_cents +
         p.change_orders.filter((c) => c.approved_at).reduce((t, c) => t + c.price_change_cents, 0);
-      const collected = p.payments.filter((x) => x.status === "received").reduce((t, x) => t + x.amount_cents, 0);
+      const collected = p.payments
+        .filter((x) => x.status === "received")
+        .reduce((t, x) => t + x.amount_cents, 0);
       return {
         id: p.id,
         name: p.name,
@@ -72,12 +74,24 @@ async function boardRows(s: Session): Promise<BoardRow[]> {
   );
   const ids = jobs.map((j) => j.id!);
   const [ms, ts, contacts, team] = await Promise.all([
-    s.db.from("milestones").select("id, project_id, key, name, sort_order, planned_date, actual_date").in("project_id", ids),
+    s.db
+      .from("milestones")
+      .select("id, project_id, key, name, sort_order, planned_date, actual_date")
+      .in("project_id", ids),
     s.db.from("tasks").select("project_id, status, kind").in("project_id", ids),
-    s.db.from("contacts").select("id, name, city").in("id", jobs.map((j) => j.contact_id!)),
+    s.db
+      .from("contacts")
+      .select("id, name, city")
+      .in(
+        "id",
+        jobs.map((j) => j.contact_id!),
+      ),
     s.db.from("users").select("id, name"),
   ]);
-  const m = must(ms), t = must(ts), c = must(contacts), u = must(team);
+  const m = must(ms),
+    t = must(ts),
+    c = must(contacts),
+    u = must(team);
   return jobs.map((j) => {
     const contact = c.find((x) => x.id === j.contact_id);
     const pm = u.find((x) => x.id === j.project_manager_id);
@@ -110,7 +124,8 @@ export async function getBoardProjects(s: Session) {
 export type BoardProject = Awaited<ReturnType<typeof getBoardProjects>>[number];
 
 export async function getProjectDetail(s: Session, projectId: string) {
-  const project = s.role === "crew" ? await crewProject(s, projectId) : await teamProject(s, projectId);
+  const project =
+    s.role === "crew" ? await crewProject(s, projectId) : await teamProject(s, projectId);
   if (!project) notFound();
 
   const office = s.role !== "crew";
@@ -186,7 +201,9 @@ async function teamProject(s: Session, projectId: string) {
   return maybe(
     await s.db
       .from("projects")
-      .select("*, contact:contacts(*), manager:users!projects_project_manager_id_fkey(id, name), lead:leads(id)")
+      .select(
+        "*, contact:contacts(*), manager:users!projects_project_manager_id_fkey(id, name), lead:leads(id)",
+      )
       .eq("id", projectId)
       .maybeSingle(),
   );
@@ -195,13 +212,19 @@ async function teamProject(s: Session, projectId: string) {
 /** Crew shape: same keys the page reads, money fields zeroed (never sent to the browser). */
 async function crewProject(s: Session, projectId: string) {
   const j = maybe(
-    await s.db.from("crew_projects").select("id, name, status, contact_id, project_manager_id, closed_at").eq("id", projectId).maybeSingle(),
+    await s.db
+      .from("crew_projects")
+      .select("id, name, status, contact_id, project_manager_id, closed_at")
+      .eq("id", projectId)
+      .maybeSingle(),
   );
   if (!j) return null;
   const [contact, manager] = await Promise.all([
     maybe(await s.db.from("contacts").select("*").eq("id", j.contact_id!).maybeSingle()),
     j.project_manager_id
-      ? maybe(await s.db.from("users").select("id, name").eq("id", j.project_manager_id).maybeSingle())
+      ? maybe(
+          await s.db.from("users").select("id, name").eq("id", j.project_manager_id).maybeSingle(),
+        )
       : Promise.resolve(null),
   ]);
   return {

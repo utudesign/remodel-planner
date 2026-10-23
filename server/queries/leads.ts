@@ -12,8 +12,11 @@ export type BoardLead = {
   budget_max_cents: number | null;
   next_follow_up_at: string | null;
   stage_entered_at: string;
-  owner: string | null;
+  owner: { id: string; name: string } | null;
   source: string;
+  created_at: string;
+  first_response_at: string | null;
+  waiting_for_live: boolean;
 };
 
 export async function getBoardLeads(s: Session): Promise<BoardLead[]> {
@@ -21,7 +24,7 @@ export async function getBoardLeads(s: Session): Promise<BoardLead[]> {
     await s.db
       .from("leads")
       .select(
-        "id, stage_id, scope, budget_min_cents, budget_max_cents, next_follow_up_at, stage_entered_at, source, updated_at, contact:contacts(name, phone), owner:users(name)",
+        "id, stage_id, scope, budget_min_cents, budget_max_cents, next_follow_up_at, stage_entered_at, source, created_at, first_response_at, waiting_for_live, contact:contacts(name, phone), owner:users(id, name)",
       )
       .order("next_follow_up_at", { ascending: true, nullsFirst: true }),
   );
@@ -35,8 +38,11 @@ export async function getBoardLeads(s: Session): Promise<BoardLead[]> {
     budget_max_cents: r.budget_max_cents,
     next_follow_up_at: r.next_follow_up_at,
     stage_entered_at: r.stage_entered_at,
-    owner: r.owner?.name ?? null,
+    owner: r.owner,
     source: r.source,
+    created_at: r.created_at,
+    first_response_at: r.first_response_at,
+    waiting_for_live: r.waiting_for_live,
   }));
 }
 

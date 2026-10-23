@@ -18,9 +18,27 @@ const admin = "u-admin";
 const tugu = "u-tugu";
 const crystal = "u-crystal";
 const windows: WorkWindow[] = [
-  ...[1, 2, 3, 4, 5].map((d) => ({ user_id: admin, weekday: d, start_time: "11:00", end_time: "15:00", kind: "live" })),
-  ...[1, 2, 3, 4, 5].map((d) => ({ user_id: admin, weekday: d, start_time: "23:00", end_time: "03:00", kind: "back_office" })),
-  ...[1, 2, 3, 4, 5].map((d) => ({ user_id: tugu, weekday: d, start_time: "15:30", end_time: "21:00", kind: "live" })),
+  ...[1, 2, 3, 4, 5].map((d) => ({
+    user_id: admin,
+    weekday: d,
+    start_time: "11:00",
+    end_time: "15:00",
+    kind: "live",
+  })),
+  ...[1, 2, 3, 4, 5].map((d) => ({
+    user_id: admin,
+    weekday: d,
+    start_time: "23:00",
+    end_time: "03:00",
+    kind: "back_office",
+  })),
+  ...[1, 2, 3, 4, 5].map((d) => ({
+    user_id: tugu,
+    weekday: d,
+    start_time: "15:30",
+    end_time: "21:00",
+    kind: "live",
+  })),
 ];
 const members = [
   { id: tugu, role: "owner", active: true, is_default_owner: true },
@@ -50,16 +68,22 @@ describe("work windows", () => {
 
 describe("routeNewLead", () => {
   it("assigns to whoever is live, team first", () => {
-    expect(routeNewLead({ windows, members, at: new Date("2026-10-26T16:00:00Z"), tz: TZ })).toEqual({
+    expect(
+      routeNewLead({ windows, members, at: new Date("2026-10-26T16:00:00Z"), tz: TZ }),
+    ).toEqual({
       ownerId: admin,
       waitingForLive: false,
     });
   });
   it("evening: Tugu is live", () => {
-    expect(routeNewLead({ windows, members, at: new Date("2026-10-26T23:00:00Z"), tz: TZ }).ownerId).toBe(tugu);
+    expect(
+      routeNewLead({ windows, members, at: new Date("2026-10-26T23:00:00Z"), tz: TZ }).ownerId,
+    ).toBe(tugu);
   });
   it("morning gap (7–11 AM): default owner, waiting for live shift", () => {
-    expect(routeNewLead({ windows, members, at: new Date("2026-10-27T12:30:00Z"), tz: TZ })).toEqual({
+    expect(
+      routeNewLead({ windows, members, at: new Date("2026-10-27T12:30:00Z"), tz: TZ }),
+    ).toEqual({
       ownerId: tugu,
       waitingForLive: true,
     });
@@ -87,10 +111,14 @@ describe("quiet hours", () => {
     expect(nextSendTime(now, rules, TZ)).toEqual(now);
   });
   it("late evening → next morning 8:00 AM", () => {
-    expect(et(nextSendTime(new Date("2026-10-27T02:00:00Z"), rules, TZ))).toBe("Tue 2026-10-27 08:00");
+    expect(et(nextSendTime(new Date("2026-10-27T02:00:00Z"), rules, TZ))).toBe(
+      "Tue 2026-10-27 08:00",
+    );
   });
   it("after midnight → same morning 8:00 AM", () => {
-    expect(et(nextSendTime(new Date("2026-10-27T06:00:00Z"), rules, TZ))).toBe("Tue 2026-10-27 08:00");
+    expect(et(nextSendTime(new Date("2026-10-27T06:00:00Z"), rules, TZ))).toBe(
+      "Tue 2026-10-27 08:00",
+    );
   });
   it("across the Nov 1 DST change: Sat 10 PM EDT → Sun 8:00 AM EST (13:00Z)", () => {
     const r = nextSendTime(new Date("2026-11-01T02:00:00Z"), rules, TZ);
@@ -102,7 +130,11 @@ describe("quiet hours", () => {
 describe("response clock", () => {
   it("counts down from 60 minutes", () => {
     const created = new Date("2026-10-27T15:00:00Z");
-    expect(responseMinutesLeft(created, { responseMinutes: 60 }, new Date("2026-10-27T15:45:00Z"))).toBe(15);
-    expect(responseMinutesLeft(created, { responseMinutes: 60 }, new Date("2026-10-27T16:30:00Z"))).toBe(-30);
+    expect(
+      responseMinutesLeft(created, { responseMinutes: 60 }, new Date("2026-10-27T15:45:00Z")),
+    ).toBe(15);
+    expect(
+      responseMinutesLeft(created, { responseMinutes: 60 }, new Date("2026-10-27T16:30:00Z")),
+    ).toBe(-30);
   });
 });

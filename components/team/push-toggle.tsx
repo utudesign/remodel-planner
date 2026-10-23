@@ -45,7 +45,11 @@ export function PushToggle({ vapidKey }: { vapidKey: string | undefined }) {
           applicationServerKey: urlBase64ToUint8Array(vapidKey!),
         });
         const json = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
-        const r = await savePushSubscription({ endpoint: json.endpoint, keys: json.keys, userAgent: navigator.userAgent });
+        const r = await savePushSubscription({
+          endpoint: json.endpoint,
+          keys: json.keys,
+          userAgent: navigator.userAgent,
+        });
         setStatus(r?.ok ? "on" : "off");
         setMsg(r?.ok ? (r.message ?? null) : (r?.error ?? "Could not turn on"));
       } catch (e) {
@@ -69,7 +73,8 @@ export function PushToggle({ vapidKey }: { vapidKey: string | undefined }) {
   const text: Record<Status, string> = {
     loading: "Checking…",
     unsupported: "This browser can't receive push notifications.",
-    "needs-install": "On iPhone: tap Share → Add to Home Screen, open the app from there, then turn notifications on.",
+    "needs-install":
+      "On iPhone: tap Share → Add to Home Screen, open the app from there, then turn notifications on.",
     off: "Get a push on this phone for new leads, @mentions and payments.",
     on: "Push notifications are on for this device.",
     blocked: "Notifications are blocked for this site. Allow them in your phone's settings.",

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { after } from "next/server";
 import { ArrowLeft, MapPin, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,10 @@ import { formatDate, todayIn } from "@/lib/dates";
 import { formatCentsWhole } from "@/lib/money";
 import { currentMilestone, getProjectDetail } from "@/server/queries/projects";
 import { getCostCategories, getTeam } from "@/server/queries/settings";
+import { getComments, getFeed, recordView } from "@/server/queries/team";
+import { CommentThread } from "@/components/team/comment-thread";
+import { FeedList } from "@/components/team/feed-list";
+import { ProjectPmChip } from "@/components/projects/project-pm-chip";
 
 export const metadata = { title: "Project" };
 
@@ -32,10 +37,13 @@ export default async function ProjectPage({
   const s = await getSession();
   const office = s.role !== "crew";
   const detail = await getProjectDetail(s, id);
-  const [team, categories] = await Promise.all([
+  const [team, categories, comments, feed] = await Promise.all([
     getTeam(s),
     office ? getCostCategories(s) : Promise.resolve([]),
+    getComments(s, "project", id),
+    getFeed(s, { projectId: id, limit: 40 }),
   ]);
+  after(() => recordView(s, "project", id));
   const { project, milestones, tasks, payments, costs, financials, memberIds } = detail;
   const today = todayIn(s.timezone);
   const closed = project.status === "closed";
@@ -88,7 +96,7 @@ export default async function ProjectPage({
                 </a>
               ) : null}
               {office ? <span>{formatCentsWhole(project.contract_value_cents)}</span> : null}
-              {project.manager ? <span>PM: {project.manager.name}</span> : null}
+              {!office && project.manager ? <span>PM: {project.manager.name}</span> : null}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -113,6 +121,16 @@ export default async function ProjectPage({
           </div>
         </div>
 
+        {office ? (
+          <div>
+            <ProjectPmChip
+              projectId={project.id}
+              pm={project.manager}
+              people={activeTeam.filter((u) => u.role !== "crew")}
+              disabled={!canEdit}
+            />
+          </div>
+        ) : null}
         <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {KEY_DATES.map((k) => {
             const m = milestones.find((x) => x.key === k);
@@ -145,6 +163,9 @@ export default async function ProjectPage({
           {office ? <TabsTrigger value="payments">Payments</TabsTrigger> : null}
           {office ? <TabsTrigger value="costs">Costs</TabsTrigger> : null}
           {!office ? <TabsTrigger value="dates">Dates</TabsTrigger> : null}
+          <TabsTrigger value="comments">
+            Comments{comments.length ? ` (${comments.length})` : ""}
+          </TabsTrigger>
         </TabsList>
 
         {office ? (
@@ -217,6 +238,28 @@ export default async function ProjectPage({
             </TabsContent>
           </>
         ) : null}
+
+        <TabsContent value="comments" className="grid gap-5 lg:grid-cols-[1fr_360px]">
+          <Card>
+            <CardContent>
+              <CommentThread
+                comments={comments}
+                entityType="project"
+                entityId={project.id}
+                people={activeTeam.filter((u) => u.role !== "crew" || s.role === "crew")}
+                tz={s.timezone}
+              />
+            </CardContent>
+          </Card>
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle>Job activity</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FeedList items={feed} tz={s.timezone} now={new Date()} />
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );

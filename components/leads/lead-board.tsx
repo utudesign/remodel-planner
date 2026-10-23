@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import {
   DndContext,
@@ -14,12 +13,9 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { Phone } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { ErrorState } from "@/components/shared/states";
-import { FollowUpBadge } from "@/components/shared/follow-up-badge";
 import { MarkLostDialog } from "@/components/leads/mark-lost-dialog";
-import { formatBudget } from "@/lib/money";
+import { LeadCard } from "@/components/leads/lead-card";
 import { cn } from "@/lib/utils";
 import { moveLeadStage } from "@/server/actions/leads";
 import type { BoardLead } from "@/server/queries/leads";
@@ -27,31 +23,23 @@ import type { BoardLead } from "@/server/queries/leads";
 type Stage = { id: string; key: string; label: string };
 type Reason = { id: string; label: string };
 
-const SCOPE_LABEL: Record<string, string> = {
-  cabinets: "Cabinets",
-  counters: "Counters",
-  full: "Full remodel",
-  other: "Other",
-};
-
-function daysSince(iso: string, now: Date) {
-  return Math.max(0, Math.floor((now.getTime() - new Date(iso).getTime()) / 86_400_000));
-}
-
 export function LeadBoard({
   stages,
   leads: initial,
   reasons,
   tz,
   nowIso,
+  unread = [],
 }: {
   stages: Stage[];
   leads: BoardLead[];
   reasons: Reason[];
   tz: string;
   nowIso: string;
+  unread?: string[];
 }) {
   const now = useMemo(() => new Date(nowIso), [nowIso]);
+  const unreadSet = useMemo(() => new Set(unread), [unread]);
   const [leads, setLeads] = useState(initial);
   const [dragging, setDragging] = useState<BoardLead | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -127,7 +115,13 @@ export function LeadBoard({
                 ) : (
                   items.map((l) => (
                     <DraggableCard key={l.id} id={l.id}>
-                      <LeadCard lead={l} tz={tz} now={now} lost={stage.key === "lost"} />
+                      <LeadCard
+                        lead={l}
+                        tz={tz}
+                        now={now}
+                        lost={stage.key === "lost"}
+                        unread={unreadSet.has(l.id)}
+                      />
                     </DraggableCard>
                   ))
                 )}
@@ -138,7 +132,7 @@ export function LeadBoard({
         <DragOverlay>
           {dragging ? (
             <div className="w-72 rotate-2 shadow-lg">
-              <LeadCard lead={dragging} tz={tz} now={now} lost={false} />
+              <LeadCard lead={dragging} tz={tz} now={now} lost={false} unread={false} />
             </div>
           ) : null}
         </DragOverlay>
@@ -192,54 +186,5 @@ function DraggableCard({ id, children }: { id: string; children: React.ReactNode
     >
       {children}
     </div>
-  );
-}
-
-function LeadCard({
-  lead,
-  tz,
-  now,
-  lost,
-}: {
-  lead: BoardLead;
-  tz: string;
-  now: Date;
-  lost: boolean;
-}) {
-  const days = daysSince(lead.stage_entered_at, now);
-  return (
-    <article className="rounded-lg border bg-card p-3 shadow-xs">
-      <div className="flex items-start justify-between gap-2">
-        <Link href={`/leads/${lead.id}`} className="font-medium leading-tight hover:underline">
-          {lead.name}
-        </Link>
-        {lead.phone ? (
-          <a
-            href={`tel:${lead.phone}`}
-            aria-label={`Call ${lead.name}`}
-            className="-m-1 rounded-md p-1 text-muted-foreground hover:text-foreground"
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <Phone className="size-4" />
-          </a>
-        ) : null}
-      </div>
-      <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
-        {lead.scope ? (
-          <Badge variant="outline">{SCOPE_LABEL[lead.scope] ?? lead.scope}</Badge>
-        ) : null}
-        <Badge variant="outline">
-          {formatBudget(lead.budget_min_cents, lead.budget_max_cents)}
-        </Badge>
-        <span className="text-muted-foreground">
-          {days === 0 ? "new in stage" : `${days}d in stage`}
-        </span>
-      </div>
-      {!lost ? (
-        <div className="mt-2">
-          <FollowUpBadge at={lead.next_follow_up_at} tz={tz} now={now} />
-        </div>
-      ) : null}
-    </article>
   );
 }

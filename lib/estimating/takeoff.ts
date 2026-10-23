@@ -6,25 +6,25 @@
  */
 
 export const QTY_SOURCES = [
-  'countertop_sqft',
-  'crown_sticks',
-  'light_rail_sticks',
-  'toe_kick_sticks',
-  'scribe_sticks',
-  'door_pulls',
-  'drawer_pulls',
-  'led_ft',
-  'countertop_outlets',
-  'cover_plates',
+  "countertop_sqft",
+  "crown_sticks",
+  "light_rail_sticks",
+  "toe_kick_sticks",
+  "scribe_sticks",
+  "door_pulls",
+  "drawer_pulls",
+  "led_ft",
+  "countertop_outlets",
+  "cover_plates",
 ] as const;
 export type QtySource = (typeof QTY_SOURCES)[number];
 
 /** Stored as quotes.takeoff (jsonb). Inches for lengths along the counter, feet for trim. */
 export interface TakeoffInputs {
-  counter_runs_in: number[];   // each counter run measured along the wall, corner to end
-  counter_depth_in: number;    // 25.5 = 24" base + 1.5" overhang
-  corners: number;             // inside corners where two runs overlap
-  openings_in: number[];       // range, fridge or other gaps with no countertop
+  counter_runs_in: number[]; // each counter run measured along the wall, corner to end
+  counter_depth_in: number; // 25.5 = 24" base + 1.5" overhang
+  corners: number; // inside corners where two runs overlap
+  openings_in: number[]; // range, fridge or other gaps with no countertop
   crown_lf: number;
   light_rail_lf: number;
   toe_kick_lf: number;
@@ -35,17 +35,17 @@ export interface TakeoffInputs {
   led_watts_per_ft: number;
   led_driver_w: number;
   countertop_outlets: number;
-  extra_cover_plates: number;  // e.g. the outlet inside the microwave cabinet
-  cabinet_lf?: number;         // base + wall cabinet run in feet; used only by the phone ballpark
+  extra_cover_plates: number; // e.g. the outlet inside the microwave cabinet
+  cabinet_lf?: number; // base + wall cabinet run in feet; used only by the phone ballpark
 }
 
 /** From estimating_settings. */
 export interface TakeoffSettings {
-  trimWaste: number;          // 0.15
-  trimStickFt: number;        // 8
-  countertopOverage: number;  // 0.05
-  hardwareSpares: number;     // 2
-  ledHeadroom: number;        // 0.20
+  trimWaste: number; // 0.15
+  trimStickFt: number; // 8
+  countertopOverage: number; // 0.05
+  hardwareSpares: number; // 2
+  ledHeadroom: number; // 0.20
 }
 
 export interface TakeoffResult {
@@ -66,7 +66,9 @@ export function trimSticks(linearFeet: number, s: TakeoffSettings): number {
 }
 
 /** (Σ runs − corners × depth − Σ openings) × depth / 144 */
-export function countertopSqft(t: Pick<TakeoffInputs, 'counter_runs_in' | 'counter_depth_in' | 'corners' | 'openings_in'>): number {
+export function countertopSqft(
+  t: Pick<TakeoffInputs, "counter_runs_in" | "counter_depth_in" | "corners" | "openings_in">,
+): number {
   const netLengthIn = sum(t.counter_runs_in) - t.corners * t.counter_depth_in - sum(t.openings_in);
   return Math.max(0, (netLengthIn * t.counter_depth_in) / 144);
 }
@@ -78,13 +80,15 @@ export function computeTakeoff(t: TakeoffInputs, s: TakeoffSettings): TakeoffRes
   const minDriverW = ledLoadW * (1 + s.ledHeadroom);
 
   if (t.led_ft > 0 && t.led_driver_w < minDriverW) {
-    warnings.push(`LED driver ${t.led_driver_w} W is too small: needs at least ${minDriverW.toFixed(1)} W.`);
+    warnings.push(
+      `LED driver ${t.led_driver_w} W is too small: needs at least ${minDriverW.toFixed(1)} W.`,
+    );
   }
   if (t.counter_depth_in < 24) {
     warnings.push(`Counter depth ${t.counter_depth_in}" is less than a 24" base cabinet.`);
   }
   if (t.countertop_outlets === 0 && measuredCountertopSqft > 0) {
-    warnings.push('No countertop outlets entered. Code requires receptacles along the counter.');
+    warnings.push("No countertop outlets entered. Code requires receptacles along the counter.");
   }
 
   const quantities: Record<QtySource, number> = {

@@ -9,7 +9,11 @@ const BUCKET = "files";
 const MAX_BYTES = 8 * 1024 * 1024;
 const TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
 
-export async function uploadImages(files: File[], companyId: string, folder: string): Promise<string[]> {
+export async function uploadImages(
+  files: File[],
+  companyId: string,
+  folder: string,
+): Promise<string[]> {
   const real = files.filter((f) => f && f.size > 0);
   if (real.length > 6) throw new Error("Up to 6 photos at a time");
   const admin = createAdminSupabase();
@@ -19,7 +23,9 @@ export async function uploadImages(files: File[], companyId: string, folder: str
     if (f.size > MAX_BYTES) throw new Error(`${f.name} is too large (max 8 MB)`);
     const ext = f.type === "image/png" ? "png" : f.type === "image/webp" ? "webp" : "jpg";
     const path = `${companyId}/${folder}/${randomUUID()}.${ext}`;
-    const { error } = await admin.storage.from(BUCKET).upload(path, f, { contentType: f.type, upsert: false });
+    const { error } = await admin.storage
+      .from(BUCKET)
+      .upload(path, f, { contentType: f.type, upsert: false });
     if (error) throw new Error(`Upload failed: ${error.message}`);
     paths.push(path);
   }
@@ -27,10 +33,15 @@ export async function uploadImages(files: File[], companyId: string, folder: str
 }
 
 /** Signed URLs (1 hour) for paths the caller has already been allowed to read. */
-export async function signedUrls(paths: string[], companyId: string): Promise<Record<string, string>> {
+export async function signedUrls(
+  paths: string[],
+  companyId: string,
+): Promise<Record<string, string>> {
   const own = paths.filter((p) => p.startsWith(`${companyId}/`));
   if (own.length === 0) return {};
-  const { data, error } = await createAdminSupabase().storage.from(BUCKET).createSignedUrls(own, 3600);
+  const { data, error } = await createAdminSupabase()
+    .storage.from(BUCKET)
+    .createSignedUrls(own, 3600);
   if (error || !data) return {};
   const out: Record<string, string> = {};
   for (const d of data) if (d.path && d.signedUrl) out[d.path] = d.signedUrl;

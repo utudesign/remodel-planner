@@ -32,11 +32,18 @@ const ICONS: Record<NavIcon, LucideIcon> = {
 const MORE_PATHS = ["/more", "/activity", "/analytics", "/settings", "/command", "/notifications"];
 
 function isActive(pathname: string, href: string) {
-  if (href === "/more") return MORE_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  if (href === "/more")
+    return MORE_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function SidebarNav({ items, badges }: { items: NavItem[]; badges?: Partial<Record<string, number>> }) {
+export function SidebarNav({
+  items,
+  badges,
+}: {
+  items: NavItem[];
+  badges?: Partial<Record<string, number>>;
+}) {
   const pathname = usePathname();
   return (
     <nav className="flex flex-col gap-1">
@@ -55,7 +62,9 @@ export function SidebarNav({ items, badges }: { items: NavItem[]; badges?: Parti
             <Icon className="size-4" />
             {item.label}
             {n ? (
-              <span className="ml-auto rounded-full bg-destructive px-1.5 text-[11px] font-semibold text-white">{n}</span>
+              <span className="ml-auto rounded-full bg-destructive px-1.5 text-[11px] font-semibold text-white">
+                {n}
+              </span>
             ) : null}
           </Link>
         );
@@ -64,11 +73,20 @@ export function SidebarNav({ items, badges }: { items: NavItem[]; badges?: Parti
   );
 }
 
-export function BottomNav({ items, badges }: { items: NavItem[]; badges?: Partial<Record<string, number>> }) {
+export function BottomNav({
+  items,
+  badges,
+}: {
+  items: NavItem[];
+  badges?: Partial<Record<string, number>>;
+}) {
   const pathname = usePathname();
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
-      <ul className="grid" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
+      <ul
+        className="grid"
+        style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+      >
         {items.map((item) => {
           const Icon = ICONS[item.icon];
           const active = isActive(pathname, item.href);

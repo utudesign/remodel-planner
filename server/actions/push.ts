@@ -17,10 +17,18 @@ export async function savePushSubscription(input: z.input<typeof subSchema>): Pr
     const v = subSchema.parse(input);
     const s = await requireRole("owner", "team", "crew");
     ok(
-      await s.db.from("push_subscriptions").upsert(
-        { company_id: s.companyId, user_id: s.userId, endpoint: v.endpoint, keys: v.keys, user_agent: v.userAgent ?? null },
-        { onConflict: "endpoint" },
-      ),
+      await s.db
+        .from("push_subscriptions")
+        .upsert(
+          {
+            company_id: s.companyId,
+            user_id: s.userId,
+            endpoint: v.endpoint,
+            keys: v.keys,
+            user_agent: v.userAgent ?? null,
+          },
+          { onConflict: "endpoint" },
+        ),
     );
     return { ok: true, message: "Notifications on for this phone" };
   });
@@ -33,11 +41,14 @@ export async function removePushSubscription(input: { endpoint: string }): Promi
   });
 }
 
-
 export async function saveMutes(mute: string[]): Promise<ActionState> {
   return run(async () => {
     const keys = NOTIFY_KINDS.map((k) => k.key) as string[];
-    const v = z.array(z.string()).max(20).parse(mute).filter((k) => keys.includes(k));
+    const v = z
+      .array(z.string())
+      .max(20)
+      .parse(mute)
+      .filter((k) => keys.includes(k));
     const s = await requireRole("owner", "team", "crew");
     const me = await s.db.from("users").select("notify_prefs").eq("id", s.userId).single();
     ok(

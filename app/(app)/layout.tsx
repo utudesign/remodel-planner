@@ -10,7 +10,11 @@ import { unreadNotificationCount } from "@/server/queries/team";
 
 function BellLink({ count }: { count: number }) {
   return (
-    <Link href="/notifications" aria-label={`Notifications${count ? ` (${count} unread)` : ""}`} className="relative p-2">
+    <Link
+      href="/notifications"
+      aria-label={`Notifications${count ? ` (${count} unread)` : ""}`}
+      className="relative p-2"
+    >
       <Bell className="size-5 text-muted-foreground" />
       {count ? (
         <span className="absolute top-0.5 right-0.5 min-w-4 rounded-full bg-destructive px-1 text-center text-[10px] font-semibold text-white">
@@ -36,7 +40,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
         <SidebarNav items={navFor(session.role)} />
         <div className="mt-auto flex flex-col gap-3 px-1">
-          <OrganizationSwitcher hidePersonal afterSelectOrganizationUrl="/today" afterCreateOrganizationUrl="/today" />
+          <OrganizationSwitcher
+            hidePersonal
+            afterSelectOrganizationUrl="/today"
+            afterCreateOrganizationUrl="/today"
+          />
           <div className="flex items-center gap-2 px-2 text-sm">
             <UserButton />
             <div className="min-w-0">
@@ -56,7 +64,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <UserButton />
           </div>
         </header>
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-5 pb-36 lg:px-8 lg:pt-8 lg:pb-12">{children}</main>
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-5 pb-36 lg:px-8 lg:pt-8 lg:pb-12">
+          {children}
+        </main>
       </div>
       {!crew ? <Fab /> : null}
       <BottomNav items={tabsFor(session.role)} />

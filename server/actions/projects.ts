@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { flushNotifications } from "@/server/push";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/require-role";
 import { buildPaymentSchedule } from "@/lib/payment-schedule";
@@ -54,6 +56,7 @@ export async function convertLead(_: ActionState, fd: FormData): Promise<ActionS
         p_planned_start_date: v.planned_start_date ?? undefined,
       }),
     );
+    after(() => flushNotifications(s.companyId));
     revalidateProject();
     revalidatePath("/leads");
     revalidatePath(`/leads/${v.lead_id}`);
@@ -147,6 +150,20 @@ export async function setProjectMembers(input: {
         ),
       );
     }
+    revalidateProject(v.project_id);
+  });
+}
+
+export async function reassignProject(input: {
+  project_id: string;
+  user_id: string;
+}): Promise<ActionState> {
+  return run(async () => {
+    const v = z.object({ project_id: z.uuid(), user_id: z.uuid() }).parse(input);
+    const s = await requireRole(...TEAM_ROLES);
+    ok(
+      await s.db.from("projects").update({ project_manager_id: v.user_id }).eq("id", v.project_id),
+    );
     revalidateProject(v.project_id);
   });
 }

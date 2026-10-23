@@ -9,7 +9,10 @@ const team = [
 
 describe("parseMentions", () => {
   it("matches first names and full names", () => {
-    expect(parseMentions("@Crystal can you measure Sat? cc @tugu", team).sort()).toEqual(["c", "t"]);
+    expect(parseMentions("@Crystal can you measure Sat? cc @tugu", team).sort()).toEqual([
+      "c",
+      "t",
+    ]);
     expect(parseMentions("@Office Admin please book", team)).toEqual(["a"]);
   });
   it("ignores emails and partial words", () => {

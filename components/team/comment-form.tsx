@@ -31,7 +31,13 @@ export function CommentForm({
     <form ref={formRef} action={action} className="flex flex-col gap-2">
       <input type="hidden" name="entity_type" value={entityType} />
       <input type="hidden" name="entity_id" value={entityId} />
-      <Textarea ref={areaRef} name="body" rows={2} required placeholder="Write a note… use @name to notify someone" />
+      <Textarea
+        ref={areaRef}
+        name="body"
+        rows={2}
+        required
+        placeholder="Write a note… use @name to notify someone"
+      />
       <div className="flex flex-wrap gap-1.5">
         {people.map((p) => (
           <button

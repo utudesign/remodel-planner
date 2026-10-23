@@ -59,7 +59,9 @@ export function AssigneeChip({
           ))}
         </select>
       ) : null}
-      {error ? <span className="absolute top-full left-0 mt-1 text-xs text-destructive">{error}</span> : null}
+      {error ? (
+        <span className="absolute top-full left-0 mt-1 text-xs text-destructive">{error}</span>
+      ) : null}
     </span>
   );
 }

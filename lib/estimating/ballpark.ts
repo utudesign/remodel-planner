@@ -10,8 +10,14 @@
  * mid − low% (rounded down) to mid + high% (rounded up), to the nearest $500 by default.
  * It is never a commitment: the final price comes from Crystal's design + quote.
  */
-import { quoteTotals, type LineInput, type QuoteAssumptions } from './pricing';
-import { computeTakeoff, QTY_SOURCES, type QtySource, type TakeoffInputs, type TakeoffSettings } from './takeoff';
+import { quoteTotals, type LineInput, type QuoteAssumptions } from "./pricing";
+import {
+  computeTakeoff,
+  QTY_SOURCES,
+  type QtySource,
+  type TakeoffInputs,
+  type TakeoffSettings,
+} from "./takeoff";
 
 export interface BallparkLine extends LineInput {
   qtySource: string | null;
@@ -20,8 +26,8 @@ export interface BallparkLine extends LineInput {
 }
 
 export interface BallparkSettings {
-  lowPct: number;      // estimating_settings.ballpark_low_pct  (0.05)
-  highPct: number;     // estimating_settings.ballpark_high_pct (0.15)
+  lowPct: number; // estimating_settings.ballpark_low_pct  (0.05)
+  highPct: number; // estimating_settings.ballpark_high_pct (0.15)
   roundToCents: number; // estimating_settings.ballpark_round_cents (50000 = $500)
 }
 
@@ -44,14 +50,17 @@ export function ballpark(
   takeoffSettings: TakeoffSettings,
   settings: BallparkSettings,
 ): BallparkResult {
-  if (!(templateTakeoff.cabinet_lf > 0)) throw new RangeError('Template is missing cabinet_lf in its default takeoff');
-  if (!(rough.cabinet_lf >= 0)) throw new RangeError('Enter the cabinet length in feet');
+  if (!(templateTakeoff.cabinet_lf > 0))
+    throw new RangeError("Template is missing cabinet_lf in its default takeoff");
+  if (!(rough.cabinet_lf >= 0)) throw new RangeError("Enter the cabinet length in feet");
 
   const takeoff = computeTakeoff(rough, takeoffSettings);
   const cabinetFactor = rough.cabinet_lf / templateTakeoff.cabinet_lf;
   const warnings = [...takeoff.warnings];
   if (cabinetFactor < 0.5 || cabinetFactor > 2) {
-    warnings.push('This kitchen is far from the template size. Pick a closer template for a better range.');
+    warnings.push(
+      "This kitchen is far from the template size. Pick a closer template for a better range.",
+    );
   }
 
   const lines: LineInput[] = templateLines.map((line) => {
@@ -73,5 +82,12 @@ export function ballpark(
   const lowCents = Math.floor((mid * (1 - settings.lowPct)) / step) * step;
   const highCents = Math.ceil((mid * (1 + settings.highPct)) / step) * step;
 
-  return { lowCents, midCents: mid, highCents, costCents: totals.totalCostCents, cabinetFactor, warnings };
+  return {
+    lowCents,
+    midCents: mid,
+    highCents,
+    costCents: totals.totalCostCents,
+    cabinetFactor,
+    warnings,
+  };
 }

@@ -25,7 +25,15 @@ async function compress(file: File): Promise<File> {
 }
 
 /** Camera/photo picker that posts compressed images under `name` with the surrounding form. */
-export function PhotoInput({ name = "photos", label = "Photo", className }: { name?: string; label?: string; className?: string }) {
+export function PhotoInput({
+  name = "photos",
+  label = "Photo",
+  className,
+}: {
+  name?: string;
+  label?: string;
+  className?: string;
+}) {
   const ref = useRef<HTMLInputElement>(null);
   const [previews, setPreviews] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -53,14 +61,27 @@ export function PhotoInput({ name = "photos", label = "Photo", className }: { na
     <div className={cn("flex flex-wrap items-center gap-2", className)}>
       <label className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm font-medium">
         <Camera className="size-4" /> {busy ? "Preparing…" : label}
-        <input ref={ref} type="file" name={name} accept="image/*" multiple className="sr-only" onChange={onChange} />
+        <input
+          ref={ref}
+          type="file"
+          name={name}
+          accept="image/*"
+          multiple
+          className="sr-only"
+          onChange={onChange}
+        />
       </label>
       {previews.map((u) => (
         // eslint-disable-next-line @next/next/no-img-element
         <img key={u} src={u} alt="" className="size-11 rounded-md object-cover" />
       ))}
       {previews.length ? (
-        <button type="button" onClick={clear} aria-label="Remove photos" className="text-muted-foreground">
+        <button
+          type="button"
+          onClick={clear}
+          aria-label="Remove photos"
+          className="text-muted-foreground"
+        >
           <X className="size-4" />
         </button>
       ) : null}

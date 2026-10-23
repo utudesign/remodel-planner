@@ -24,12 +24,17 @@ export function Fab() {
     <div className="fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 lg:bottom-6">
       {open ? (
         <>
-          <button aria-label="Close" className="fixed inset-0 -z-10 bg-black/30" onClick={() => setOpen(false)} />
+          <button
+            aria-label="Close"
+            className="fixed inset-0 -z-10 bg-black/30"
+            onClick={() => setOpen(false)}
+          />
           <ul className="mb-3 flex flex-col items-end gap-2">
             {LATER.map((a) => (
               <li key={a.label}>
                 <span className="flex h-11 items-center gap-2 rounded-full bg-card px-4 text-sm text-muted-foreground shadow-md">
-                  <a.icon className="size-4" /> {a.label} <span className="text-[10px]">({a.phase})</span>
+                  <a.icon className="size-4" /> {a.label}{" "}
+                  <span className="text-[10px]">({a.phase})</span>
                 </span>
               </li>
             ))}

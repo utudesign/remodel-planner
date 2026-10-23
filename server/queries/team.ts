@@ -10,7 +10,11 @@ export type CommentView = {
   photos: string[];
 };
 
-export async function getComments(s: Session, entityType: "lead" | "project" | "task", entityId: string): Promise<CommentView[]> {
+export async function getComments(
+  s: Session,
+  entityType: "lead" | "project" | "task",
+  entityId: string,
+): Promise<CommentView[]> {
   const rows = must(
     await s.db
       .from("comments")
@@ -19,7 +23,10 @@ export async function getComments(s: Session, entityType: "lead" | "project" | "
       .eq("entity_id", entityId)
       .order("created_at"),
   );
-  const urls = await signedUrls(rows.flatMap((r) => r.photo_paths), s.companyId);
+  const urls = await signedUrls(
+    rows.flatMap((r) => r.photo_paths),
+    s.companyId,
+  );
   return rows.map((r) => ({
     id: r.id,
     body: r.body,
@@ -33,14 +40,21 @@ export async function getComments(s: Session, entityType: "lead" | "project" | "
 export async function recordView(s: Session, entityType: "lead" | "project", entityId: string) {
   await s.db
     .from("record_views")
-    .upsert({ user_id: s.userId, entity_type: entityType, entity_id: entityId, last_seen_at: new Date().toISOString() });
+    .upsert({
+      user_id: s.userId,
+      entity_type: entityType,
+      entity_id: entityId,
+      last_seen_at: new Date().toISOString(),
+    });
 }
 
 /**
  * Unread = someone else changed the record since I last opened it.
  * Small company: read the last 14 days of events and compare in memory.
  */
-export async function getUnread(s: Session): Promise<{ leads: Set<string>; projects: Set<string> }> {
+export async function getUnread(
+  s: Session,
+): Promise<{ leads: Set<string>; projects: Set<string> }> {
   const since = new Date(Date.now() - 14 * 86_400_000).toISOString();
   const [events, views] = await Promise.all([
     s.db
@@ -48,7 +62,10 @@ export async function getUnread(s: Session): Promise<{ leads: Set<string>; proje
       .select("lead_id, project_id, actor_id, created_at")
       .gte("created_at", since)
       .neq("actor_id", s.userId),
-    s.db.from("record_views").select("entity_type, entity_id, last_seen_at").eq("user_id", s.userId),
+    s.db
+      .from("record_views")
+      .select("entity_type, entity_id, last_seen_at")
+      .eq("user_id", s.userId),
   ]);
   const seen = new Map(must(views).map((v) => [`${v.entity_type}:${v.entity_id}`, v.last_seen_at]));
   const leads = new Set<string>();
@@ -81,11 +98,19 @@ export type FeedItem = {
 
 export async function getFeed(
   s: Session,
-  opts: { limit?: number; actorId?: string; projectId?: string; money?: boolean; since?: string } = {},
+  opts: {
+    limit?: number;
+    actorId?: string;
+    projectId?: string;
+    money?: boolean;
+    since?: string;
+  } = {},
 ): Promise<FeedItem[]> {
   let q = s.db
     .from("events")
-    .select("id, verb, summary, created_at, publish_at, pinned_until, has_money, lead_id, project_id, actor:users(id, name)")
+    .select(
+      "id, verb, summary, created_at, publish_at, pinned_until, has_money, lead_id, project_id, actor:users(id, name)",
+    )
     .order("publish_at", { ascending: false })
     .limit(opts.limit ?? 50);
   if (opts.actorId) q = q.eq("actor_id", opts.actorId);
@@ -116,5 +141,11 @@ export async function unreadNotificationCount(s: Session) {
 }
 
 export async function getTeamMembers(s: Session) {
-  return must(await s.db.from("users").select("id, name, role, active, avatar_url").eq("active", true).order("name"));
+  return must(
+    await s.db
+      .from("users")
+      .select("id, name, role, active, avatar_url")
+      .eq("active", true)
+      .order("name"),
+  );
 }

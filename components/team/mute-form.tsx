@@ -4,7 +4,13 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { saveMutes } from "@/server/actions/push";
 
-export function MuteForm({ kinds, muted }: { kinds: readonly { key: string; label: string }[]; muted: string[] }) {
+export function MuteForm({
+  kinds,
+  muted,
+}: {
+  kinds: readonly { key: string; label: string }[];
+  muted: string[];
+}) {
   const [m, setM] = useState(new Set(muted));
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);

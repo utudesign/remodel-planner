@@ -15,11 +15,18 @@ export default async function MorePage() {
   const me = must(await s.db.from("users").select("notify_prefs").eq("id", s.userId).single());
   const muted = ((me.notify_prefs ?? {}) as { mute?: string[] }).mute ?? [];
   const links = [
-    { href: "/command", label: "Command center", icon: LayoutDashboard, hint: "Shift queue, checklists, handoff" },
+    {
+      href: "/command",
+      label: "Command center",
+      icon: LayoutDashboard,
+      hint: "Shift queue, checklists, handoff",
+    },
     { href: "/activity", label: "Activity", icon: Rss, hint: "Everything the team did" },
     { href: "/notifications", label: "Notifications", icon: Bell, hint: "Your inbox" },
     { href: "/analytics", label: "Analytics", icon: BarChart3, hint: "Margin per job" },
-    ...(s.role === "owner" ? [{ href: "/settings", label: "Settings", icon: Settings, hint: "Team, windows, rules" }] : []),
+    ...(s.role === "owner"
+      ? [{ href: "/settings", label: "Settings", icon: Settings, hint: "Team, windows, rules" }]
+      : []),
   ];
   return (
     <>

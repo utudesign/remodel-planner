@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Calculator, Camera, ClipboardPaste, PhoneCall, PhoneMissed, Plus, UserPlus, X } from "lucide-react";
+import { Calculator, Camera, Car, ClipboardPaste, PhoneCall, PhoneMissed, Plus, Receipt, UserPlus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** Floating + : New deal · Paste a message · Quick estimate · Take photos · Log call · Add expense · Log trip. */
@@ -14,6 +14,8 @@ const ACTIONS = [
   { href: "/pick?for=estimate", label: "Quick estimate", icon: Calculator },
   { href: "/pick?for=photos", label: "Take photos", icon: Camera },
   { href: "/pick?for=log", label: "Log call", icon: PhoneCall },
+  { href: "/money/expenses/new", label: "Add expense", icon: Receipt },
+  { href: "/money/mileage/new", label: "Log trip", icon: Car },
 ] as const;
 
 export function Fab() {

@@ -156,3 +156,13 @@ payments schedule, close/margin lock screens) was removed; it's in git history b
 | Crystal's login: More → Partners → Invite. An invite row + a Clerk email invitation; her first sign-in with that email creates a `partner` user (`accept_partner_invite`) | Works with Clerk sign-ups restricted to you |
 | Partners can read the customer contact and site visit of deals handed to them (0010) | She needs the address and measurements to do the job; estimates, notes and my money stay hidden (0006) |
 | Every job update (hers or mine) is logged on the deal; hers also notify me (`partner_update`, held until 3:30 PM on workdays) | One timeline, no "did you see my text?" |
+
+### Step 5: my money
+
+| Decision | Why |
+| --- | --- |
+| Commission payments: amount (negative = clawback), date, Zelle / check / ACH + reference, optional check photo filed in the deal's payments folder | SALES-REP-MODE §6; only the owner records them (0006 RLS) |
+| Expenses with a receipt photo in `{company}/receipts/{year}/…` (private bucket, signed URLs) | Kept out of any deal jacket the partner can see |
+| Mileage = miles typed in, or odometer start/end; "Log the drive" from a deal pre-fills it | PLAN Q8: no paid maps API |
+| Year tab uses `rep_year_summary(year, 72.5)`; CSV export lists commissions received, expenses and mileage for the tax preparer | 1099 contractor; set-aside % is a savings target, not tax advice |
+| Earned-and-unpaid > 14 days: red on Today and counted in the 3:30 PM digest | SALES-REP-MODE §6 |

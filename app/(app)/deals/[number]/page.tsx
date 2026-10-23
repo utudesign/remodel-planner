@@ -429,6 +429,9 @@ async function Visits({
         >
           Open the site visit form
         </Link>
+        <Link href={`/money/mileage/new?deal=${number}`} className="flex h-11 items-center justify-center rounded-xl bg-secondary text-sm font-semibold">
+          Log the drive (mileage)
+        </Link>
         <div className="flex items-center justify-between gap-2 rounded-xl bg-secondary p-3">
           <p className="min-w-0 text-sm">
             <span className="block font-medium">Client booking link</span>
@@ -723,6 +726,14 @@ async function PartnerTab({
         <Stat label="Owed now" value={commission ? formatCents(commission.owed_cents) : "—"} tone={commission && commission.owed_cents > 0 ? "text-destructive" : undefined} />
         <Stat label="Earned" value={commission ? formatCents(commission.earned_cents) : "—"} small />
         <Stat label="Paid to me" value={commission ? formatCents(commission.paid_cents) : "—"} small hint={commission?.plan_name} />
+        {commission && commission.earned_cents > 0 ? (
+          <Link
+            href={`/money/record?deal=${deal.deal_number}`}
+            className="col-span-2 flex h-11 items-center justify-center rounded-xl bg-accent text-sm font-semibold text-accent-foreground"
+          >
+            Record a payment I received
+          </Link>
+        ) : null}
       </div>
       <Card>
         <CardHeader>

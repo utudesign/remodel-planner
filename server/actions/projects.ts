@@ -9,7 +9,7 @@ import {
   milestoneDatesSchema,
   projectHeaderSchema,
 } from "@/lib/validation/project";
-import { formToObject, must, ok, run, type ActionState } from "@/server/action-utils";
+import { formToObject, maybe, must, ok, run, type ActionState } from "@/server/action-utils";
 import { z } from "zod";
 
 const OFFICE = ["admin", "designer"] as const;
@@ -78,6 +78,21 @@ export async function moveProject(input: {
         p_milestone_key: v.milestone_key,
       }),
     );
+    const m = maybe(
+      await s.db
+        .from("milestones")
+        .select("name")
+        .eq("project_id", v.project_id)
+        .eq("key", v.milestone_key)
+        .maybeSingle(),
+    );
+    await s.db.from("activities").insert({
+      company_id: s.companyId,
+      project_id: v.project_id,
+      type: "note",
+      summary: `Moved to ${m?.name ?? v.milestone_key}`,
+      created_by: s.userId,
+    });
     revalidateProject(v.project_id);
   });
 }
@@ -91,9 +106,18 @@ export async function updateMilestoneDates(_: ActionState, fd: FormData): Promis
         .from("milestones")
         .update({ planned_date: v.planned_date, actual_date: v.actual_date })
         .eq("id", v.milestone_id)
-        .select("project_id")
+        .select("project_id, name")
         .single(),
     );
+    await s.db.from("activities").insert({
+      company_id: s.companyId,
+      project_id: m.project_id,
+      type: "note",
+      summary: v.actual_date
+        ? `${m.name} done (${v.actual_date})`
+        : `${m.name} planned for ${v.planned_date ?? "TBD"}`,
+      created_by: s.userId,
+    });
     revalidateProject(m.project_id);
     return { ok: true, message: "Dates saved" };
   });

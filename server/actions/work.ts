@@ -49,14 +49,12 @@ export async function saveTask(_: ActionState, fd: FormData): Promise<ActionStat
           .limit(1),
       );
       ok(
-        await s.db
-          .from("tasks")
-          .insert({
-            ...row,
-            project_id: v.project_id,
-            company_id: s.companyId,
-            sort_order: (last[0]?.sort_order ?? 0) + 1,
-          }),
+        await s.db.from("tasks").insert({
+          ...row,
+          project_id: v.project_id,
+          company_id: s.companyId,
+          sort_order: (last[0]?.sort_order ?? 0) + 1,
+        }),
       );
     }
     revalidate(v.project_id);
@@ -79,9 +77,19 @@ export async function setTaskStatus(input: {
         .from("tasks")
         .update({ status: v.status })
         .eq("id", v.task_id)
-        .select("project_id")
+        .select("project_id, title")
         .single(),
     );
+    if (v.status === "done" || v.status === "blocked") {
+      // Shows in "Team updates" on Today, so the others see progress without a call.
+      await s.db.from("activities").insert({
+        company_id: s.companyId,
+        project_id: t.project_id,
+        type: "note",
+        summary: `${v.status === "done" ? "Done" : "Blocked"}: ${t.title}`,
+        created_by: s.userId,
+      });
+    }
     revalidate(t.project_id);
   });
 }

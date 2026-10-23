@@ -1,8 +1,8 @@
 -- =====================================================================
 -- 0004_deal_jacket.sql
 -- Deal numbers + the deal jacket (everything for one customer job in one place):
---   1. Deal numbers: MMDD + that day's sequence, Eastern Time, restart every year
---      Oct 23 first deal = 10231, second = 10232; Oct 24 first = 10241; Jan 5 first = 01051
+--   1. Deal numbers: YY-NNNN per company per year (26-1001, 26-1002 … 27-1001),
+--      plus document numbers inside a deal (26-1047-CO1, -E2, -R3, -PO1)
 --   2. deal_files: photos + documents in fixed folders, stored in the private
 --      'deal-files' bucket at {company}/{year}/{deal number}/{folder}/{file}
 --   3. Required-document gates (like a car deal jacket): before order / start / close
@@ -13,48 +13,61 @@
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
--- 1. Deal numbers
+-- 1. Deal numbers: YY-NNNN
+--    26-1001 is the first deal of 2026, 26-1002 the next; 27-1001 starts 2027.
+--    Short enough to say on the phone, sorts correctly, the year is visible, and the
+--    number never depends on what day the deal was opened. Year = company time zone.
+--    Documents in a deal reuse it: 26-1047-E2 (estimate v2), 26-1047-CO1 (change order),
+--    26-1047-R3 (payment receipt), 26-1047-PO1 (purchase order), 26-1047-W1 (warranty claim).
 -- ---------------------------------------------------------------------
 alter table public.deals
   add column if not exists deal_year       int,
-  add column if not exists deal_date       date,
   add column if not exists deal_seq        int,
   add column if not exists deal_number     text,
+  add column if not exists opened_on       date,
   add column if not exists permit_required boolean not null default false,
   add column if not exists deleted_at      timestamptz;
 
-create unique index if not exists deals_number_unique on public.deals (company_id, deal_year, deal_number);
+create unique index if not exists deals_number_unique on public.deals (company_id, deal_number);
 create unique index if not exists projects_one_per_deal on public.projects (deal_id);
 
--- One row per company per day; only next_deal_number() touches it.
+-- Settings: where each year's series starts (default 1001, so the first deal never looks like #1).
+alter table public.companies add column if not exists deal_number_start int not null default 1001;
+
+-- One row per company per year; only next_deal_number() touches it.
 create table public.deal_number_counters (
   company_id  uuid not null references public.companies(id) on delete cascade,
-  deal_date   date not null,
+  deal_year   int  not null,
   last_seq    int  not null,
-  constraint deal_number_counters_pkey primary key (company_id, deal_date)
+  constraint deal_number_counters_pkey primary key (company_id, deal_year)
 );
 alter table public.deal_number_counters enable row level security;  -- no policies: no direct access
 revoke all on public.deal_number_counters from anon, authenticated;
 
--- Concurrency-safe: the upsert locks the day's row, so two deals opened at the
--- same moment get 10231 and 10232, never the same number.
+-- Concurrency-safe: the upsert locks the year's row, so two deals opened at the
+-- same moment get 26-1047 and 26-1048, never the same number.
 create or replace function public.next_deal_number(p_company_id uuid, p_at timestamptz default now())
-returns table (deal_year int, deal_date date, deal_seq int, deal_number text)
+returns table (deal_year int, deal_seq int, deal_number text, opened_on date)
 language plpgsql security definer set search_path = public as $$
 declare
-  v_date date;
-  v_seq  int;
+  v_date  date;
+  v_start int;
+  v_year  int;
+  v_seq   int;
 begin
-  select (p_at at time zone coalesce(c.timezone, 'America/New_York'))::date into v_date
+  select (p_at at time zone coalesce(c.timezone, 'America/New_York'))::date, c.deal_number_start
+    into v_date, v_start
   from public.companies c where c.id = p_company_id;
   if v_date is null then raise exception 'Company % not found', p_company_id; end if;
+  v_year := extract(year from v_date)::int;
 
-  insert into public.deal_number_counters as c (company_id, deal_date, last_seq)
-  values (p_company_id, v_date, 1)
+  insert into public.deal_number_counters as c (company_id, deal_year, last_seq)
+  values (p_company_id, v_year, v_start)
   on conflict on constraint deal_number_counters_pkey do update set last_seq = c.last_seq + 1
   returning c.last_seq into v_seq;
 
-  return query select extract(year from v_date)::int, v_date, v_seq, to_char(v_date, 'MMDD') || v_seq::text;
+  return query select v_year, v_seq,
+    lpad((v_year % 100)::text, 2, '0') || '-' || lpad(v_seq::text, 4, '0'), v_date;
 end $$;
 revoke execute on function public.next_deal_number(uuid, timestamptz) from public, anon, authenticated;
 
@@ -65,9 +78,9 @@ begin
   if new.deal_number is null then
     select * into n from public.next_deal_number(new.company_id, coalesce(new.created_at, now()));
     new.deal_year := n.deal_year;
-    new.deal_date := n.deal_date;
     new.deal_seq := n.deal_seq;
     new.deal_number := n.deal_number;
+    new.opened_on := n.opened_on;
   end if;
   return new;
 end $$;
@@ -78,14 +91,53 @@ create trigger deals_number before insert on public.deals
 create or replace function public.deals_guard_number()
 returns trigger language plpgsql as $$
 begin
-  if (new.deal_year, new.deal_date, new.deal_seq, new.deal_number)
-     is distinct from (old.deal_year, old.deal_date, old.deal_seq, old.deal_number) then
+  if (new.deal_year, new.deal_seq, new.deal_number, new.opened_on)
+     is distinct from (old.deal_year, old.deal_seq, old.deal_number, old.opened_on) then
     raise exception 'Deal numbers cannot be changed (deal %)', old.deal_number using errcode = 'check_violation';
   end if;
   return new;
 end $$;
 create trigger deals_number_guard before update on public.deals
   for each row execute function public.deals_guard_number();
+
+-- Document numbers inside a deal: 26-1047-CO1, -CO2 … one series per deal per kind.
+create table public.deal_doc_counters (
+  deal_id  uuid not null references public.deals(id) on delete cascade,
+  kind     text not null check (kind in ('E','D','CO','R','PO','INV','W')),
+  last_n   int  not null,
+  constraint deal_doc_counters_pkey primary key (deal_id, kind)
+);
+alter table public.deal_doc_counters enable row level security;
+revoke all on public.deal_doc_counters from anon, authenticated;
+
+-- E = estimate/quote version, D = vendor design request, CO = change order, R = payment receipt,
+-- PO = purchase order, INV = invoice to the client, W = warranty claim.
+-- Internal (used by triggers, e.g. change orders and payment receipts in 0005).
+create or replace function public._deal_doc_number(p_deal_id uuid, p_kind text)
+returns text language plpgsql security definer set search_path = public as $$
+declare v_num text; v_n int;
+begin
+  select d.deal_number into v_num from public.deals d where d.id = p_deal_id;
+  if v_num is null then raise exception 'Deal % not found', p_deal_id; end if;
+  insert into public.deal_doc_counters as c (deal_id, kind, last_n) values (p_deal_id, p_kind, 1)
+  on conflict on constraint deal_doc_counters_pkey do update set last_n = c.last_n + 1
+  returning c.last_n into v_n;
+  return v_num || '-' || p_kind || v_n;
+end $$;
+revoke execute on function public._deal_doc_number(uuid, text) from public, anon, authenticated;
+
+-- For the app (owners + team), e.g. numbering a purchase order: 26-1047-PO1.
+create or replace function public.next_deal_doc_number(p_deal_id uuid, p_kind text)
+returns text language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from public.deals d where d.id = p_deal_id
+                 and d.company_id = public.current_company_id() and public.is_team()) then
+    raise exception 'Deal % not found', p_deal_id using errcode = 'insufficient_privilege';
+  end if;
+  return public._deal_doc_number(p_deal_id, p_kind);
+end $$;
+revoke execute on function public.next_deal_doc_number(uuid, text) from public, anon;
+grant execute on function public.next_deal_doc_number(uuid, text) to authenticated;
 
 create or replace function public.is_assigned_to_deal(p_deal_id uuid)
 returns boolean language sql stable security definer set search_path = public as $$

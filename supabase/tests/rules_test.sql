@@ -1,15 +1,11 @@
--- Business-rule + RLS checks. Run against a fresh `supabase db reset` (needs seed.sql):
---   psql "$DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/rules_test.sql
+-- Rules + access checks for 0001/0007 on top of supabase/seed.sql.
+-- (The handoff's own tests in test/ cover 0002–0006.) Run with scripts/test-db.sh.
 -- Every block raises on failure; success prints "ALL RULE TESTS PASSED".
 \set QUIET on
-
--- Link the demo company to a fake Clerk org and add an admin + an unassigned field user.
-update public.companies set clerk_org_id = 'org_test' where id = '00000000-0000-0000-0000-0000000000c1';
-select public.bootstrap_membership('org_test', 'RenoDesign (demo)', 'user_admin', 'Admin', 'a@x.com', 'crew');
-select public.bootstrap_membership('org_test', 'RenoDesign (demo)', 'user_field_other', 'Other', 'o@x.com', 'crew');
+\set ON_ERROR_STOP 1
 
 create or replace function pg_temp.act_as(p_sub text) returns void language sql as $$
-  select set_config('request.jwt.claims', json_build_object('sub', p_sub, 'o', json_build_object('id', 'org_test'))::text, false);
+  select set_config('request.jwt.claims', json_build_object('sub', p_sub)::text, false);
 $$;
 create or replace function pg_temp.expect_error(p_sql text, p_like text) returns void language plpgsql as $$
 begin
@@ -21,277 +17,163 @@ begin
   end;
   raise exception 'Expected an error like "%" but the statement succeeded: %', p_like, p_sql;
 end $$;
--- File every required document for a gate (what the jacket's "Add" buttons do).
-create or replace function pg_temp.file_gate(p_deal uuid, p_gate text) returns void language sql as $$
-  insert into public.deal_files (deal_id, folder, storage_path, mime_type, size_bytes, requirement_id, title)
-  select d.id, r.folder,
-         d.company_id || '/' || d.deal_year || '/' || d.deal_number || '/' || r.folder || '/' || gen_random_uuid() || '.pdf',
-         'application/pdf', 1000, r.id, r.label
-    from public.deals d join public.document_requirements r on r.company_id = d.company_id
-   where d.id = p_deal and r.gate = p_gate and r.required
-     and (r.applies_when = 'always' or d.permit_required)
-$$;
 grant execute on all functions in schema pg_temp to authenticated;
 
+-- A second account (another rep) and a stray crew login in the demo company.
+select * from public.bootstrap_owner('user_other_rep', 'Other Rep', 'o@x.com') \gset other_
+insert into public.users (company_id, clerk_id, name, role)
+values ('00000000-0000-0000-0000-0000000000c1', 'seed_crew', 'Installer', 'crew');
+
+-- 0. Onboarding ------------------------------------------------------------------
+do $$
+declare c uuid := (select company_id from public.users where clerk_id = 'user_other_rep');
+begin
+  if (select count(*) from public.pipeline_stages where company_id = c) <> 8 then raise exception 'stages not seeded'; end if;
+  if (select count(*) from public.partners where company_id = c) <> 1 then raise exception 'partner not seeded'; end if;
+  if (select count(*) from public.commission_plans where company_id = c) <> 2 then raise exception 'plans not seeded'; end if;
+  if not exists (select 1 from public.estimating_settings where company_id = c) then raise exception 'estimating not seeded'; end if;
+  if (select count(*) from public.document_requirements where company_id = c and gate = 'before_handoff') <> 5 then
+    raise exception 'hand-off checklist not seeded'; end if;
+  if (select (settings_json->>'mileage_rate_cents')::numeric from public.companies where id = c) <> 72.5 then
+    raise exception 'mileage rate default'; end if;
+  if (select role from public.users where clerk_id = 'user_other_rep') <> 'owner' then raise exception 'first user is owner'; end if;
+  -- idempotent
+  perform public.bootstrap_owner('user_other_rep', 'Other Rep', 'o@x.com');
+  perform public.seed_company_defaults(c);
+  if (select count(*) from public.companies) <> 2 then raise exception 'bootstrap twice made a 2nd company'; end if;
+  if (select count(*) from public.commission_plans where company_id = c) <> 2 then raise exception 'plans duplicated'; end if;
+  raise notice 'OK: onboarding seeds stages, partner, plans, estimating, checklist; idempotent';
+end $$;
+
 set role authenticated;
 
--- 1. Visibility -------------------------------------------------------------------
-select pg_temp.act_as('user_admin');
+-- 1. Who sees what ----------------------------------------------------------------
+select pg_temp.act_as('seed_tugu');
 do $$ begin
-  if (select count(*) from public.projects) <> 2 then raise exception 'admin should see 2 projects'; end if;
-  if (select count(*) from public.deals) <> 5 then raise exception 'admin should see 5 deals'; end if;
+  if (select count(*) from public.deals) <> 8 then raise exception 'owner should see 8 deals, sees %', (select count(*) from public.deals); end if;
+  if (select count(*) from public.business_expenses) <> 1 then raise exception 'owner sees expenses'; end if;
+  if (select count(*) from public.companies) <> 1 then raise exception 'owner sees only own company'; end if;
+  raise notice 'OK: owner sees all 8 demo deals, own company only';
 end $$;
 
-select pg_temp.act_as('seed_crew');
+select pg_temp.act_as('user_other_rep');
 do $$ begin
-  -- crew never reads the projects table (money columns); they use crew_projects
-  if (select count(*) from public.projects) <> 0 then raise exception 'crew must not read projects (money columns)'; end if;
-  if (select count(*) from public.crew_projects) <> 1 then raise exception 'assigned crew should see 1 job via crew_projects'; end if;
-  if exists (select 1 from information_schema.columns where table_name = 'crew_projects' and column_name like '%cents%') then
-    raise exception 'crew_projects exposes money columns';
-  end if;
-  if (select count(*) from public.deals) <> 0 then raise exception 'crew must not see deals'; end if;
-  if (select count(*) from public.payments) <> 0 then raise exception 'crew must not see payments'; end if;
-  if (select count(*) from public.costs) <> 0 then raise exception 'crew must not see costs'; end if;
-  if (select count(*) from public.tasks) = 0 then raise exception 'crew should see tasks on their job'; end if;
-  if exists (select 1 from public.events where has_money) then raise exception 'crew sees money events'; end if;
+  if (select count(*) from public.deals) <> 0 then raise exception 'other rep sees demo deals'; end if;
+  if (select count(*) from public.contacts) <> 0 then raise exception 'other rep sees contacts'; end if;
+  if (select count(*) from public.partners) <> 1 then raise exception 'other rep should see only own partner'; end if;
+  raise notice 'OK: another account sees nothing of the demo company';
 end $$;
 
-select pg_temp.act_as('user_field_other');
-do $$ begin
-  if (select count(*) from public.crew_projects) <> 0 then raise exception 'unassigned crew should see 0 jobs'; end if;
-end $$;
-
-select pg_temp.act_as('nobody');
-do $$ begin
-  if (select count(*) from public.contacts) <> 0 then raise exception 'non-member sees contacts'; end if;
-end $$;
-
--- 2. Deal guards -------------------------------------------------------------------
-select pg_temp.act_as('user_admin');
-select pg_temp.expect_error(
-  $q$update public.deals set next_follow_up_at = null where contact_id = (select id from public.contacts where name = 'Maria Gonzalez')$q$,
-  '%next follow-up%');
-select pg_temp.expect_error(
-  $q$update public.deals set stage_id = (select id from public.pipeline_stages where key = 'lost')
-     where contact_id = (select id from public.contacts where name = 'Maria Gonzalez')$q$,
-  '%lost reason%');
-select pg_temp.expect_error(
-  $q$update public.deals set stage_id = (select id from public.pipeline_stages where key = 'won')
-     where contact_id = (select id from public.contacts where name = 'Maria Gonzalez')$q$,
-  '%deposit%');
-
--- New deal gets owner = default owner and follow-up ≈ now + 1h; stage change is logged.
-do $$
-declare v_deal uuid; v_contact uuid;
-begin
-  insert into public.contacts (company_id, name) values (private.company_id(), 'Test Person') returning id into v_contact;
-  insert into public.deals (company_id, contact_id, stage_id)
-  values (private.company_id(), v_contact, (select id from public.pipeline_stages where key = 'new'))
-  returning id into v_deal;
-  if (select owner_id from public.deals where id = v_deal) <> private.user_id() then
-    raise exception 'new deal should be owned by the default owner (first admin)';
-  end if;
-  if (select abs(extract(epoch from next_follow_up_at - (now() + interval '1 hour'))) from public.deals where id = v_deal) > 5 then
-    raise exception 'new deal follow-up should be now + 1h';
-  end if;
-  update public.deals set stage_id = (select id from public.pipeline_stages where key = 'contacted') where id = v_deal;
-  if not exists (select 1 from public.activities where deal_id = v_deal and type = 'stage_change') then
-    raise exception 'stage change should be logged';
-  end if;
-end $$;
-
--- 3. Convert to project ------------------------------------------------------------
-select pg_temp.expect_error($q$
-  select public.convert_deal_to_project(
-    (select l.id from public.deals l join public.contacts c on c.id = l.contact_id where c.name = 'Maria Gonzalez'),
-    'Bad sum', 1000000, null, null,
-    '[{"label":"Deposit","amount_cents":500000},{"label":"Rest","amount_cents":400000,"due_trigger":"final_inspection"}]',
-    current_date, 'check', '1', null, null)$q$, '%add up%');
-
-do $$
-declare v_project uuid;
-begin
-  v_project := public.convert_deal_to_project(
-    (select l.id from public.deals l join public.contacts c on c.id = l.contact_id where c.name = 'Maria Gonzalez'),
-    'Gonzalez cabinets', 1000000,
-    (select id from public.payment_templates where name = 'Cabinets only'),
-    (select id from public.task_templates where is_default),
-    '[{"label":"Deposit","amount_cents":700000},{"label":"Balance","amount_cents":300000,"due_trigger":"materials_delivered"}]',
-    current_date, 'check', '2001', current_date + 14, null);
-  if (select count(*) from public.milestones where project_id = v_project) <> 9 then raise exception 'milestones not generated'; end if;
-  if (select count(*) from public.tasks where project_id = v_project) <> 16 then raise exception 'tasks not generated'; end if;
-  if (select status from public.payments where project_id = v_project and sort_order = 1) <> 'received' then
-    raise exception 'deposit should be received';
-  end if;
-  if (select s.key from public.deals l join public.pipeline_stages s on s.id = l.stage_id
-       join public.projects p on p.deal_id = l.id where p.id = v_project) <> 'won' then
-    raise exception 'deal should be won';
-  end if;
-
-  -- 4. Deal jacket gate: can't order without contract + design + deposit papers.
-  begin
-    perform public.move_project_to_milestone(v_project, 'project_start');
-    raise exception 'order gate should block';
-  exception when check_violation then
-    if sqlerrm not like 'Deal jacket is missing before ordering%' then raise; end if;
-  end;
-  perform pg_temp.file_gate((select deal_id from public.projects where id = v_project), 'before_order');
-
-  -- Moving past "Materials Delivered" makes the balance due.
-  perform public.move_project_to_milestone(v_project, 'project_start');
-  if (select status from public.payments where project_id = v_project and sort_order = 2) <> 'due' then
-    raise exception 'balance should be due after delivery';
-  end if;
-  -- Moving back reverts it.
-  perform public.move_project_to_milestone(v_project, 'materials_delivered');
-  if (select status from public.payments where project_id = v_project and sort_order = 2) <> 'pending' then
-    raise exception 'balance should revert to pending';
-  end if;
-end $$;
-
--- 5. Close gate + margin lock --------------------------------------------------------
-select pg_temp.expect_error($q$select public.close_project('00000000-0000-0000-0000-0000000000a2')$q$, '%Balance due%punch list%');
-
-select pg_temp.act_as('seed_office');
-select pg_temp.expect_error($q$select public.close_project('00000000-0000-0000-0000-0000000000a2')$q$, '%Only an owner%');
-update public.payments set status = 'received', received_on = current_date, method = 'check', check_number = '555'
- where project_id = '00000000-0000-0000-0000-0000000000a2' and status = 'due';
-update public.tasks set status = 'done' where project_id = '00000000-0000-0000-0000-0000000000a2' and kind = 'punch';
-
-select pg_temp.act_as('user_admin');
-select pg_temp.expect_error($q$select public.close_project('00000000-0000-0000-0000-0000000000a2')$q$, '%missing before closing%');
-select pg_temp.file_gate((select deal_id from public.projects where id = '00000000-0000-0000-0000-0000000000a2'), 'before_close');
-select public.close_project('00000000-0000-0000-0000-0000000000a2');
-do $$ begin
-  -- revenue 1,450,000; cost 1,045,000 → margin 27.93%
-  if (select locked_margin_bps from public.projects where id = '00000000-0000-0000-0000-0000000000a2') <> 2793 then
-    raise exception 'locked margin should be 2793 bps, got %',
-      (select locked_margin_bps from public.projects where id = '00000000-0000-0000-0000-0000000000a2');
-  end if;
-  if (select actual_date from public.milestones where project_id = '00000000-0000-0000-0000-0000000000a2' and key = 'final_payment') is null then
-    raise exception 'final payment milestone should be set when everything is received';
-  end if;
-end $$;
-
--- 6. Post-close edits: designer blocked, admin allowed + audited.
-select pg_temp.act_as('seed_office');
-select pg_temp.expect_error($q$update public.costs set actual_amount_cents = 1 where project_id = '00000000-0000-0000-0000-0000000000a2'$q$, '%closed%');
-select pg_temp.act_as('user_admin');
-update public.costs set vendor = 'CabinetCo Inc.' where project_id = '00000000-0000-0000-0000-0000000000a2' and vendor = 'CabinetCo';
-do $$ begin
-  if not exists (select 1 from public.audit_log where table_name = 'costs' and action = 'update') then
-    raise exception 'admin post-close edit should be audited';
-  end if;
-end $$;
-
--- 7. Settings are admin-only.
-select pg_temp.act_as('seed_office');
-do $$ begin
-  update public.lost_reasons set label = 'hack' where key = 'price';
-  if exists (select 1 from public.lost_reasons where label = 'hack') then raise exception 'designer edited settings'; end if;
-end $$;
-
--- 8. Team engine: events + notifications written in the same transaction --------------
-select pg_temp.act_as('seed_office');
-do $$
-declare v_contact uuid; v_deal uuid; v_owner uuid;
-begin
-  insert into public.contacts (company_id, name) values (private.company_id(), 'Event Test') returning id into v_contact;
-  insert into public.deals (company_id, contact_id, stage_id)
-  values (private.company_id(), v_contact, (select id from public.pipeline_stages where key = 'new'))
-  returning id, owner_id into v_deal, v_owner;
-  if not exists (select 1 from public.events where deal_id = v_deal and verb = 'deal.created') then
-    raise exception 'deal.created event missing';
-  end if;
-  insert into public.activities (company_id, deal_id, type, direction, summary)
-  values (private.company_id(), v_deal, 'call', 'out', 'left VM');
-  if (select first_response_at from public.deals where id = v_deal) is null then
-    raise exception 'first outbound touch should start the response clock';
-  end if;
-  if not exists (select 1 from public.events where deal_id = v_deal and verb = 'activity.call') then
-    raise exception 'activity event missing';
-  end if;
-end $$;
-
--- the owner (default deal owner) got a new-deal notification; the actor did not
-select pg_temp.act_as('user_admin');
-do $$ begin
-  if not exists (select 1 from public.notifications where kind = 'new_deal' and title like '%Event Test%') then
-    raise exception 'deal owner should be notified of a new deal';
-  end if;
-end $$;
-select pg_temp.act_as('seed_office');
-do $$ begin
-  if exists (select 1 from public.notifications where kind = 'new_deal' and title like '%Event Test%') then
-    raise exception 'the person who created the deal should not be notified';
-  end if;
-end $$;
-
--- @mention notifies the mentioned person only
-do $$
-declare v_deal uuid; v_crystal uuid;
-begin
-  select l.id into v_deal from public.deals l join public.contacts c on c.id = l.contact_id where c.name = 'Event Test';
-  select id into v_crystal from public.users where clerk_id = 'seed_crystal';
-  insert into public.comments (company_id, entity_type, entity_id, deal_id, author_id, body, mentions)
-  values (private.company_id(), 'deal', v_deal, v_deal, private.user_id(), '@Crystal can you measure Sat?', array[v_crystal]);
-end $$;
 select pg_temp.act_as('seed_crystal');
 do $$ begin
-  if not exists (select 1 from public.notifications where kind = 'mention' and title like '%mentioned you%') then
-    raise exception 'mentioned user should be notified';
-  end if;
+  if (select count(*) from public.deals) <> 3 then raise exception 'partner should see 3 handed-off deals, sees %', (select count(*) from public.deals); end if;
+  if (select count(*) from public.contacts) <> 0 then raise exception 'partner must not read contacts table'; end if;
+  if (select count(*) from public.business_expenses) + (select count(*) from public.mileage_trips) <> 0 then raise exception 'partner sees my money'; end if;
+  if (select count(*) from public.activities) <> 0 then raise exception 'partner sees my activity log'; end if;
+  if (select count(*) from public.deal_commissions) <> 3 then raise exception 'partner sees commissions on her deals'; end if;
+  raise notice 'OK: partner sees only her 3 deals, no contacts, notes or expenses';
 end $$;
-
--- events can't be forged; team can't change settings or work windows
-select pg_temp.act_as('seed_office');
-select pg_temp.expect_error($q$insert into public.events (company_id, entity_type, verb, summary) values (private.company_id(), 'x', 'x', 'x')$q$, '%permission denied%');
+select pg_temp.expect_error($$update public.deals set stage = 'new' where id = '00000000-0000-0000-0000-0000000000d3'$$,
+                            'Partners can only update%');
 do $$ begin
-  insert into public.work_windows (company_id, user_id, weekday, start_time, end_time, kind)
-  values (private.company_id(), private.user_id(), 1, '09:00', '10:00', 'live');
-  raise exception 'team should not be able to edit work windows';
-exception when insufficient_privilege then null;
+  update public.deals set job_status = 'ordered', deposit_received_at = now() where id = '00000000-0000-0000-0000-0000000000d3';
+  if not found then raise exception 'partner could not update job progress'; end if;
+  raise notice 'OK: partner updates job progress, not the stage';
 end $$;
 
--- crew: sees events for their job only, never money or sales
 select pg_temp.act_as('seed_crew');
 do $$ begin
-  if exists (select 1 from public.events where deal_id is not null) then raise exception 'crew sees sales events'; end if;
-  if exists (select 1 from public.events where has_money) then raise exception 'crew sees money events'; end if;
+  if (select count(*) from public.deals) + (select count(*) from public.contacts) + (select count(*) from public.partners) <> 0 then
+    raise exception 'unassigned crew sees sales data'; end if;
+  raise notice 'OK: crew login sees nothing';
 end $$;
 
--- 9. Deal numbers ----------------------------------------------------------------------
-reset role;
+-- 2. Deal rules -------------------------------------------------------------------
+select pg_temp.act_as('seed_tugu');
 do $$
-declare a record; b record; late record; jan record;
+declare d public.deals;
 begin
-  -- two deals at the same instant get consecutive numbers
-  select * into a from public.next_deal_number('00000000-0000-0000-0000-0000000000c1', timestamptz '2026-03-14 15:00:00-04');
-  select * into b from public.next_deal_number('00000000-0000-0000-0000-0000000000c1', timestamptz '2026-03-14 15:00:00-04');
-  if a.deal_number <> '03141' or b.deal_number <> '03142' then raise exception 'got % / %', a.deal_number, b.deal_number; end if;
-  -- 11:30 PM ET still belongs to that day (already Mar 15 in UTC)
-  select * into late from public.next_deal_number('00000000-0000-0000-0000-0000000000c1', timestamptz '2026-03-14 23:30:00-04');
-  if late.deal_number <> '03143' then raise exception '11:30 PM ET should be 03143, got %', late.deal_number; end if;
-  select * into jan from public.next_deal_number('00000000-0000-0000-0000-0000000000c1', timestamptz '2027-01-05 09:00:00-05');
-  if jan.deal_number <> '01051' or jan.deal_year <> 2027 then raise exception 'Jan 5 should be 01051/2027'; end if;
+  insert into public.deals (company_id, source, stage, scope)
+  values ('00000000-0000-0000-0000-0000000000c1', 'manual', 'new', 'kitchen') returning * into d;
+  if d.owner_id <> '00000000-0000-0000-0000-0000000000a1' then raise exception 'default owner'; end if;
+  if d.next_follow_up_at not between now() + interval '59 minutes' and now() + interval '61 minutes' then
+    raise exception 'new lead follow-up should be +1h, got %', d.next_follow_up_at; end if;
+  if d.deal_number !~ '^\d{2}-\d{4}$' then raise exception 'deal number %', d.deal_number; end if;
+
+  insert into public.activities (company_id, deal_id, type, direction, summary)
+  values (d.company_id, d.id, 'call', 'out', 'Left a voicemail');
+  select * into d from public.deals where id = d.id;
+  if d.last_touch_at is null then raise exception 'touch not recorded'; end if;
+
+  update public.deals set stage = 'qualified' where id = d.id returning * into d;
+  if d.next_follow_up_at::date <> (now() + interval '1 day')::date then raise exception 'qualified follow-up +1 day'; end if;
+  if not exists (select 1 from public.activities where deal_id = d.id and type = 'stage_change') then
+    raise exception 'stage change not logged'; end if;
+  raise notice 'OK: new deal gets number %, owner, +1h follow-up; touches + stage changes logged', d.deal_number;
+end $$;
+select pg_temp.expect_error($$update public.deals set stage = 'nope' where id = '00000000-0000-0000-0000-0000000000d6'$$, 'Unknown stage%');
+select pg_temp.expect_error($$update public.deals set stage = 'lost' where id = '00000000-0000-0000-0000-0000000000d6'$$, 'A lost reason is required%');
+do $$
+declare d public.deals;
+begin
+  update public.deals set stage = 'lost', lost_reason = 'timing' where id = '00000000-0000-0000-0000-0000000000d6' returning * into d;
+  if d.next_follow_up_at is not null then raise exception 'lost deals leave the follow-up queue'; end if;
+  update public.deals set stage = 'qualified' where id = d.id returning * into d;
+  if d.lost_reason is not null or d.next_follow_up_at is null then raise exception 'reopen clears lost reason'; end if;
+  raise notice 'OK: unknown stage refused; lost needs a reason; reopening works';
+end $$;
+
+-- 3. Hand-off moves the stage; partner updates restart the 7-day nudge -------------
+select pg_temp.expect_error($$update public.deals set handed_off_at = now() where id = '00000000-0000-0000-0000-0000000000d5'$$,
+                            'Pick the partner%');
+do $$
+declare d public.deals;
+begin
+  update public.deals d2 set partner_id = cp.partner_id, commission_plan_id = cp.id, handed_off_at = now()
+    from public.commission_plans cp
+   where d2.id = '00000000-0000-0000-0000-0000000000d4' and cp.company_id = d2.company_id and cp.name like 'Kitchens%'
+  returning d2.* into d;
+  if d.stage <> 'handed_off' then raise exception 'hand-off should move stage, got %', d.stage; end if;
+  if d.next_follow_up_at::date <> (now() + interval '7 days')::date then raise exception 'ask-partner nudge in 7 days'; end if;
+  raise notice 'OK: hand-off moves Lee to "Handed off" with a 7-day partner nudge';
+end $$;
+reset role;
+do $$ begin
+  if (select partner_updated_at from public.deals where id = '00000000-0000-0000-0000-0000000000d3') < now() - interval '1 minute' then
+    raise exception 'partner update not stamped'; end if;
+  raise notice 'OK: partner update stamped';
 end $$;
 set role authenticated;
-select pg_temp.act_as('user_admin');
-do $$ begin
-  if exists (select 1 from public.deals where deal_number = '' or deal_year < 2000) then raise exception 'every deal needs a number'; end if;
-  begin
-    update public.deals set deal_number = '99999' where deal_number is not null;
-    raise exception 'deal numbers must be permanent';
-  exception when check_violation then null;
-  end;
+
+-- 4. Money -------------------------------------------------------------------------
+select pg_temp.act_as('seed_tugu');
+do $$
+declare s record; k record;
+begin
+  select * into k from public.deal_commissions where deal_id = '00000000-0000-0000-0000-0000000000d2';
+  if k.earned_cents <> 96250 or k.owed_cents <> 96250 then raise exception 'Kim: earned % owed %', k.earned_cents, k.owed_cents; end if;
+  select * into k from public.deal_commissions where deal_id = '00000000-0000-0000-0000-0000000000d1';
+  if k.commission_status <> 'paid' or k.paid_cents <> 33600 then raise exception 'Park should be paid'; end if;
+  select * into s from public.rep_year_summary(2026, 72.5::numeric);
+  -- 42.5 mi × 72.5¢ = 3,081.25¢ → 3,081
+  if s.mileage_deduction_cents <> 3081 or s.net_cents <> 33600 - 7499 - 3081 then
+    raise exception 'year summary % %', s.mileage_deduction_cents, s.net_cents; end if;
+  raise notice 'OK: commissions (Kim owed $962.50, Park paid) and year net at 72.5¢/mi';
 end $$;
--- crew sees photos of their job but never money documents
-select pg_temp.act_as('seed_crew');
+
+-- 5. Notifications are private to their user ---------------------------------------
+reset role;
+insert into public.notifications (company_id, user_id, kind, title)
+values ('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000a1', 'new_lead', 'New lead');
+set role authenticated;
+select pg_temp.act_as('seed_crystal');
 do $$ begin
-  if exists (select 1 from public.deal_files where folder in ('payments', 'contract', 'invoices_receipts')) then
-    raise exception 'crew sees money documents';
-  end if;
+  if (select count(*) from public.notifications) <> 0 then raise exception 'partner sees my notifications'; end if;
+end $$;
+select pg_temp.act_as('seed_tugu');
+do $$ begin
+  if (select count(*) from public.notifications) <> 1 then raise exception 'owner sees own notification'; end if;
+  raise notice 'OK: notifications are per user';
 end $$;
 
 reset role;

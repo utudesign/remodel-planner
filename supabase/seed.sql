@@ -1,166 +1,100 @@
--- =============================================================================
--- Local demo data. Runs after migrations on `supabase db reset`.
--- Demo company "RenoDesign (demo)" is linked to a Clerk org by running (once, after you create your org):
---   update public.companies set clerk_org_id = 'org_XXXX' where id = '00000000-0000-0000-0000-0000000000c1';
--- Then sign in: you become admin + default owner (seed users don't count as real members).
--- All dates are relative to today (US Eastern) so the Today screen always has something on it.
--- =============================================================================
+-- Demo data for local development (`supabase db reset`). Not for production.
+-- One rep account with RenoDesign as partner and 8 deals across the lifecycle.
+-- Clerk ids starting with seed_ are placeholders: sign in with your real Clerk
+-- user and the app creates your own company (bootstrap_owner), separate from this one.
 
-do $$
-declare
-  c   uuid := '00000000-0000-0000-0000-0000000000c1';
-  u_d uuid := '00000000-0000-0000-0000-0000000000d1';
-  u_f uuid := '00000000-0000-0000-0000-0000000000f1';
-  today date := (now() at time zone 'America/New_York')::date;
-  s_new uuid; s_contacted uuid; s_quote uuid; s_won uuid; s_booked uuid;
-  ct1 uuid; ct2 uuid; ct3 uuid; ct4 uuid; ct5 uuid;
-  l4 uuid; l5 uuid;
-  p1 uuid := '00000000-0000-0000-0000-0000000000a1';
-  p2 uuid := '00000000-0000-0000-0000-0000000000a2';
-  cat_mat uuid; cat_lab uuid; cat_sub uuid;
-  tpl_full uuid; tpl_cab uuid; tpl_tasks uuid;
-begin
-  insert into public.companies (id, name) values (c, 'RenoDesign (demo)');
-  perform public.seed_company_defaults(c);
+insert into public.companies (id, name) values
+  ('00000000-0000-0000-0000-0000000000c1', 'Tugu — kitchen sales (demo)');
+insert into public.users (id, company_id, clerk_id, name, email, role, is_default_owner) values
+  ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000c1', 'seed_tugu', 'Tugu', 'tugu@example.com', 'owner', true);
+select public.seed_company_defaults('00000000-0000-0000-0000-0000000000c1');
 
-  insert into public.users (id, company_id, clerk_id, name, email, role, is_default_owner) values
-    (u_d, c, 'seed_office',  'Office Admin (demo)', 'office@example.com',  'team',  true),
-    (u_f, c, 'seed_crew',    'Crew Deal (demo)',    'crew@example.com',    'crew',  false),
-    ('00000000-0000-0000-0000-0000000000e1', c, 'seed_crystal', 'Crystal (demo)', 'crystal@example.com', 'owner', false);
+-- Crystal's optional partner login
+insert into public.users (id, company_id, clerk_id, name, email, role, partner_id)
+select '00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000000c1', 'seed_crystal', 'Crystal',
+       'crystal@example.com', 'partner', p.id
+from public.partners p where p.company_id = '00000000-0000-0000-0000-0000000000c1' and p.name = 'RenoDesign Inc.';
+update public.partners set phone = '(703) 555-0142', license_number = '[DPOR LICENSE #]', license_class = 'B'
+ where company_id = '00000000-0000-0000-0000-0000000000c1';
 
-  -- Work windows (ET), FIELD-AND-OFFICE §2: admin split shift; owners' shared field time.
-  insert into public.work_windows (company_id, user_id, weekday, start_time, end_time, kind)
-  select c, u_d, d, time '11:00', time '15:00', 'live' from generate_series(1, 5) d
-  union all select c, u_d, d, time '23:00', time '03:00', 'back_office' from generate_series(1, 5) d
-  union all select c, '00000000-0000-0000-0000-0000000000e1', d, time '17:30', time '21:00', 'field' from generate_series(1, 5) d
-  union all select c, '00000000-0000-0000-0000-0000000000e1', d, time '09:00', time '18:00', 'field' from unnest(array[0, 6]) d;
+insert into public.contacts (id, company_id, name, phone, address, city) values
+  ('00000000-0000-0000-0000-000000000c01', '00000000-0000-0000-0000-0000000000c1', 'Maria Gonzalez', '(571) 555-0101', null, 'Springfield'),
+  ('00000000-0000-0000-0000-000000000c02', '00000000-0000-0000-0000-0000000000c1', 'Ahmed Rahimi',   '(703) 555-0102', null, 'Burke'),
+  ('00000000-0000-0000-0000-000000000c03', '00000000-0000-0000-0000-0000000000c1', 'Raj Patel',      '(703) 555-0103', '8812 Oak Hollow Ln', 'Fairfax'),
+  ('00000000-0000-0000-0000-000000000c04', '00000000-0000-0000-0000-0000000000c1', 'Grace Lee',      '(571) 555-0104', '4120 Maple Ridge Ct', 'Fairfax'),
+  ('00000000-0000-0000-0000-000000000c05', '00000000-0000-0000-0000-0000000000c1', 'David Chen',     '(703) 555-0105', '1509 Laurel Glen Rd', 'Vienna'),
+  ('00000000-0000-0000-0000-000000000c06', '00000000-0000-0000-0000-0000000000c1', 'Min Kim',        '(571) 555-0106', '602 Cedar Pointe Dr', 'Centreville'),
+  ('00000000-0000-0000-0000-000000000c07', '00000000-0000-0000-0000-0000000000c1', 'Sun Park',       '(703) 555-0107', '77 Brookfield Ct', 'Annandale'),
+  ('00000000-0000-0000-0000-000000000c08', '00000000-0000-0000-0000-0000000000c1', 'Linh Nguyen',    '(571) 555-0108', null, 'Alexandria');
 
-  select id into s_new       from public.pipeline_stages where company_id = c and key = 'new';
-  select id into s_contacted from public.pipeline_stages where company_id = c and key = 'contacted';
-  select id into s_booked    from public.pipeline_stages where company_id = c and key = 'meeting_booked';
-  select id into s_quote     from public.pipeline_stages where company_id = c and key = 'quote_sent';
-  select id into s_won       from public.pipeline_stages where company_id = c and key = 'won';
-  select id into cat_mat from public.cost_categories where company_id = c and key = 'cabinets';
-  select id into cat_lab from public.cost_categories where company_id = c and key = 'labor';
-  select id into cat_sub from public.cost_categories where company_id = c and key = 'subcontractor';
-  select id into tpl_full from public.payment_templates where company_id = c and name = 'Cabinets + counters + install';
-  select id into tpl_cab  from public.payment_templates where company_id = c and name = 'Cabinets only';
-  select id into tpl_tasks from public.task_templates where company_id = c and is_default;
+-- created_at drives the deal number year (Eastern Time): all 2026 → 26-1001 …
+insert into public.deals (id, company_id, contact_id, source, stage, scope, title, budget_min_cents, budget_max_cents,
+                          timeline, estimated_value_cents, created_at, year_built, first_response_at) values
+  ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-000000000c07', 'marketplace', 'ready',   'cabinets_only', 'Park cabinets', 300000, 500000, 'asap', 420000, '2026-09-02 19:00-04', 1994, '2026-09-02 19:03-04'),
+  ('00000000-0000-0000-0000-0000000000d2', '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-000000000c06', 'fb_group',    'ready',   'kitchen',       'Kim kitchen',   3000000, 4500000, '1_3_months', 3850000, '2026-09-10 18:00-04', 1988, '2026-09-10 18:20-04'),
+  ('00000000-0000-0000-0000-0000000000d3', '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-000000000c05', 'referral',    'ready',   'kitchen',       'Chen kitchen',  3500000, 4500000, '1_3_months', 4000000, '2026-09-21 17:30-04', 2002, '2026-09-21 18:45-04'),
+  ('00000000-0000-0000-0000-0000000000d4', '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-000000000c04', 'marketplace', 'ready',   'kitchen',       'Lee kitchen',   3500000, 4000000, '3_6_months', 3850000, '2026-10-09 19:10-04', 1979, '2026-10-09 19:12-04'),
+  ('00000000-0000-0000-0000-0000000000d5', '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-000000000c03', 'fb_group',    'visit_booked', 'cabinets_only', 'Patel cabinets', 600000, 900000, '1_3_months', null, '2026-10-19 20:00-04', null, '2026-10-19 20:04-04'),
+  ('00000000-0000-0000-0000-0000000000d6', '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-000000000c02', 'fb_group',    'qualified', 'cabinets_only', 'Rahimi cabinets', null, null, 'later', null, '2026-10-21 21:00-04', null, '2026-10-21 21:30-04'),
+  ('00000000-0000-0000-0000-0000000000d7', '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-000000000c08', 'marketplace', 'estimate', 'kitchen',      'Nguyen kitchen', null, null, null, 2600000, '2026-10-01 18:00-04', null, '2026-10-01 18:10-04'),
+  ('00000000-0000-0000-0000-0000000000d8', '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-000000000c01', 'marketplace', 'new',     'kitchen',       'Gonzalez kitchen', null, null, null, null, now() - interval '2 hours', null, null);
 
-  -- Contacts -------------------------------------------------------------------
-  insert into public.contacts (company_id, name, phone, email, address, city, zip) values
-    (c, 'Maria Gonzalez', '(703) 555-0141', 'maria@example.com', '12 Oak St',     'Arlington',  '22201') returning id into ct1;
-  insert into public.contacts (company_id, name, phone, email, address, city, zip) values
-    (c, 'James Park',     '(571) 555-0188', null,                '840 Elm Ave',   'Fairfax',    '22030') returning id into ct2;
-  insert into public.contacts (company_id, name, phone, email, address, city, zip) values
-    (c, 'Priya Shah',     '(703) 555-0102', 'priya@example.com', '5 Maple Ct',    'Alexandria', '22314') returning id into ct3;
-  insert into public.contacts (company_id, name, phone, email, address, city, zip) values
-    (c, 'Tom & Lisa Reed','(703) 555-0177', 'reeds@example.com', '77 Birch Rd',   'Vienna',     '22180') returning id into ct4;
-  insert into public.contacts (company_id, name, phone, email, address, city, zip) values
-    (c, 'Ahmed Karimi',   '(571) 555-0123', 'ahmed@example.com', '310 Cedar Ln',  'McLean',     '22101') returning id into ct5;
+-- Lost: price
+update public.deals set stage = 'lost', lost_reason = 'price' where id = '00000000-0000-0000-0000-0000000000d7';
 
-  -- 3 open deals ------------------------------------------------------------------
-  insert into public.deals (company_id, contact_id, source, stage_id, owner_id, scope,
-                            budget_min_cents, budget_max_cents, desired_timeline, next_follow_up_at, created_at)
-  values (c, ct1, 'fb_marketplace', s_new, u_d, 'cabinets', 800000, 1200000, 'Next month',
-          now() - interval '30 minutes', now() - interval '90 minutes');
+-- Patel's visit tonight at 6:00 PM Eastern
+insert into public.meetings (company_id, deal_id, kind, starts_at, ends_at, booked_via)
+select '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000d5', 'visit',
+       ((now() at time zone 'America/New_York')::date + time '18:00') at time zone 'America/New_York',
+       ((now() at time zone 'America/New_York')::date + time '19:30') at time zone 'America/New_York', 'link';
 
-  insert into public.deals (company_id, contact_id, source, stage_id, owner_id, scope,
-                            budget_min_cents, budget_max_cents, desired_timeline, next_follow_up_at,
-                            stage_entered_at, created_at)
-  values (c, ct2, 'referral', s_contacted, u_d, 'full', 2500000, 4000000, 'Spring',
-          (today::timestamp + time '14:00') at time zone 'America/New_York',
-          now() - interval '3 days', now() - interval '4 days');
+-- File the hand-off checklist for the 4 "ready" deals (what the jacket's Add buttons do).
+insert into public.deal_files (deal_id, folder, photo_tag, storage_path, mime_type, size_bytes, requirement_id, title)
+select d.id, r.folder, case when r.folder = 'photos' then 'before' end,
+       d.company_id || '/' || d.deal_year || '/' || d.deal_number || '/' || r.folder || '/' || gen_random_uuid() || '.jpg',
+       'image/jpeg', 250000, r.id, r.label
+from public.deals d
+join public.document_requirements r on r.company_id = d.company_id and r.gate = 'before_handoff' and r.required
+where d.id in ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000d2',
+               '00000000-0000-0000-0000-0000000000d3', '00000000-0000-0000-0000-0000000000d4');
 
-  insert into public.deals (company_id, contact_id, source, stage_id, owner_id, scope,
-                            budget_min_cents, budget_max_cents, desired_timeline, next_follow_up_at,
-                            stage_entered_at, created_at)
-  values (c, ct3, 'call', s_quote, u_d, 'full', 3000000, 4500000, 'ASAP',
-          now() - interval '1 day', now() - interval '6 days', now() - interval '14 days');
+-- Hand off Park (cabinets plan), Kim + Chen (kitchens plan). Lee stays "ready".
+update public.deals d
+   set partner_id = p.id,
+       commission_plan_id = cp.id,
+       handed_off_at = d.created_at + interval '10 days'
+  from public.partners p
+  join public.commission_plans cp on cp.partner_id = p.id
+ where p.company_id = d.company_id
+   and ((d.id = '00000000-0000-0000-0000-0000000000d1' and cp.name like 'Cabinets only%')
+     or (d.id in ('00000000-0000-0000-0000-0000000000d2', '00000000-0000-0000-0000-0000000000d3') and cp.name like 'Kitchens%'));
 
-  insert into public.meetings (company_id, deal_id, type, scheduled_at, assignee_id)
-  select c, l.id, 'design_review', (today::timestamp + time '16:30') at time zone 'America/New_York', u_d
-    from public.deals l where l.contact_id = ct3;
+-- What Crystal reported
+update public.deals set job_status = 'completed', sold_price_cents = 420000,
+       deposit_received_at = '2026-09-15 12:00-04', paid_in_full_at = '2026-09-30 12:00-04'
+ where id = '00000000-0000-0000-0000-0000000000d1';
+update public.deals set job_status = 'ordered', sold_price_cents = 3850000,
+       deposit_received_at = now() - interval '16 days'
+ where id = '00000000-0000-0000-0000-0000000000d2';
+update public.deals set job_status = 'signed', sold_price_cents = 4000000,
+       partner_updated_at = now() - interval '8 days'
+ where id = '00000000-0000-0000-0000-0000000000d3';
+update public.deals set partner_updated_at = now() - interval '8 days', next_follow_up_at = now() - interval '1 day'
+ where id = '00000000-0000-0000-0000-0000000000d3';
 
-  insert into public.activities (company_id, deal_id, type, direction, summary, created_by, occurred_at)
-  select c, l.id, 'call', 'out', 'Left voicemail about the quote', u_d, now() - interval '1 day'
-    from public.deals l where l.contact_id = ct3;
+-- Commission received on Park ($336, Zelle)
+insert into public.commission_payments (company_id, deal_id, amount_cents, paid_on, method, reference)
+values ('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000d1', 33600, '2026-10-02', 'zelle', 'Zelle 8F2K');
 
-  -- Won deals backing the 2 sample projects ---------------------------------------
-  insert into public.deals (company_id, contact_id, source, stage_id, owner_id, scope, next_follow_up_at, created_at)
-  values (c, ct4, 'web', s_booked, u_d, 'full', now(), now() - interval '40 days') returning id into l4;
-  insert into public.deals (company_id, contact_id, source, stage_id, owner_id, scope, next_follow_up_at, created_at)
-  values (c, ct5, 'referral', s_booked, u_d, 'cabinets', now(), now() - interval '75 days') returning id into l5;
+-- My business money
+insert into public.business_expenses (company_id, spent_on, amount_cents, category, vendor, note) values
+  ('00000000-0000-0000-0000-0000000000c1', '2026-10-05', 7499, 'samples', 'TimberPeak', 'Door sample set');
+insert into public.mileage_trips (company_id, trip_on, miles, purpose, deal_id) values
+  ('00000000-0000-0000-0000-0000000000c1', '2026-10-09', 24.0, 'Site visit — Lee', '00000000-0000-0000-0000-0000000000d4'),
+  ('00000000-0000-0000-0000-0000000000c1', '2026-09-22', 18.5, 'Site visit — Chen', '00000000-0000-0000-0000-0000000000d3');
 
-  -- Project 1: full remodel, starts this week ---------------------------------------
-  insert into public.projects (id, company_id, deal_id, contact_id, name, contract_value_cents,
-                               payment_template_id, project_manager_id, created_at)
-  values (p1, c, l4, ct4, 'Reed kitchen — full remodel', 3600000, tpl_full, u_d, now() - interval '20 days');
-
-  insert into public.milestones (company_id, project_id, key, name, sort_order, planned_date, actual_date)
-  select c, p1, d.key, d.label, d.sort_order,
-         case d.key when 'materials_ordered' then today - 18
-                    when 'materials_delivered' then today - 2
-                    when 'project_start' then today + 2
-                    when 'mid_check' then today + 12
-                    when 'install_complete' then today + 25
-                    when 'final_inspection' then today + 28 end,
-         case d.key when 'deposit_received' then today - 20
-                    when 'materials_ordered' then today - 18 end
-    from public.milestone_definitions d where d.company_id = c;
-
-  insert into public.payments (company_id, project_id, label, amount_cents, due_trigger, due_date, received_on, method, check_number, status, sort_order) values
-    (c, p1, 'Deposit',             1800000, 'deposit_received', today - 20, today - 20, 'check', '1043', 'received', 1),
-    (c, p1, 'Mid-project payment',  900000, 'mid_check',        null,       null,       null,    null,   'pending',  2),
-    (c, p1, 'Final payment',        900000, 'final_inspection', null,       null,       null,    null,   'pending',  3);
-
-  insert into public.costs (company_id, project_id, category_id, vendor, description, estimated_amount_cents, actual_amount_cents) values
-    (c, p1, cat_mat, 'CabinetCo',    'Shaker cabinets',        1300000, 1340000),
-    (c, p1, (select id from public.cost_categories where company_id = c and key = 'countertop'), 'Stone Supply', 'Quartz countertops',      550000, null),
-    (c, p1, cat_lab, 'In-house',     'Install crew',            600000, null),
-    (c, p1, cat_sub, 'Bright Elec.', 'Electrical rough-in',     180000, null);
-
-  insert into public.tasks (company_id, project_id, milestone_id, title, kind, sort_order, status, assignee_id, due_date)
-  select c, p1, m.id, i.title, i.kind, i.sort_order,
-         case when i.sort_order <= 4 then 'done' when i.sort_order = 5 then 'blocked' else 'todo' end,
-         case when i.sort_order >= 6 then u_f end,
-         case when i.sort_order = 5 then today - 1 end
-    from public.task_template_items i
-    left join public.milestones m on m.project_id = p1 and m.key = i.milestone_key
-   where i.template_id = tpl_tasks;
-  update public.tasks set description = 'Supplier says 2 boxes back-ordered' where project_id = p1 and sort_order = 5;
-  update public.tasks set trade = case
-      when title ilike 'plumbing%' then 'Plumber'
-      when title ilike 'electrical%' or title ilike 'layout%' then 'Electrician'
-      when title ilike 'countertop%' then 'Countertop fabricator'
-      when sort_order between 7 and 15 then 'Install crew'
-    end
-   where project_id = p1;
-
-  insert into public.project_members (project_id, user_id, company_id) values (p1, u_f, c);
-
-  -- Project 2: cabinets only, at final inspection; final payment overdue ------------
-  insert into public.projects (id, company_id, deal_id, contact_id, name, contract_value_cents,
-                               payment_template_id, project_manager_id, created_at)
-  values (p2, c, l5, ct5, 'Karimi — cabinet replacement', 1450000, tpl_cab, u_d, now() - interval '60 days');
-
-  insert into public.milestones (company_id, project_id, key, name, sort_order, planned_date, actual_date)
-  select c, p2, d.key, d.label, d.sort_order,
-         case d.key when 'final_inspection' then today - 6 end,
-         case when d.sort_order <= 6 then today - 60 + d.sort_order * 8 end
-    from public.milestone_definitions d where d.company_id = c;
-  -- materials_delivered done → the 30% installment became due (trigger) 3+ days ago.
-  insert into public.payments (company_id, project_id, label, amount_cents, due_trigger, due_date, received_on, method, check_number, status, sort_order) values
-    (c, p2, 'Deposit at order',    1015000, 'deposit_received',    today - 60, today - 60, 'zelle', null, 'received', 1),
-    (c, p2, 'Balance on delivery',  435000, 'materials_delivered', today - 8,  null,       null,    null, 'due',      2);
-
-  insert into public.costs (company_id, project_id, category_id, vendor, description, estimated_amount_cents, actual_amount_cents) values
-    (c, p2, cat_mat, 'CabinetCo', 'RTA cabinets', 800000, 815000),
-    (c, p2, cat_lab, 'In-house',  'Install',      250000, 230000);
-
-  insert into public.tasks (company_id, project_id, title, kind, status, sort_order) values
-    (c, p2, 'Adjust pantry door hinge', 'punch', 'todo', 1),
-    (c, p2, 'Touch-up paint on end panel', 'punch', 'done', 2);
-
-  update public.deals set stage_id = s_won where id in (l4, l5);
-end $$;
+-- A few touches on the timeline
+insert into public.activities (company_id, deal_id, type, direction, summary, occurred_at) values
+  ('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000d4', 'fb_msg', 'in',  'Asked about a full kitchen, L-shape, starting after the holidays', '2026-10-09 19:10-04'),
+  ('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000d4', 'visit',  'out', 'Measured 10×12 L-shape, 24 photos, appliances reused', '2026-10-14 18:00-04'),
+  ('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000d6', 'fb_msg', 'in',  'Wants cabinets only, maybe spring', '2026-10-21 21:00-04');

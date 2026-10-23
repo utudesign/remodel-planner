@@ -13,11 +13,10 @@ export type Database = {
         Row: {
           company_id: string
           created_by: string | null
-          deal_id: string | null
+          deal_id: string
           direction: string | null
           id: string
           occurred_at: string
-          project_id: string | null
           summary: string
           type: string
         }
@@ -25,22 +24,20 @@ export type Database = {
         Insert: {
           company_id: string
           created_by?: string | null
-          deal_id?: string | null
+          deal_id: string
           direction?: string | null
           id?: string
           occurred_at?: string
-          project_id?: string | null
           summary?: string
           type: string
         }
         Update: {
           company_id?: string
           created_by?: string | null
-          deal_id?: string | null
+          deal_id?: string
           direction?: string | null
           id?: string
           occurred_at?: string
-          project_id?: string | null
           summary?: string
           type?: string
         }
@@ -63,6 +60,13 @@ export type Database = {
             foreignKeyName: "activities_deal_id_fkey"
             columns: ["deal_id"]
             isOneToOne: false
+            referencedRelation: "deal_commissions"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "activities_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
             referencedRelation: "deal_jacket_checklist"
             referencedColumns: ["deal_id"]
           },
@@ -77,28 +81,14 @@ export type Database = {
             foreignKeyName: "activities_deal_id_fkey"
             columns: ["deal_id"]
             isOneToOne: false
+            referencedRelation: "deal_warranty"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "activities_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
             referencedRelation: "deals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "activities_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "crew_projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "activities_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "deal_recap"
-            referencedColumns: ["project_id"]
-          },
-          {
-            foreignKeyName: "activities_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -155,165 +145,535 @@ export type Database = {
           },
         ]
       }
-      change_orders: {
+      business_expenses: {
         Row: {
-          approved_at: string | null
-          company_id: string
-          cost_change_cents: number
-          created_at: string
-          description: string
-          id: string
-          price_change_cents: number
-          project_id: string
-        }
-        ComputedFields: never
-        Insert: {
-          approved_at?: string | null
-          company_id: string
-          cost_change_cents?: number
-          created_at?: string
-          description: string
-          id?: string
-          price_change_cents?: number
-          project_id: string
-        }
-        Update: {
-          approved_at?: string | null
-          company_id?: string
-          cost_change_cents?: number
-          created_at?: string
-          description?: string
-          id?: string
-          price_change_cents?: number
-          project_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "change_orders_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "change_orders_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "crew_projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "change_orders_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "deal_recap"
-            referencedColumns: ["project_id"]
-          },
-          {
-            foreignKeyName: "change_orders_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      comments: {
-        Row: {
-          author_id: string
-          body: string
+          amount_cents: number
+          category: string
           company_id: string
           created_at: string
           deal_id: string | null
-          entity_id: string
-          entity_type: string
           id: string
-          mentions: string[]
-          photo_paths: string[]
-          project_id: string | null
+          note: string | null
+          receipt_path: string | null
+          spent_on: string
+          vendor: string | null
         }
         ComputedFields: never
         Insert: {
-          author_id: string
-          body: string
+          amount_cents: number
+          category: string
           company_id: string
           created_at?: string
           deal_id?: string | null
-          entity_id: string
-          entity_type: string
           id?: string
-          mentions?: string[]
-          photo_paths?: string[]
-          project_id?: string | null
+          note?: string | null
+          receipt_path?: string | null
+          spent_on: string
+          vendor?: string | null
         }
         Update: {
-          author_id?: string
-          body?: string
+          amount_cents?: number
+          category?: string
           company_id?: string
           created_at?: string
           deal_id?: string | null
-          entity_id?: string
-          entity_type?: string
           id?: string
-          mentions?: string[]
-          photo_paths?: string[]
-          project_id?: string | null
+          note?: string | null
+          receipt_path?: string | null
+          spent_on?: string
+          vendor?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "comments_author_id_fkey"
-            columns: ["author_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comments_company_id_fkey"
+            foreignKeyName: "business_expenses_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "comments_deal_id_fkey"
+            foreignKeyName: "business_expenses_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_commissions"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "business_expenses_deal_id_fkey"
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deal_jacket_checklist"
             referencedColumns: ["deal_id"]
           },
           {
-            foreignKeyName: "comments_deal_id_fkey"
+            foreignKeyName: "business_expenses_deal_id_fkey"
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deal_recap"
             referencedColumns: ["deal_id"]
           },
           {
-            foreignKeyName: "comments_deal_id_fkey"
+            foreignKeyName: "business_expenses_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_warranty"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "business_expenses_deal_id_fkey"
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      business_holidays: {
+        Row: {
+          day: string
+          name: string
+        }
+        ComputedFields: never
+        Insert: {
+          day: string
+          name: string
+        }
+        Update: {
+          day?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      catalog_categories: {
+        Row: {
+          company_id: string
+          cost_category: string
+          default_pick_phase_id: string | null
+          default_section_id: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        ComputedFields: never
+        Insert: {
+          company_id: string
+          cost_category: string
+          default_pick_phase_id?: string | null
+          default_section_id: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          company_id?: string
+          cost_category?: string
+          default_pick_phase_id?: string | null
+          default_section_id?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
           {
-            foreignKeyName: "comments_project_id_fkey"
-            columns: ["project_id"]
+            foreignKeyName: "catalog_categories_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "crew_projects"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "comments_project_id_fkey"
+            foreignKeyName: "catalog_categories_default_pick_phase_id_fkey"
+            columns: ["default_pick_phase_id"]
+            isOneToOne: false
+            referencedRelation: "pick_phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_categories_default_section_id_fkey"
+            columns: ["default_section_id"]
+            isOneToOne: false
+            referencedRelation: "quote_section_totals"
+            referencedColumns: ["section_id"]
+          },
+          {
+            foreignKeyName: "catalog_categories_default_section_id_fkey"
+            columns: ["default_section_id"]
+            isOneToOne: false
+            referencedRelation: "quote_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      catalog_collections: {
+        Row: {
+          active: boolean
+          colors: string[]
+          company_id: string
+          id: string
+          name: string
+          price_list_id: string | null
+          sort_order: number
+        }
+        ComputedFields: never
+        Insert: {
+          active?: boolean
+          colors?: string[]
+          company_id: string
+          id?: string
+          name: string
+          price_list_id?: string | null
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          colors?: string[]
+          company_id?: string
+          id?: string
+          name?: string
+          price_list_id?: string | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_collections_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_collections_price_list_id_fkey"
+            columns: ["price_list_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      catalog_items: {
+        Row: {
+          active: boolean
+          category_id: string
+          code: string
+          collection_id: string | null
+          company_id: string
+          cost_category: string | null
+          cost_updated_at: string
+          created_at: string
+          id: string
+          is_allowance: boolean
+          list_price_cents: number | null
+          name: string
+          notes: string | null
+          price_source: string
+          pricing_mode: string
+          qty_source: string | null
+          section_id: string | null
+          source_checked_on: string | null
+          source_url: string | null
+          taxable: boolean
+          unit: string
+          unit_cost_cents: number
+          unit_price_cents: number | null
+          updated_at: string
+          uses_labor_rate: boolean
+          vendor: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          active?: boolean
+          category_id: string
+          code?: string
+          collection_id?: string | null
+          company_id: string
+          cost_category?: string | null
+          cost_updated_at?: string
+          created_at?: string
+          id?: string
+          is_allowance?: boolean
+          list_price_cents?: number | null
+          name: string
+          notes?: string | null
+          price_source?: string
+          pricing_mode?: string
+          qty_source?: string | null
+          section_id?: string | null
+          source_checked_on?: string | null
+          source_url?: string | null
+          taxable?: boolean
+          unit?: string
+          unit_cost_cents?: number
+          unit_price_cents?: number | null
+          updated_at?: string
+          uses_labor_rate?: boolean
+          vendor?: string | null
+        }
+        Update: {
+          active?: boolean
+          category_id?: string
+          code?: string
+          collection_id?: string | null
+          company_id?: string
+          cost_category?: string | null
+          cost_updated_at?: string
+          created_at?: string
+          id?: string
+          is_allowance?: boolean
+          list_price_cents?: number | null
+          name?: string
+          notes?: string | null
+          price_source?: string
+          pricing_mode?: string
+          qty_source?: string | null
+          section_id?: string | null
+          source_checked_on?: string | null
+          source_url?: string | null
+          taxable?: boolean
+          unit?: string
+          unit_cost_cents?: number
+          unit_price_cents?: number | null
+          updated_at?: string
+          uses_labor_rate?: boolean
+          vendor?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_items_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "quote_section_totals"
+            referencedColumns: ["section_id"]
+          },
+          {
+            foreignKeyName: "catalog_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "quote_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      change_orders: {
+        Row: {
+          approved_at: string | null
+          client_signed_at: string | null
+          cost_change: number
+          description: string | null
+          doc_number: string | null
+          id: string
+          price_change: number
+          project_id: string
+          schedule_days: number
+          signed_file_id: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          approved_at?: string | null
+          client_signed_at?: string | null
+          cost_change?: number
+          description?: string | null
+          doc_number?: string | null
+          id?: string
+          price_change?: number
+          project_id: string
+          schedule_days?: number
+          signed_file_id?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          client_signed_at?: string | null
+          cost_change?: number
+          description?: string | null
+          doc_number?: string | null
+          id?: string
+          price_change?: number
+          project_id?: string
+          schedule_days?: number
+          signed_file_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_orders_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "deal_recap"
             referencedColumns: ["project_id"]
           },
           {
-            foreignKeyName: "comments_project_id_fkey"
+            foreignKeyName: "change_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "deal_warranty"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "change_orders_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_signed_file_id_fkey"
+            columns: ["signed_file_id"]
+            isOneToOne: false
+            referencedRelation: "deal_files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_payments: {
+        Row: {
+          amount_cents: number
+          company_id: string
+          created_at: string
+          deal_id: string
+          id: string
+          method: string | null
+          note: string | null
+          paid_on: string
+          reference: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          amount_cents: number
+          company_id: string
+          created_at?: string
+          deal_id: string
+          id?: string
+          method?: string | null
+          note?: string | null
+          paid_on: string
+          reference?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          company_id?: string
+          created_at?: string
+          deal_id?: string
+          id?: string
+          method?: string | null
+          note?: string | null
+          paid_on?: string
+          reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_payments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_payments_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_commissions"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "commission_payments_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_jacket_checklist"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "commission_payments_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_recap"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "commission_payments_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_warranty"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "commission_payments_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_plans: {
+        Row: {
+          active: boolean
+          basis: string
+          company_id: string
+          created_at: string
+          first_payout_pct: number
+          id: string
+          min_cents: number
+          name: string
+          partner_id: string
+          rate: number
+        }
+        ComputedFields: never
+        Insert: {
+          active?: boolean
+          basis?: string
+          company_id: string
+          created_at?: string
+          first_payout_pct?: number
+          id?: string
+          min_cents?: number
+          name: string
+          partner_id: string
+          rate: number
+        }
+        Update: {
+          active?: boolean
+          basis?: string
+          company_id?: string
+          created_at?: string
+          first_payout_pct?: number
+          id?: string
+          min_cents?: number
+          name?: string
+          partner_id?: string
+          rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_plans_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_plans_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
             referencedColumns: ["id"]
           },
         ]
@@ -322,6 +682,7 @@ export type Database = {
         Row: {
           clerk_org_id: string | null
           created_at: string
+          deal_number_start: number
           id: string
           name: string
           settings_json: NonNullable<Json>
@@ -331,6 +692,7 @@ export type Database = {
         Insert: {
           clerk_org_id?: string | null
           created_at?: string
+          deal_number_start?: number
           id?: string
           name: string
           settings_json?: NonNullable<Json>
@@ -339,6 +701,7 @@ export type Database = {
         Update: {
           clerk_org_id?: string | null
           created_at?: string
+          deal_number_start?: number
           id?: string
           name?: string
           settings_json?: NonNullable<Json>
@@ -346,15 +709,233 @@ export type Database = {
         }
         Relationships: []
       }
+      comparison_adjustments: {
+        Row: {
+          amount_cents: number
+          checked_on: string | null
+          company_id: string
+          id: string
+          label: string
+          quote_id: string | null
+          sort_order: number
+          source_id: string
+          url: string | null
+          verified: boolean
+        }
+        ComputedFields: never
+        Insert: {
+          amount_cents: number
+          checked_on?: string | null
+          company_id: string
+          id?: string
+          label: string
+          quote_id?: string | null
+          sort_order?: number
+          source_id: string
+          url?: string | null
+          verified?: boolean
+        }
+        Update: {
+          amount_cents?: number
+          checked_on?: string | null
+          company_id?: string
+          id?: string
+          label?: string
+          quote_id?: string | null
+          sort_order?: number
+          source_id?: string
+          url?: string | null
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comparison_adjustments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comparison_adjustments_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "deal_recap"
+            referencedColumns: ["approved_quote_id"]
+          },
+          {
+            foreignKeyName: "comparison_adjustments_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_section_totals"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "comparison_adjustments_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_totals"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "comparison_adjustments_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comparison_adjustments_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "comparison_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comparison_adjustments_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "quote_comparison_lines"
+            referencedColumns: ["source_id"]
+          },
+          {
+            foreignKeyName: "comparison_adjustments_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "quote_comparison_totals"
+            referencedColumns: ["source_id"]
+          },
+        ]
+      }
+      comparison_prices: {
+        Row: {
+          catalog_item_id: string | null
+          checked_on: string
+          company_id: string
+          id: string
+          is_substitute: boolean
+          match_code: string | null
+          notes: string | null
+          pack_price_cents: number
+          pack_qty: number
+          product_name: string
+          sku: string | null
+          source_id: string
+          url: string | null
+          verified: boolean
+        }
+        ComputedFields: never
+        Insert: {
+          catalog_item_id?: string | null
+          checked_on: string
+          company_id: string
+          id?: string
+          is_substitute?: boolean
+          match_code?: string | null
+          notes?: string | null
+          pack_price_cents: number
+          pack_qty?: number
+          product_name: string
+          sku?: string | null
+          source_id: string
+          url?: string | null
+          verified?: boolean
+        }
+        Update: {
+          catalog_item_id?: string | null
+          checked_on?: string
+          company_id?: string
+          id?: string
+          is_substitute?: boolean
+          match_code?: string | null
+          notes?: string | null
+          pack_price_cents?: number
+          pack_qty?: number
+          product_name?: string
+          sku?: string | null
+          source_id?: string
+          url?: string | null
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comparison_prices_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comparison_prices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comparison_prices_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "comparison_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comparison_prices_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "quote_comparison_lines"
+            referencedColumns: ["source_id"]
+          },
+          {
+            foreignKeyName: "comparison_prices_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "quote_comparison_totals"
+            referencedColumns: ["source_id"]
+          },
+        ]
+      }
+      comparison_sources: {
+        Row: {
+          active: boolean
+          company_id: string
+          disclaimer: string
+          id: string
+          name: string
+        }
+        ComputedFields: never
+        Insert: {
+          active?: boolean
+          company_id: string
+          disclaimer: string
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          disclaimer?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comparison_sources_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           address: string | null
           city: string | null
-          company_id: string
+          company_id: string | null
           created_at: string
           email: string | null
           id: string
-          name: string
+          name: string | null
           notes: string | null
           phone: string | null
           zip: string | null
@@ -363,11 +944,11 @@ export type Database = {
         Insert: {
           address?: string | null
           city?: string | null
-          company_id: string
+          company_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
-          name: string
+          name?: string | null
           notes?: string | null
           phone?: string | null
           zip?: string | null
@@ -375,11 +956,11 @@ export type Database = {
         Update: {
           address?: string | null
           city?: string | null
-          company_id?: string
+          company_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
-          name?: string
+          name?: string | null
           notes?: string | null
           phone?: string | null
           zip?: string | null
@@ -394,105 +975,39 @@ export type Database = {
           },
         ]
       }
-      cost_categories: {
-        Row: {
-          active: boolean
-          company_id: string
-          id: string
-          key: string
-          label: string
-          sort_order: number
-        }
-        ComputedFields: never
-        Insert: {
-          active?: boolean
-          company_id: string
-          id?: string
-          key: string
-          label: string
-          sort_order?: number
-        }
-        Update: {
-          active?: boolean
-          company_id?: string
-          id?: string
-          key?: string
-          label?: string
-          sort_order?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "cost_categories_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       costs: {
         Row: {
-          actual_amount_cents: number | null
-          category_id: string
-          company_id: string
-          created_at: string
-          description: string | null
-          estimated_amount_cents: number
+          actual_amount: number | null
+          category: string
+          estimated_amount: number | null
           id: string
-          paid_on: string | null
+          paid_at: string | null
           project_id: string
           receipt_url: string | null
           vendor: string | null
         }
         ComputedFields: never
         Insert: {
-          actual_amount_cents?: number | null
-          category_id: string
-          company_id: string
-          created_at?: string
-          description?: string | null
-          estimated_amount_cents?: number
+          actual_amount?: number | null
+          category: string
+          estimated_amount?: number | null
           id?: string
-          paid_on?: string | null
+          paid_at?: string | null
           project_id: string
           receipt_url?: string | null
           vendor?: string | null
         }
         Update: {
-          actual_amount_cents?: number | null
-          category_id?: string
-          company_id?: string
-          created_at?: string
-          description?: string | null
-          estimated_amount_cents?: number
+          actual_amount?: number | null
+          category?: string
+          estimated_amount?: number | null
           id?: string
-          paid_on?: string | null
+          paid_at?: string | null
           project_id?: string
           receipt_url?: string | null
           vendor?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "costs_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "cost_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "costs_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "costs_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "crew_projects"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "costs_project_id_fkey"
             columns: ["project_id"]
@@ -504,7 +1019,69 @@ export type Database = {
             foreignKeyName: "costs_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "deal_warranty"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "costs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deal_doc_counters: {
+        Row: {
+          deal_id: string
+          kind: string
+          last_n: number
+        }
+        ComputedFields: never
+        Insert: {
+          deal_id: string
+          kind: string
+          last_n: number
+        }
+        Update: {
+          deal_id?: string
+          kind?: string
+          last_n?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_doc_counters_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_commissions"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "deal_doc_counters_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_jacket_checklist"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "deal_doc_counters_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_recap"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "deal_doc_counters_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_warranty"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "deal_doc_counters_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
             referencedColumns: ["id"]
           },
         ]
@@ -589,6 +1166,13 @@ export type Database = {
             foreignKeyName: "deal_files_deal_id_fkey"
             columns: ["deal_id"]
             isOneToOne: false
+            referencedRelation: "deal_commissions"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "deal_files_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
             referencedRelation: "deal_jacket_checklist"
             referencedColumns: ["deal_id"]
           },
@@ -597,6 +1181,13 @@ export type Database = {
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deal_recap"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "deal_files_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_warranty"
             referencedColumns: ["deal_id"]
           },
           {
@@ -612,6 +1203,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_files_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "deal_recap"
+            referencedColumns: ["approved_quote_id"]
+          },
+          {
+            foreignKeyName: "deal_files_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_section_totals"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "deal_files_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_totals"
+            referencedColumns: ["quote_id"]
           },
           {
             foreignKeyName: "deal_files_quote_id_fkey"
@@ -653,18 +1265,18 @@ export type Database = {
       deal_number_counters: {
         Row: {
           company_id: string
-          deal_date: string
+          deal_year: number
           last_seq: number
         }
         ComputedFields: never
         Insert: {
           company_id: string
-          deal_date: string
+          deal_year: number
           last_seq: number
         }
         Update: {
           company_id?: string
-          deal_date?: string
+          deal_year?: number
           last_seq?: number
         }
         Relationships: [
@@ -681,86 +1293,172 @@ export type Database = {
         Row: {
           budget_max_cents: number | null
           budget_min_cents: number | null
+          cancel_deadline: string | null
+          cancellation_waived: boolean
+          cancelled_at: string | null
+          change_orders_cents: number
+          commission_plan_id: string | null
           company_id: string
-          contact_id: string
-          created_at: string
-          deal_date: string
-          deal_number: string
-          deal_seq: number
-          deal_year: number
+          contact_id: string | null
+          contract_signed_at: string | null
+          created_at: string | null
+          deal_number: string | null
+          deal_seq: number | null
+          deal_year: number | null
+          decision_maker: string | null
           deleted_at: string | null
-          desired_timeline: string | null
+          deposit_received_at: string | null
+          estimated_value_cents: number | null
+          financing_fee_rate: number | null
+          financing_lender: string | null
           first_response_at: string | null
+          handed_off_at: string | null
           id: string
-          lost_note: string | null
-          lost_reason_id: string | null
+          job_completed_at: string | null
+          job_status: string
+          knowledge_level: number | null
+          last_touch_at: string | null
+          lost_reason: string | null
           next_follow_up_at: string | null
           notes: string | null
+          opened_on: string | null
           owner_id: string | null
+          owns_home: boolean | null
+          paid_in_full_at: string | null
+          partner_gross_profit_cents: number | null
+          partner_id: string | null
+          partner_note: string | null
+          partner_updated_at: string | null
           permit_required: boolean
           scope: string | null
-          source: string
+          sold_in_home: boolean
+          sold_price_cents: number | null
+          source: string | null
+          stage: string
           stage_entered_at: string
-          stage_id: string
+          timeline: string | null
+          title: string | null
           updated_at: string
-          waiting_for_live: boolean
+          year_built: number | null
         }
         ComputedFields: never
         Insert: {
           budget_max_cents?: number | null
           budget_min_cents?: number | null
+          cancel_deadline?: string | null
+          cancellation_waived?: boolean
+          cancelled_at?: string | null
+          change_orders_cents?: number
+          commission_plan_id?: string | null
           company_id: string
-          contact_id: string
-          created_at?: string
-          deal_date?: string
-          deal_number?: string
-          deal_seq?: number
-          deal_year?: number
+          contact_id?: string | null
+          contract_signed_at?: string | null
+          created_at?: string | null
+          deal_number?: string | null
+          deal_seq?: number | null
+          deal_year?: number | null
+          decision_maker?: string | null
           deleted_at?: string | null
-          desired_timeline?: string | null
+          deposit_received_at?: string | null
+          estimated_value_cents?: number | null
+          financing_fee_rate?: number | null
+          financing_lender?: string | null
           first_response_at?: string | null
+          handed_off_at?: string | null
           id?: string
-          lost_note?: string | null
-          lost_reason_id?: string | null
+          job_completed_at?: string | null
+          job_status?: string
+          knowledge_level?: number | null
+          last_touch_at?: string | null
+          lost_reason?: string | null
           next_follow_up_at?: string | null
           notes?: string | null
+          opened_on?: string | null
           owner_id?: string | null
+          owns_home?: boolean | null
+          paid_in_full_at?: string | null
+          partner_gross_profit_cents?: number | null
+          partner_id?: string | null
+          partner_note?: string | null
+          partner_updated_at?: string | null
           permit_required?: boolean
           scope?: string | null
-          source?: string
+          sold_in_home?: boolean
+          sold_price_cents?: number | null
+          source?: string | null
+          stage?: string
           stage_entered_at?: string
-          stage_id: string
+          timeline?: string | null
+          title?: string | null
           updated_at?: string
-          waiting_for_live?: boolean
+          year_built?: number | null
         }
         Update: {
           budget_max_cents?: number | null
           budget_min_cents?: number | null
+          cancel_deadline?: string | null
+          cancellation_waived?: boolean
+          cancelled_at?: string | null
+          change_orders_cents?: number
+          commission_plan_id?: string | null
           company_id?: string
-          contact_id?: string
-          created_at?: string
-          deal_date?: string
-          deal_number?: string
-          deal_seq?: number
-          deal_year?: number
+          contact_id?: string | null
+          contract_signed_at?: string | null
+          created_at?: string | null
+          deal_number?: string | null
+          deal_seq?: number | null
+          deal_year?: number | null
+          decision_maker?: string | null
           deleted_at?: string | null
-          desired_timeline?: string | null
+          deposit_received_at?: string | null
+          estimated_value_cents?: number | null
+          financing_fee_rate?: number | null
+          financing_lender?: string | null
           first_response_at?: string | null
+          handed_off_at?: string | null
           id?: string
-          lost_note?: string | null
-          lost_reason_id?: string | null
+          job_completed_at?: string | null
+          job_status?: string
+          knowledge_level?: number | null
+          last_touch_at?: string | null
+          lost_reason?: string | null
           next_follow_up_at?: string | null
           notes?: string | null
+          opened_on?: string | null
           owner_id?: string | null
+          owns_home?: boolean | null
+          paid_in_full_at?: string | null
+          partner_gross_profit_cents?: number | null
+          partner_id?: string | null
+          partner_note?: string | null
+          partner_updated_at?: string | null
           permit_required?: boolean
           scope?: string | null
-          source?: string
+          sold_in_home?: boolean
+          sold_price_cents?: number | null
+          source?: string | null
+          stage?: string
           stage_entered_at?: string
-          stage_id?: string
+          timeline?: string | null
+          title?: string | null
           updated_at?: string
-          waiting_for_live?: boolean
+          year_built?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "deals_commission_plan_id_fkey"
+            columns: ["commission_plan_id"]
+            isOneToOne: false
+            referencedRelation: "commission_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_commission_plan_id_fkey"
+            columns: ["commission_plan_id"]
+            isOneToOne: false
+            referencedRelation: "deal_commissions"
+            referencedColumns: ["plan_id"]
+          },
           {
             foreignKeyName: "deals_company_id_fkey"
             columns: ["company_id"]
@@ -776,13 +1474,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "deals_lost_reason_id_fkey"
-            columns: ["lost_reason_id"]
-            isOneToOne: false
-            referencedRelation: "lost_reasons"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "deals_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
@@ -790,100 +1481,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "deals_stage_id_fkey"
-            columns: ["stage_id"]
+            foreignKeyName: "deals_partner_id_fkey"
+            columns: ["partner_id"]
             isOneToOne: false
-            referencedRelation: "pipeline_stages"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      design_requests: {
-        Row: {
-          assignee_id: string | null
-          company_id: string
-          deal_id: string
-          due_at: string | null
-          id: string
-          paused_at: string | null
-          quote_id: string | null
-          ready_at: string | null
-          site_visit_id: string | null
-          status: string
-        }
-        ComputedFields: never
-        Insert: {
-          assignee_id?: string | null
-          company_id: string
-          deal_id: string
-          due_at?: string | null
-          id?: string
-          paused_at?: string | null
-          quote_id?: string | null
-          ready_at?: string | null
-          site_visit_id?: string | null
-          status?: string
-        }
-        Update: {
-          assignee_id?: string | null
-          company_id?: string
-          deal_id?: string
-          due_at?: string | null
-          id?: string
-          paused_at?: string | null
-          quote_id?: string | null
-          ready_at?: string | null
-          site_visit_id?: string | null
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "design_requests_assignee_id_fkey"
-            columns: ["assignee_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "design_requests_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "design_requests_deal_id_fkey"
-            columns: ["deal_id"]
-            isOneToOne: false
-            referencedRelation: "deal_jacket_checklist"
-            referencedColumns: ["deal_id"]
-          },
-          {
-            foreignKeyName: "design_requests_deal_id_fkey"
-            columns: ["deal_id"]
-            isOneToOne: false
-            referencedRelation: "deal_recap"
-            referencedColumns: ["deal_id"]
-          },
-          {
-            foreignKeyName: "design_requests_deal_id_fkey"
-            columns: ["deal_id"]
-            isOneToOne: false
-            referencedRelation: "deals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "design_requests_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "design_requests_site_visit_id_fkey"
-            columns: ["site_visit_id"]
-            isOneToOne: false
-            referencedRelation: "site_visits"
+            referencedRelation: "partners"
             referencedColumns: ["id"]
           },
         ]
@@ -930,108 +1531,65 @@ export type Database = {
           },
         ]
       }
-      events: {
+      estimating_settings: {
         Row: {
-          actor_id: string | null
+          ballpark_high_pct: number
+          ballpark_low_pct: number
+          ballpark_round_cents: number
           company_id: string
-          created_at: string
-          deal_id: string | null
-          entity_id: string | null
-          entity_type: string
-          has_money: boolean
-          id: string
-          pinned_until: string | null
-          project_id: string | null
-          publish_at: string
-          summary: string
-          verb: string
+          contingency_rate: number
+          cost_stale_days: number
+          countertop_overage: number
+          hardware_spares: number
+          labor_rate_cents: number
+          led_headroom: number
+          target_margin: number
+          tax_rate: number
+          trim_stick_ft: number
+          trim_waste: number
+          updated_at: string
         }
         ComputedFields: never
         Insert: {
-          actor_id?: string | null
+          ballpark_high_pct?: number
+          ballpark_low_pct?: number
+          ballpark_round_cents?: number
           company_id: string
-          created_at?: string
-          deal_id?: string | null
-          entity_id?: string | null
-          entity_type: string
-          has_money?: boolean
-          id?: string
-          pinned_until?: string | null
-          project_id?: string | null
-          publish_at?: string
-          summary: string
-          verb: string
+          contingency_rate?: number
+          cost_stale_days?: number
+          countertop_overage?: number
+          hardware_spares?: number
+          labor_rate_cents?: number
+          led_headroom?: number
+          target_margin?: number
+          tax_rate?: number
+          trim_stick_ft?: number
+          trim_waste?: number
+          updated_at?: string
         }
         Update: {
-          actor_id?: string | null
+          ballpark_high_pct?: number
+          ballpark_low_pct?: number
+          ballpark_round_cents?: number
           company_id?: string
-          created_at?: string
-          deal_id?: string | null
-          entity_id?: string | null
-          entity_type?: string
-          has_money?: boolean
-          id?: string
-          pinned_until?: string | null
-          project_id?: string | null
-          publish_at?: string
-          summary?: string
-          verb?: string
+          contingency_rate?: number
+          cost_stale_days?: number
+          countertop_overage?: number
+          hardware_spares?: number
+          labor_rate_cents?: number
+          led_headroom?: number
+          target_margin?: number
+          tax_rate?: number
+          trim_stick_ft?: number
+          trim_waste?: number
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "events_actor_id_fkey"
-            columns: ["actor_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "events_company_id_fkey"
+            foreignKeyName: "estimating_settings_company_id_fkey"
             columns: ["company_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "events_deal_id_fkey"
-            columns: ["deal_id"]
-            isOneToOne: false
-            referencedRelation: "deal_jacket_checklist"
-            referencedColumns: ["deal_id"]
-          },
-          {
-            foreignKeyName: "events_deal_id_fkey"
-            columns: ["deal_id"]
-            isOneToOne: false
-            referencedRelation: "deal_recap"
-            referencedColumns: ["deal_id"]
-          },
-          {
-            foreignKeyName: "events_deal_id_fkey"
-            columns: ["deal_id"]
-            isOneToOne: false
-            referencedRelation: "deals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "events_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "crew_projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "events_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "deal_recap"
-            referencedColumns: ["project_id"]
-          },
-          {
-            foreignKeyName: "events_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -1044,7 +1602,7 @@ export type Database = {
           offset_days: number
           offset_hours: number
           sequence: number
-          stage_id: string
+          stage_key: string
         }
         ComputedFields: never
         Insert: {
@@ -1054,7 +1612,7 @@ export type Database = {
           offset_days?: number
           offset_hours?: number
           sequence?: number
-          stage_id: string
+          stage_key: string
         }
         Update: {
           company_id?: string
@@ -1063,7 +1621,7 @@ export type Database = {
           offset_days?: number
           offset_hours?: number
           sequence?: number
-          stage_id?: string
+          stage_key?: string
         }
         Relationships: [
           {
@@ -1071,155 +1629,6 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "follow_up_rules_stage_id_fkey"
-            columns: ["stage_id"]
-            isOneToOne: false
-            referencedRelation: "pipeline_stages"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      info_requests: {
-        Row: {
-          answered_at: string | null
-          asked_by: string | null
-          asked_of: string | null
-          company_id: string
-          created_at: string
-          design_request_id: string
-          id: string
-          items: NonNullable<Json>
-        }
-        ComputedFields: never
-        Insert: {
-          answered_at?: string | null
-          asked_by?: string | null
-          asked_of?: string | null
-          company_id: string
-          created_at?: string
-          design_request_id: string
-          id?: string
-          items?: NonNullable<Json>
-        }
-        Update: {
-          answered_at?: string | null
-          asked_by?: string | null
-          asked_of?: string | null
-          company_id?: string
-          created_at?: string
-          design_request_id?: string
-          id?: string
-          items?: NonNullable<Json>
-        }
-        Relationships: [
-          {
-            foreignKeyName: "info_requests_asked_by_fkey"
-            columns: ["asked_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "info_requests_asked_of_fkey"
-            columns: ["asked_of"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "info_requests_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "info_requests_design_request_id_fkey"
-            columns: ["design_request_id"]
-            isOneToOne: false
-            referencedRelation: "design_requests"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      issues: {
-        Row: {
-          company_id: string
-          cost_impact_cents: number | null
-          created_at: string
-          description: string
-          id: string
-          photo_paths: string[]
-          project_id: string
-          reported_by: string | null
-          schedule_impact_days: number | null
-          status: string
-          type: string
-        }
-        ComputedFields: never
-        Insert: {
-          company_id: string
-          cost_impact_cents?: number | null
-          created_at?: string
-          description: string
-          id?: string
-          photo_paths?: string[]
-          project_id: string
-          reported_by?: string | null
-          schedule_impact_days?: number | null
-          status?: string
-          type: string
-        }
-        Update: {
-          company_id?: string
-          cost_impact_cents?: number | null
-          created_at?: string
-          description?: string
-          id?: string
-          photo_paths?: string[]
-          project_id?: string
-          reported_by?: string | null
-          schedule_impact_days?: number | null
-          status?: string
-          type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "issues_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "issues_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "crew_projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "issues_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "deal_recap"
-            referencedColumns: ["project_id"]
-          },
-          {
-            foreignKeyName: "issues_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "issues_reported_by_fkey"
-            columns: ["reported_by"]
-            isOneToOne: false
-            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -1262,56 +1671,56 @@ export type Database = {
       }
       meetings: {
         Row: {
-          assignee_id: string | null
+          booked_via: string
           company_id: string
-          confirmed_at: string | null
-          deal_id: string | null
+          created_at: string
+          deal_id: string
+          ends_at: string | null
           id: string
+          kind: string
           notes: string | null
-          project_id: string | null
-          scheduled_at: string
+          starts_at: string
           status: string
-          type: string
         }
         ComputedFields: never
         Insert: {
-          assignee_id?: string | null
+          booked_via?: string
           company_id: string
-          confirmed_at?: string | null
-          deal_id?: string | null
+          created_at?: string
+          deal_id: string
+          ends_at?: string | null
           id?: string
+          kind?: string
           notes?: string | null
-          project_id?: string | null
-          scheduled_at: string
+          starts_at: string
           status?: string
-          type: string
         }
         Update: {
-          assignee_id?: string | null
+          booked_via?: string
           company_id?: string
-          confirmed_at?: string | null
-          deal_id?: string | null
+          created_at?: string
+          deal_id?: string
+          ends_at?: string | null
           id?: string
+          kind?: string
           notes?: string | null
-          project_id?: string | null
-          scheduled_at?: string
+          starts_at?: string
           status?: string
-          type?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "meetings_assignee_id_fkey"
-            columns: ["assignee_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "meetings_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meetings_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_commissions"
+            referencedColumns: ["deal_id"]
           },
           {
             foreignKeyName: "meetings_deal_id_fkey"
@@ -1331,180 +1740,134 @@ export type Database = {
             foreignKeyName: "meetings_deal_id_fkey"
             columns: ["deal_id"]
             isOneToOne: false
+            referencedRelation: "deal_warranty"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "meetings_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
             referencedRelation: "deals"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "meetings_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "crew_projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "meetings_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "deal_recap"
-            referencedColumns: ["project_id"]
-          },
-          {
-            foreignKeyName: "meetings_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
         ]
       }
-      milestone_definitions: {
+      mileage_trips: {
         Row: {
           company_id: string
+          created_at: string
+          deal_id: string | null
           id: string
-          key: string
-          label: string
-          sort_order: number
+          miles: number
+          purpose: string
+          trip_on: string
         }
         ComputedFields: never
         Insert: {
           company_id: string
+          created_at?: string
+          deal_id?: string | null
           id?: string
-          key: string
-          label: string
-          sort_order?: number
+          miles: number
+          purpose: string
+          trip_on: string
         }
         Update: {
           company_id?: string
+          created_at?: string
+          deal_id?: string | null
           id?: string
-          key?: string
-          label?: string
-          sort_order?: number
+          miles?: number
+          purpose?: string
+          trip_on?: string
         }
         Relationships: [
           {
-            foreignKeyName: "milestone_definitions_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      milestones: {
-        Row: {
-          actual_date: string | null
-          company_id: string
-          id: string
-          key: string
-          name: string
-          planned_date: string | null
-          project_id: string
-          sort_order: number
-        }
-        ComputedFields: never
-        Insert: {
-          actual_date?: string | null
-          company_id: string
-          id?: string
-          key: string
-          name: string
-          planned_date?: string | null
-          project_id: string
-          sort_order?: number
-        }
-        Update: {
-          actual_date?: string | null
-          company_id?: string
-          id?: string
-          key?: string
-          name?: string
-          planned_date?: string | null
-          project_id?: string
-          sort_order?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "milestones_company_id_fkey"
+            foreignKeyName: "mileage_trips_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "milestones_project_id_fkey"
-            columns: ["project_id"]
+            foreignKeyName: "mileage_trips_deal_id_fkey"
+            columns: ["deal_id"]
             isOneToOne: false
-            referencedRelation: "crew_projects"
-            referencedColumns: ["id"]
+            referencedRelation: "deal_commissions"
+            referencedColumns: ["deal_id"]
           },
           {
-            foreignKeyName: "milestones_project_id_fkey"
-            columns: ["project_id"]
+            foreignKeyName: "mileage_trips_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_jacket_checklist"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "mileage_trips_deal_id_fkey"
+            columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deal_recap"
-            referencedColumns: ["project_id"]
+            referencedColumns: ["deal_id"]
           },
           {
-            foreignKeyName: "milestones_project_id_fkey"
-            columns: ["project_id"]
+            foreignKeyName: "mileage_trips_deal_id_fkey"
+            columns: ["deal_id"]
             isOneToOne: false
-            referencedRelation: "projects"
+            referencedRelation: "deal_warranty"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "mileage_trips_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
             referencedColumns: ["id"]
           },
         ]
       }
       notifications: {
         Row: {
-          body: string
-          comment_id: string | null
+          body: string | null
           company_id: string
           created_at: string
-          event_id: string | null
+          deal_id: string | null
           id: string
           kind: string
           pushed_at: string | null
           read_at: string | null
           title: string
-          url: string
+          url: string | null
           user_id: string
         }
         ComputedFields: never
         Insert: {
-          body?: string
-          comment_id?: string | null
+          body?: string | null
           company_id: string
           created_at?: string
-          event_id?: string | null
+          deal_id?: string | null
           id?: string
           kind: string
           pushed_at?: string | null
           read_at?: string | null
           title: string
-          url?: string
+          url?: string | null
           user_id: string
         }
         Update: {
-          body?: string
-          comment_id?: string | null
+          body?: string | null
           company_id?: string
           created_at?: string
-          event_id?: string | null
+          deal_id?: string | null
           id?: string
           kind?: string
           pushed_at?: string | null
           read_at?: string | null
           title?: string
-          url?: string
+          url?: string | null
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "notifications_comment_id_fkey"
-            columns: ["comment_id"]
-            isOneToOne: false
-            referencedRelation: "comments"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "notifications_company_id_fkey"
             columns: ["company_id"]
@@ -1513,10 +1876,38 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "notifications_event_id_fkey"
-            columns: ["event_id"]
+            foreignKeyName: "notifications_deal_id_fkey"
+            columns: ["deal_id"]
             isOneToOne: false
-            referencedRelation: "events"
+            referencedRelation: "deal_commissions"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "notifications_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_jacket_checklist"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "notifications_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_recap"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "notifications_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_warranty"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "notifications_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
             referencedColumns: ["id"]
           },
           {
@@ -1528,84 +1919,50 @@ export type Database = {
           },
         ]
       }
-      payment_template_items: {
-        Row: {
-          amount_cents: number | null
-          company_id: string
-          due_trigger: string | null
-          id: string
-          kind: string
-          label: string
-          percent_bps: number | null
-          sort_order: number
-          template_id: string
-        }
-        ComputedFields: never
-        Insert: {
-          amount_cents?: number | null
-          company_id: string
-          due_trigger?: string | null
-          id?: string
-          kind: string
-          label: string
-          percent_bps?: number | null
-          sort_order?: number
-          template_id: string
-        }
-        Update: {
-          amount_cents?: number | null
-          company_id?: string
-          due_trigger?: string | null
-          id?: string
-          kind?: string
-          label?: string
-          percent_bps?: number | null
-          sort_order?: number
-          template_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_template_items_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_template_items_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "payment_templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      payment_templates: {
+      partners: {
         Row: {
           active: boolean
+          address: string | null
           company_id: string
+          contact_name: string | null
+          created_at: string
+          email: string | null
           id: string
+          license_class: string | null
+          license_number: string | null
           name: string
-          sort_order: number
+          phone: string | null
         }
         ComputedFields: never
         Insert: {
           active?: boolean
+          address?: string | null
           company_id: string
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
           id?: string
+          license_class?: string | null
+          license_number?: string | null
           name: string
-          sort_order?: number
+          phone?: string | null
         }
         Update: {
           active?: boolean
+          address?: string | null
           company_id?: string
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
           id?: string
+          license_class?: string | null
+          license_number?: string | null
           name?: string
-          sort_order?: number
+          phone?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "payment_templates_company_id_fkey"
+            foreignKeyName: "partners_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -1615,66 +1972,43 @@ export type Database = {
       }
       payments: {
         Row: {
-          amount_cents: number
+          amount: number
           check_number: string | null
-          company_id: string
-          created_at: string
           due_date: string | null
-          due_trigger: string | null
           id: string
-          label: string
+          label: string | null
           method: string | null
           project_id: string
-          received_on: string | null
-          sort_order: number
-          status: string
+          receipt_number: string | null
+          received_at: string | null
+          status: string | null
         }
         ComputedFields: never
         Insert: {
-          amount_cents: number
+          amount: number
           check_number?: string | null
-          company_id: string
-          created_at?: string
           due_date?: string | null
-          due_trigger?: string | null
           id?: string
-          label: string
+          label?: string | null
           method?: string | null
           project_id: string
-          received_on?: string | null
-          sort_order?: number
-          status?: string
+          receipt_number?: string | null
+          received_at?: string | null
+          status?: string | null
         }
         Update: {
-          amount_cents?: number
+          amount?: number
           check_number?: string | null
-          company_id?: string
-          created_at?: string
           due_date?: string | null
-          due_trigger?: string | null
           id?: string
-          label?: string
+          label?: string | null
           method?: string | null
           project_id?: string
-          received_on?: string | null
-          sort_order?: number
-          status?: string
+          receipt_number?: string | null
+          received_at?: string | null
+          status?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "payments_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payments_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "crew_projects"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "payments_project_id_fkey"
             columns: ["project_id"]
@@ -1686,7 +2020,44 @@ export type Database = {
             foreignKeyName: "payments_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "deal_warranty"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "payments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pick_phases: {
+        Row: {
+          company_id: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        ComputedFields: never
+        Insert: {
+          company_id: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          company_id?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pick_phases_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -1697,6 +2068,7 @@ export type Database = {
           company_id: string
           id: string
           key: string
+          kind: string
           label: string
           sort_order: number
         }
@@ -1706,6 +2078,7 @@ export type Database = {
           company_id: string
           id?: string
           key: string
+          kind?: string
           label: string
           sort_order?: number
         }
@@ -1714,6 +2087,7 @@ export type Database = {
           company_id?: string
           id?: string
           key?: string
+          kind?: string
           label?: string
           sort_order?: number
         }
@@ -1727,57 +2101,209 @@ export type Database = {
           },
         ]
       }
-      project_members: {
+      price_lists: {
         Row: {
           company_id: string
-          project_id: string
-          user_id: string
+          cost_multiplier: number
+          created_at: string
+          effective_date: string
+          id: string
+          name: string
+          source_file: string | null
+          vendor: string
         }
         ComputedFields: never
         Insert: {
           company_id: string
-          project_id: string
-          user_id: string
+          cost_multiplier: number
+          created_at?: string
+          effective_date?: string
+          id?: string
+          name: string
+          source_file?: string | null
+          vendor: string
         }
         Update: {
           company_id?: string
-          project_id?: string
-          user_id?: string
+          cost_multiplier?: number
+          created_at?: string
+          effective_date?: string
+          id?: string
+          name?: string
+          source_file?: string | null
+          vendor?: string
         }
         Relationships: [
           {
-            foreignKeyName: "project_members_company_id_fkey"
+            foreignKeyName: "price_lists_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_materials: {
+        Row: {
+          code: string
+          company_id: string
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          order_status: string
+          ordered_at: string | null
+          packed: boolean
+          packed_at: string | null
+          packed_by: string | null
+          pick_phase_id: string | null
+          project_id: string
+          qty: number
+          received_at: string | null
+          sort_order: number
+          source_line_item_id: string | null
+          source_quote_id: string | null
+          unit: string
+          updated_at: string
+          vendor: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          code?: string
+          company_id: string
+          created_at?: string
+          id?: string
+          name: string
+          note?: string | null
+          order_status?: string
+          ordered_at?: string | null
+          packed?: boolean
+          packed_at?: string | null
+          packed_by?: string | null
+          pick_phase_id?: string | null
+          project_id: string
+          qty: number
+          received_at?: string | null
+          sort_order?: number
+          source_line_item_id?: string | null
+          source_quote_id?: string | null
+          unit?: string
+          updated_at?: string
+          vendor?: string | null
+        }
+        Update: {
+          code?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          note?: string | null
+          order_status?: string
+          ordered_at?: string | null
+          packed?: boolean
+          packed_at?: string | null
+          packed_by?: string | null
+          pick_phase_id?: string | null
+          project_id?: string
+          qty?: number
+          received_at?: string | null
+          sort_order?: number
+          source_line_item_id?: string | null
+          source_quote_id?: string | null
+          unit?: string
+          updated_at?: string
+          vendor?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_materials_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "project_members_project_id_fkey"
-            columns: ["project_id"]
+            foreignKeyName: "project_materials_packed_by_fkey"
+            columns: ["packed_by"]
             isOneToOne: false
-            referencedRelation: "crew_projects"
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "project_members_project_id_fkey"
+            foreignKeyName: "project_materials_pick_phase_id_fkey"
+            columns: ["pick_phase_id"]
+            isOneToOne: false
+            referencedRelation: "pick_phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_materials_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "deal_recap"
             referencedColumns: ["project_id"]
           },
           {
-            foreignKeyName: "project_members_project_id_fkey"
+            foreignKeyName: "project_materials_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "deal_warranty"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_materials_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "project_members_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "project_materials_source_line_item_id_fkey"
+            columns: ["source_line_item_id"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "quote_comparison_lines"
+            referencedColumns: ["line_id"]
+          },
+          {
+            foreignKeyName: "project_materials_source_line_item_id_fkey"
+            columns: ["source_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "quote_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_materials_source_line_item_id_fkey"
+            columns: ["source_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "quote_line_items_priced"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_materials_source_quote_id_fkey"
+            columns: ["source_quote_id"]
+            isOneToOne: false
+            referencedRelation: "deal_recap"
+            referencedColumns: ["approved_quote_id"]
+          },
+          {
+            foreignKeyName: "project_materials_source_quote_id_fkey"
+            columns: ["source_quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_section_totals"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "project_materials_source_quote_id_fkey"
+            columns: ["source_quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_totals"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "project_materials_source_quote_id_fkey"
+            columns: ["source_quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
         ]
@@ -1785,64 +2311,54 @@ export type Database = {
       projects: {
         Row: {
           closed_at: string | null
-          closed_by: string | null
           company_id: string
-          contact_id: string
-          contract_value_cents: number
+          contact_id: string | null
+          contract_value: number | null
           created_at: string
           deal_id: string | null
           id: string
-          locked_cost_cents: number | null
-          locked_margin_bps: number | null
-          locked_revenue_cents: number | null
-          name: string
-          payment_template_id: string | null
+          name: string | null
+          order_date: string | null
           project_manager_id: string | null
-          status: string
+          start_date: string | null
+          status: string | null
+          substantial_completion_on: string | null
+          warranty_months: number
         }
         ComputedFields: never
         Insert: {
           closed_at?: string | null
-          closed_by?: string | null
           company_id: string
-          contact_id: string
-          contract_value_cents: number
+          contact_id?: string | null
+          contract_value?: number | null
           created_at?: string
           deal_id?: string | null
           id?: string
-          locked_cost_cents?: number | null
-          locked_margin_bps?: number | null
-          locked_revenue_cents?: number | null
-          name: string
-          payment_template_id?: string | null
+          name?: string | null
+          order_date?: string | null
           project_manager_id?: string | null
-          status?: string
+          start_date?: string | null
+          status?: string | null
+          substantial_completion_on?: string | null
+          warranty_months?: number
         }
         Update: {
           closed_at?: string | null
-          closed_by?: string | null
           company_id?: string
-          contact_id?: string
-          contract_value_cents?: number
+          contact_id?: string | null
+          contract_value?: number | null
           created_at?: string
           deal_id?: string | null
           id?: string
-          locked_cost_cents?: number | null
-          locked_margin_bps?: number | null
-          locked_revenue_cents?: number | null
-          name?: string
-          payment_template_id?: string | null
+          name?: string | null
+          order_date?: string | null
           project_manager_id?: string | null
-          status?: string
+          start_date?: string | null
+          status?: string | null
+          substantial_completion_on?: string | null
+          warranty_months?: number
         }
         Relationships: [
-          {
-            foreignKeyName: "projects_closed_by_fkey"
-            columns: ["closed_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "projects_company_id_fkey"
             columns: ["company_id"]
@@ -1860,29 +2376,36 @@ export type Database = {
           {
             foreignKeyName: "projects_deal_id_fkey"
             columns: ["deal_id"]
-            isOneToOne: true
+            isOneToOne: false
+            referencedRelation: "deal_commissions"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "projects_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
             referencedRelation: "deal_jacket_checklist"
             referencedColumns: ["deal_id"]
           },
           {
             foreignKeyName: "projects_deal_id_fkey"
             columns: ["deal_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "deal_recap"
             referencedColumns: ["deal_id"]
           },
           {
             foreignKeyName: "projects_deal_id_fkey"
             columns: ["deal_id"]
-            isOneToOne: true
-            referencedRelation: "deals"
-            referencedColumns: ["id"]
+            isOneToOne: false
+            referencedRelation: "deal_warranty"
+            referencedColumns: ["deal_id"]
           },
           {
-            foreignKeyName: "projects_payment_template_id_fkey"
-            columns: ["payment_template_id"]
+            foreignKeyName: "projects_deal_id_fkey"
+            columns: ["deal_id"]
             isOneToOne: false
-            referencedRelation: "payment_templates"
+            referencedRelation: "deals"
             referencedColumns: ["id"]
           },
           {
@@ -1896,30 +2419,33 @@ export type Database = {
       }
       push_subscriptions: {
         Row: {
+          auth: string
           company_id: string
           created_at: string
           endpoint: string
           id: string
-          keys: NonNullable<Json>
+          p256dh: string
           user_agent: string | null
           user_id: string
         }
         ComputedFields: never
         Insert: {
+          auth: string
           company_id: string
           created_at?: string
           endpoint: string
           id?: string
-          keys: NonNullable<Json>
+          p256dh: string
           user_agent?: string | null
           user_id: string
         }
         Update: {
+          auth?: string
           company_id?: string
           created_at?: string
           endpoint?: string
           id?: string
-          keys?: NonNullable<Json>
+          p256dh?: string
           user_agent?: string | null
           user_id?: string
         }
@@ -1940,48 +2466,385 @@ export type Database = {
           },
         ]
       }
+      quote_line_items: {
+        Row: {
+          catalog_item_id: string | null
+          category_id: string | null
+          code: string
+          collection_id: string | null
+          company_id: string
+          cost_category: string
+          created_at: string
+          id: string
+          is_allowance: boolean
+          list_price_cents: number | null
+          margin_override: number | null
+          name: string
+          note: string | null
+          pick_phase_id: string | null
+          pricing_mode: string
+          qty: number
+          qty_source: string | null
+          quote_id: string
+          section_id: string
+          sort_order: number
+          taxable: boolean
+          unit: string
+          unit_cost_cents: number
+          unit_price_cents: number | null
+          updated_at: string
+          uses_labor_rate: boolean
+          vendor: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          catalog_item_id?: string | null
+          category_id?: string | null
+          code?: string
+          collection_id?: string | null
+          company_id: string
+          cost_category?: string
+          created_at?: string
+          id?: string
+          is_allowance?: boolean
+          list_price_cents?: number | null
+          margin_override?: number | null
+          name: string
+          note?: string | null
+          pick_phase_id?: string | null
+          pricing_mode?: string
+          qty?: number
+          qty_source?: string | null
+          quote_id: string
+          section_id: string
+          sort_order?: number
+          taxable?: boolean
+          unit?: string
+          unit_cost_cents?: number
+          unit_price_cents?: number | null
+          updated_at?: string
+          uses_labor_rate?: boolean
+          vendor?: string | null
+        }
+        Update: {
+          catalog_item_id?: string | null
+          category_id?: string | null
+          code?: string
+          collection_id?: string | null
+          company_id?: string
+          cost_category?: string
+          created_at?: string
+          id?: string
+          is_allowance?: boolean
+          list_price_cents?: number | null
+          margin_override?: number | null
+          name?: string
+          note?: string | null
+          pick_phase_id?: string | null
+          pricing_mode?: string
+          qty?: number
+          qty_source?: string | null
+          quote_id?: string
+          section_id?: string
+          sort_order?: number
+          taxable?: boolean
+          unit?: string
+          unit_cost_cents?: number
+          unit_price_cents?: number | null
+          updated_at?: string
+          uses_labor_rate?: boolean
+          vendor?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_line_items_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_pick_phase_id_fkey"
+            columns: ["pick_phase_id"]
+            isOneToOne: false
+            referencedRelation: "pick_phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "deal_recap"
+            referencedColumns: ["approved_quote_id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_section_totals"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_totals"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "quote_section_totals"
+            referencedColumns: ["section_id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "quote_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_sections: {
+        Row: {
+          absorbs_project_costs: boolean
+          active: boolean
+          client_description: string | null
+          company_id: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        ComputedFields: never
+        Insert: {
+          absorbs_project_costs?: boolean
+          active?: boolean
+          client_description?: string | null
+          company_id: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          absorbs_project_costs?: boolean
+          active?: boolean
+          client_description?: string | null
+          company_id?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_sections_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_template_items: {
+        Row: {
+          catalog_item_id: string
+          company_id: string
+          id: string
+          note: string | null
+          qty: number
+          sort_order: number
+          template_id: string
+        }
+        ComputedFields: never
+        Insert: {
+          catalog_item_id: string
+          company_id: string
+          id?: string
+          note?: string | null
+          qty?: number
+          sort_order?: number
+          template_id: string
+        }
+        Update: {
+          catalog_item_id?: string
+          company_id?: string
+          id?: string
+          note?: string | null
+          qty?: number
+          sort_order?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_template_items_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_template_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "quote_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_templates: {
+        Row: {
+          active: boolean
+          company_id: string
+          created_at: string
+          default_takeoff: NonNullable<Json>
+          description: string | null
+          id: string
+          name: string
+        }
+        ComputedFields: never
+        Insert: {
+          active?: boolean
+          company_id: string
+          created_at?: string
+          default_takeoff?: NonNullable<Json>
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          created_at?: string
+          default_takeoff?: NonNullable<Json>
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quotes: {
         Row: {
           approved_at: string | null
+          approved_cost_cents: number | null
+          approved_price_cents: number | null
+          collection_id: string | null
           company_id: string
+          contingency_rate: number
+          created_at: string
+          created_by: string | null
           deal_id: string
           file_url: string | null
           id: string
-          line_items_json: NonNullable<Json>
+          labor_rate_cents: number
+          name: string | null
           sent_at: string | null
-          subtotal_cents: number
-          tax_cents: number
-          total_cents: number
+          status: string
+          takeoff: NonNullable<Json>
+          target_margin: number
+          tax_rate: number
+          template_id: string | null
+          updated_at: string
           version: number
         }
         ComputedFields: never
         Insert: {
           approved_at?: string | null
+          approved_cost_cents?: number | null
+          approved_price_cents?: number | null
+          collection_id?: string | null
           company_id: string
+          contingency_rate: number
+          created_at?: string
+          created_by?: string | null
           deal_id: string
           file_url?: string | null
           id?: string
-          line_items_json?: NonNullable<Json>
+          labor_rate_cents: number
+          name?: string | null
           sent_at?: string | null
-          subtotal_cents?: number
-          tax_cents?: number
-          total_cents?: number
+          status?: string
+          takeoff?: NonNullable<Json>
+          target_margin: number
+          tax_rate: number
+          template_id?: string | null
+          updated_at?: string
           version?: number
         }
         Update: {
           approved_at?: string | null
+          approved_cost_cents?: number | null
+          approved_price_cents?: number | null
+          collection_id?: string | null
           company_id?: string
+          contingency_rate?: number
+          created_at?: string
+          created_by?: string | null
           deal_id?: string
           file_url?: string | null
           id?: string
-          line_items_json?: NonNullable<Json>
+          labor_rate_cents?: number
+          name?: string | null
           sent_at?: string | null
-          subtotal_cents?: number
-          tax_cents?: number
-          total_cents?: number
+          status?: string
+          takeoff?: NonNullable<Json>
+          target_margin?: number
+          tax_rate?: number
+          template_id?: string | null
+          updated_at?: string
           version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "quotes_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_collections"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "quotes_company_id_fkey"
             columns: ["company_id"]
@@ -1990,206 +2853,52 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "quotes_deal_id_fkey"
-            columns: ["deal_id"]
-            isOneToOne: false
-            referencedRelation: "deal_jacket_checklist"
-            referencedColumns: ["deal_id"]
-          },
-          {
-            foreignKeyName: "quotes_deal_id_fkey"
-            columns: ["deal_id"]
-            isOneToOne: false
-            referencedRelation: "deal_recap"
-            referencedColumns: ["deal_id"]
-          },
-          {
-            foreignKeyName: "quotes_deal_id_fkey"
-            columns: ["deal_id"]
-            isOneToOne: false
-            referencedRelation: "deals"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      record_views: {
-        Row: {
-          entity_id: string
-          entity_type: string
-          last_seen_at: string
-          user_id: string
-        }
-        ComputedFields: never
-        Insert: {
-          entity_id: string
-          entity_type: string
-          last_seen_at?: string
-          user_id: string
-        }
-        Update: {
-          entity_id?: string
-          entity_type?: string
-          last_seen_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "record_views_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      scheduled_messages: {
-        Row: {
-          body: string
-          channel: string
-          company_id: string
-          created_at: string
-          created_by: string | null
-          deal_id: string | null
-          id: string
-          project_id: string | null
-          reminded_at: string | null
-          send_at: string
-          sent_at: string | null
-        }
-        ComputedFields: never
-        Insert: {
-          body: string
-          channel: string
-          company_id: string
-          created_at?: string
-          created_by?: string | null
-          deal_id?: string | null
-          id?: string
-          project_id?: string | null
-          reminded_at?: string | null
-          send_at: string
-          sent_at?: string | null
-        }
-        Update: {
-          body?: string
-          channel?: string
-          company_id?: string
-          created_at?: string
-          created_by?: string | null
-          deal_id?: string | null
-          id?: string
-          project_id?: string | null
-          reminded_at?: string | null
-          send_at?: string
-          sent_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "scheduled_messages_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "scheduled_messages_created_by_fkey"
+            foreignKeyName: "quotes_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "scheduled_messages_deal_id_fkey"
+            foreignKeyName: "quotes_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_commissions"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "quotes_deal_id_fkey"
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deal_jacket_checklist"
             referencedColumns: ["deal_id"]
           },
           {
-            foreignKeyName: "scheduled_messages_deal_id_fkey"
+            foreignKeyName: "quotes_deal_id_fkey"
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deal_recap"
             referencedColumns: ["deal_id"]
           },
           {
-            foreignKeyName: "scheduled_messages_deal_id_fkey"
+            foreignKeyName: "quotes_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_warranty"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "quotes_deal_id_fkey"
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "scheduled_messages_project_id_fkey"
-            columns: ["project_id"]
+            foreignKeyName: "quotes_template_id_fkey"
+            columns: ["template_id"]
             isOneToOne: false
-            referencedRelation: "crew_projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "scheduled_messages_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "deal_recap"
-            referencedColumns: ["project_id"]
-          },
-          {
-            foreignKeyName: "scheduled_messages_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      shift_handoffs: {
-        Row: {
-          body: string
-          checklist: NonNullable<Json>
-          company_id: string
-          id: string
-          posted_at: string | null
-          publish_at: string | null
-          shift_date: string
-          shift_kind: string
-          user_id: string
-        }
-        ComputedFields: never
-        Insert: {
-          body?: string
-          checklist?: NonNullable<Json>
-          company_id: string
-          id?: string
-          posted_at?: string | null
-          publish_at?: string | null
-          shift_date: string
-          shift_kind: string
-          user_id: string
-        }
-        Update: {
-          body?: string
-          checklist?: NonNullable<Json>
-          company_id?: string
-          id?: string
-          posted_at?: string | null
-          publish_at?: string | null
-          shift_date?: string
-          shift_kind?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "shift_handoffs_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "shift_handoffs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "quote_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -2198,62 +2907,47 @@ export type Database = {
         Row: {
           appliances: NonNullable<Json>
           ballpark_high_cents: number | null
-          ballpark_inputs: Json | null
           ballpark_low_cents: number | null
           checklist: NonNullable<Json>
-          client: NonNullable<Json>
-          company_id: string
-          completeness: number
-          deal_id: string
+          company_id: string | null
+          created_at: string
+          deal_id: string | null
           id: string
-          promised: string | null
-          scope: NonNullable<Json>
-          sketch_file_id: string | null
+          notes: string | null
           status: string
-          submitted_at: string | null
+          updated_at: string
           visited_at: string | null
-          visited_by: string[]
           walls: NonNullable<Json>
         }
         ComputedFields: never
         Insert: {
           appliances?: NonNullable<Json>
           ballpark_high_cents?: number | null
-          ballpark_inputs?: Json | null
           ballpark_low_cents?: number | null
           checklist?: NonNullable<Json>
-          client?: NonNullable<Json>
-          company_id: string
-          completeness?: number
-          deal_id: string
+          company_id?: string | null
+          created_at?: string
+          deal_id?: string | null
           id?: string
-          promised?: string | null
-          scope?: NonNullable<Json>
-          sketch_file_id?: string | null
+          notes?: string | null
           status?: string
-          submitted_at?: string | null
+          updated_at?: string
           visited_at?: string | null
-          visited_by?: string[]
           walls?: NonNullable<Json>
         }
         Update: {
           appliances?: NonNullable<Json>
           ballpark_high_cents?: number | null
-          ballpark_inputs?: Json | null
           ballpark_low_cents?: number | null
           checklist?: NonNullable<Json>
-          client?: NonNullable<Json>
-          company_id?: string
-          completeness?: number
-          deal_id?: string
+          company_id?: string | null
+          created_at?: string
+          deal_id?: string | null
           id?: string
-          promised?: string | null
-          scope?: NonNullable<Json>
-          sketch_file_id?: string | null
+          notes?: string | null
           status?: string
-          submitted_at?: string | null
+          updated_at?: string
           visited_at?: string | null
-          visited_by?: string[]
           walls?: NonNullable<Json>
         }
         Relationships: [
@@ -2268,6 +2962,13 @@ export type Database = {
             foreignKeyName: "site_visits_deal_id_fkey"
             columns: ["deal_id"]
             isOneToOne: false
+            referencedRelation: "deal_commissions"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "site_visits_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
             referencedRelation: "deal_jacket_checklist"
             referencedColumns: ["deal_id"]
           },
@@ -2282,93 +2983,87 @@ export type Database = {
             foreignKeyName: "site_visits_deal_id_fkey"
             columns: ["deal_id"]
             isOneToOne: false
+            referencedRelation: "deal_warranty"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "site_visits_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
             referencedRelation: "deals"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "site_visits_sketch_file_fk"
-            columns: ["sketch_file_id"]
-            isOneToOne: false
-            referencedRelation: "deal_files"
-            referencedColumns: ["id"]
-          },
         ]
       }
-      task_template_items: {
-        Row: {
-          company_id: string
-          id: string
-          kind: string
-          milestone_key: string | null
-          sort_order: number
-          template_id: string
-          title: string
-        }
-        ComputedFields: never
-        Insert: {
-          company_id: string
-          id?: string
-          kind?: string
-          milestone_key?: string | null
-          sort_order?: number
-          template_id: string
-          title: string
-        }
-        Update: {
-          company_id?: string
-          id?: string
-          kind?: string
-          milestone_key?: string | null
-          sort_order?: number
-          template_id?: string
-          title?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_template_items_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_template_items_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "task_templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      task_templates: {
+      subcontractors: {
         Row: {
           active: boolean
           company_id: string
+          created_at: string
+          email: string | null
+          gl_coi_expires: string | null
           id: string
-          is_default: boolean
+          license_class: string | null
+          license_expires: string | null
+          license_number: string | null
           name: string
+          notes: string | null
+          phone: string | null
+          trade: string
+          user_id: string | null
+          w9_on_file: boolean
+          wc_coi_expires: string | null
         }
         ComputedFields: never
         Insert: {
           active?: boolean
           company_id: string
+          created_at?: string
+          email?: string | null
+          gl_coi_expires?: string | null
           id?: string
-          is_default?: boolean
+          license_class?: string | null
+          license_expires?: string | null
+          license_number?: string | null
           name: string
+          notes?: string | null
+          phone?: string | null
+          trade: string
+          user_id?: string | null
+          w9_on_file?: boolean
+          wc_coi_expires?: string | null
         }
         Update: {
           active?: boolean
           company_id?: string
+          created_at?: string
+          email?: string | null
+          gl_coi_expires?: string | null
           id?: string
-          is_default?: boolean
+          license_class?: string | null
+          license_expires?: string | null
+          license_number?: string | null
           name?: string
+          notes?: string | null
+          phone?: string | null
+          trade?: string
+          user_id?: string | null
+          w9_on_file?: boolean
+          wc_coi_expires?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "task_templates_company_id_fkey"
+            foreignKeyName: "subcontractors_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subcontractors_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -2376,52 +3071,31 @@ export type Database = {
       tasks: {
         Row: {
           assignee_id: string | null
-          company_id: string
           created_at: string
-          description: string | null
           due_date: string | null
           id: string
-          kind: string
-          milestone_id: string | null
-          priority: string
-          project_id: string
-          sort_order: number
-          status: string
-          title: string
-          trade: string | null
+          project_id: string | null
+          status: string | null
+          title: string | null
         }
         ComputedFields: never
         Insert: {
           assignee_id?: string | null
-          company_id: string
           created_at?: string
-          description?: string | null
           due_date?: string | null
           id?: string
-          kind?: string
-          milestone_id?: string | null
-          priority?: string
-          project_id: string
-          sort_order?: number
-          status?: string
-          title: string
-          trade?: string | null
+          project_id?: string | null
+          status?: string | null
+          title?: string | null
         }
         Update: {
           assignee_id?: string | null
-          company_id?: string
           created_at?: string
-          description?: string | null
           due_date?: string | null
           id?: string
-          kind?: string
-          milestone_id?: string | null
-          priority?: string
-          project_id?: string
-          sort_order?: number
-          status?: string
-          title?: string
-          trade?: string | null
+          project_id?: string | null
+          status?: string | null
+          title?: string | null
         }
         Relationships: [
           {
@@ -2432,31 +3106,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "tasks_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_milestone_id_fkey"
-            columns: ["milestone_id"]
-            isOneToOne: false
-            referencedRelation: "milestones"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "crew_projects"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "tasks_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "deal_recap"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "deal_warranty"
             referencedColumns: ["project_id"]
           },
           {
@@ -2471,44 +3131,41 @@ export type Database = {
       users: {
         Row: {
           active: boolean
-          avatar_url: string | null
           clerk_id: string
           company_id: string
           created_at: string
           email: string | null
           id: string
           is_default_owner: boolean
-          name: string
-          notify_prefs: NonNullable<Json>
+          name: string | null
+          partner_id: string | null
           phone: string | null
           role: string
         }
         ComputedFields: never
         Insert: {
           active?: boolean
-          avatar_url?: string | null
           clerk_id: string
           company_id: string
           created_at?: string
           email?: string | null
           id?: string
           is_default_owner?: boolean
-          name?: string
-          notify_prefs?: NonNullable<Json>
+          name?: string | null
+          partner_id?: string | null
           phone?: string | null
-          role?: string
+          role: string
         }
         Update: {
           active?: boolean
-          avatar_url?: string | null
           clerk_id?: string
           company_id?: string
           created_at?: string
           email?: string | null
           id?: string
           is_default_owner?: boolean
-          name?: string
-          notify_prefs?: NonNullable<Json>
+          name?: string | null
+          partner_id?: string | null
           phone?: string | null
           role?: string
         }
@@ -2520,112 +3177,59 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      work_windows: {
-        Row: {
-          company_id: string
-          end_time: string
-          id: string
-          kind: string
-          start_time: string
-          user_id: string
-          weekday: number
-        }
-        ComputedFields: never
-        Insert: {
-          company_id: string
-          end_time: string
-          id?: string
-          kind: string
-          start_time: string
-          user_id: string
-          weekday: number
-        }
-        Update: {
-          company_id?: string
-          end_time?: string
-          id?: string
-          kind?: string
-          start_time?: string
-          user_id?: string
-          weekday?: number
-        }
-        Relationships: [
           {
-            foreignKeyName: "work_windows_company_id_fkey"
-            columns: ["company_id"]
+            foreignKeyName: "users_partner_id_fkey"
+            columns: ["partner_id"]
             isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "work_windows_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "partners"
             referencedColumns: ["id"]
           },
         ]
       }
     }
     Views: {
-      crew_projects: {
+      deal_commissions: {
         Row: {
-          closed_at: string | null
+          basis: string | null
+          basis_cents: number | null
+          cancelled_at: string | null
+          commission_cents: number | null
+          commission_status: string | null
           company_id: string | null
-          contact_id: string | null
-          created_at: string | null
+          contract_total_cents: number | null
           deal_id: string | null
           deal_number: string | null
-          deal_year: number | null
-          id: string | null
-          name: string | null
-          project_manager_id: string | null
-          status: string | null
+          deposit_received_at: string | null
+          earned_cents: number | null
+          expected_cents: number | null
+          first_payout_pct: number | null
+          handed_off_at: string | null
+          job_status: string | null
+          last_paid_on: string | null
+          min_cents: number | null
+          owed_cents: number | null
+          paid_cents: number | null
+          paid_in_full_at: string | null
+          partner_id: string | null
+          partner_name: string | null
+          plan_id: string | null
+          plan_name: string | null
+          rate: number | null
         }
         ComputedFields: never
         Relationships: [
           {
-            foreignKeyName: "projects_company_id_fkey"
+            foreignKeyName: "deals_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "projects_contact_id_fkey"
-            columns: ["contact_id"]
+            foreignKeyName: "deals_partner_id_fkey"
+            columns: ["partner_id"]
             isOneToOne: false
-            referencedRelation: "contacts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "projects_deal_id_fkey"
-            columns: ["deal_id"]
-            isOneToOne: true
-            referencedRelation: "deal_jacket_checklist"
-            referencedColumns: ["deal_id"]
-          },
-          {
-            foreignKeyName: "projects_deal_id_fkey"
-            columns: ["deal_id"]
-            isOneToOne: true
-            referencedRelation: "deal_recap"
-            referencedColumns: ["deal_id"]
-          },
-          {
-            foreignKeyName: "projects_deal_id_fkey"
-            columns: ["deal_id"]
-            isOneToOne: true
-            referencedRelation: "deals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "projects_project_manager_id_fkey"
-            columns: ["project_manager_id"]
-            isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "partners"
             referencedColumns: ["id"]
           },
         ]
@@ -2651,6 +3255,9 @@ export type Database = {
           actual_cost_cents: number | null
           actual_margin: number | null
           actual_profit_cents: number | null
+          approved_cost_cents: number | null
+          approved_price_cents: number | null
+          approved_quote_id: string | null
           balance_due_cents: number | null
           change_orders_cents: number | null
           change_orders_pending: number | null
@@ -2665,69 +3272,587 @@ export type Database = {
           overdue_cents: number | null
           project_id: string | null
           revenue_cents: number | null
-          stage_key: string | null
-          stage_label: string | null
+          stage: string | null
         }
         ComputedFields: never
         Relationships: []
       }
+      deal_warranty: {
+        Row: {
+          check_in_on: string | null
+          deal_id: string | null
+          deal_number: string | null
+          project_id: string | null
+          substantial_completion_on: string | null
+          warranty_ends_on: string | null
+        }
+        ComputedFields: never
+        Relationships: []
+      }
+      lead_source_stats: {
+        Row: {
+          answered_1_hour: number | null
+          answered_5_min: number | null
+          commission_expected_cents: number | null
+          commission_paid_cents: number | null
+          company_id: string | null
+          contract_value_cents: number | null
+          deal_year: number | null
+          handed_off: number | null
+          leads: number | null
+          source: string | null
+          win_rate: number | null
+          won: number | null
+        }
+        ComputedFields: never
+        Relationships: [
+          {
+            foreignKeyName: "deals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_comparison_lines: {
+        Row: {
+          checked_on: string | null
+          code: string | null
+          is_substitute: boolean | null
+          line_id: string | null
+          name: string | null
+          our_price_cents: number | null
+          pack_price_cents: number | null
+          pack_qty: number | null
+          packs: number | null
+          product_name: string | null
+          qty: number | null
+          quote_id: string | null
+          retailer_cost_cents: number | null
+          section_id: string | null
+          sku: string | null
+          sort_order: number | null
+          source_id: string | null
+          source_name: string | null
+          unit: string | null
+          url: string | null
+          verified: boolean | null
+        }
+        ComputedFields: never
+        Relationships: [
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "deal_recap"
+            referencedColumns: ["approved_quote_id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_section_totals"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_totals"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "quote_section_totals"
+            referencedColumns: ["section_id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "quote_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_comparison_totals: {
+        Row: {
+          adjustments_cents: number | null
+          adjustments_verified: boolean | null
+          covered_lines: number | null
+          oldest_price_date: string | null
+          our_price_covered_cents: number | null
+          our_total_price_cents: number | null
+          quote_id: string | null
+          retailer_materials_cents: number | null
+          retailer_total_cents: number | null
+          source_id: string | null
+          source_name: string | null
+          substitute_lines: number | null
+          uncovered_lines: number | null
+          unverified_lines: number | null
+        }
+        ComputedFields: never
+        Relationships: [
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "deal_recap"
+            referencedColumns: ["approved_quote_id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_section_totals"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_totals"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_cost_rollup: {
+        Row: {
+          cost_category: string | null
+          estimated_cost_cents: number | null
+          quote_id: string | null
+          vendor: string | null
+        }
+        ComputedFields: never
+        Relationships: []
+      }
+      quote_line_items_priced: {
+        Row: {
+          catalog_item_id: string | null
+          category_id: string | null
+          code: string | null
+          collection_id: string | null
+          company_id: string | null
+          cost_category: string | null
+          created_at: string | null
+          effective_margin: number | null
+          effective_unit_cost_cents: number | null
+          ext_cost_cents: number | null
+          id: string | null
+          is_allowance: boolean | null
+          line_margin: number | null
+          list_price_cents: number | null
+          margin_override: number | null
+          name: string | null
+          note: string | null
+          pick_phase_id: string | null
+          price_cents: number | null
+          pricing_mode: string | null
+          qty: number | null
+          qty_source: string | null
+          quote_id: string | null
+          section_id: string | null
+          sort_order: number | null
+          taxable: boolean | null
+          unit: string | null
+          unit_cost_cents: number | null
+          unit_price_cents: number | null
+          updated_at: string | null
+          uses_labor_rate: boolean | null
+          vendor: string | null
+        }
+        ComputedFields: never
+        Relationships: [
+          {
+            foreignKeyName: "quote_line_items_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_pick_phase_id_fkey"
+            columns: ["pick_phase_id"]
+            isOneToOne: false
+            referencedRelation: "pick_phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "deal_recap"
+            referencedColumns: ["approved_quote_id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_section_totals"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_totals"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "quote_section_totals"
+            referencedColumns: ["section_id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "quote_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_section_totals: {
+        Row: {
+          client_description: string | null
+          line_count: number | null
+          name: string | null
+          price_cents: number | null
+          quote_id: string | null
+          section_id: string | null
+          sort_order: number | null
+        }
+        ComputedFields: never
+        Relationships: []
+      }
+      quote_totals: {
+        Row: {
+          company_id: string | null
+          contingency_cost_cents: number | null
+          contingency_price_cents: number | null
+          deal_id: string | null
+          direct_cost_cents: number | null
+          gross_margin: number | null
+          gross_profit_cents: number | null
+          line_count: number | null
+          lines_price_cents: number | null
+          quote_id: string | null
+          status: string | null
+          target_margin: number | null
+          tax_cost_cents: number | null
+          tax_price_cents: number | null
+          taxable_cost_cents: number | null
+          total_cost_cents: number | null
+          total_price_cents: number | null
+          version: number | null
+        }
+        ComputedFields: never
+        Relationships: [
+          {
+            foreignKeyName: "quotes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_commissions"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "quotes_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_jacket_checklist"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "quotes_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_recap"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "quotes_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_warranty"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "quotes_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subcontractor_compliance: {
+        Row: {
+          company_id: string | null
+          id: string | null
+          name: string | null
+          next_expiry: string | null
+          status: string | null
+          trade: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          company_id?: string | null
+          id?: string | null
+          name?: string | null
+          next_expiry?: never
+          status?: never
+          trade?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          id?: string | null
+          name?: string | null
+          next_expiry?: never
+          status?: never
+          trade?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subcontractors_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
-      bootstrap_membership: {
+      _deal_doc_number: {
+        Args: { p_deal_id: string; p_kind: string }
+        Returns: string
+      }
+      approve_quote: {
+        Args: { p_quote_id: string }
+        Returns: {
+          company_id: string | null
+          contingency_cost_cents: number | null
+          contingency_price_cents: number | null
+          deal_id: string | null
+          direct_cost_cents: number | null
+          gross_margin: number | null
+          gross_profit_cents: number | null
+          line_count: number | null
+          lines_price_cents: number | null
+          quote_id: string | null
+          status: string | null
+          target_margin: number | null
+          tax_cost_cents: number | null
+          tax_price_cents: number | null
+          taxable_cost_cents: number | null
+          total_cost_cents: number | null
+          total_price_cents: number | null
+          version: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "quote_totals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      bootstrap_owner: {
         Args: {
-          p_clerk_org_id: string
           p_clerk_user_id: string
+          p_company_name?: string
           p_email: string
           p_name: string
-          p_org_name: string
-          p_role: string
         }
+        Returns: {
+          company_id: string
+          created: boolean
+          user_id: string
+        }[]
+      }
+      cancellation_deadline: {
+        Args: { p_signed: string; p_tz?: string }
         Returns: string
       }
-      close_project: { Args: { p_project_id: string }; Returns: undefined }
-      convert_deal_to_project: {
-        Args: {
-          p_contract_value_cents: number
-          p_deal_id: string
-          p_deposit_check_number: string
-          p_deposit_method: string
-          p_deposit_received_on: string
-          p_installments: Json
-          p_name: string
-          p_payment_template_id: string
-          p_planned_start_date?: string
-          p_project_manager_id?: string
-          p_task_template_id: string
-        }
+      create_quote_from_template: {
+        Args: { p_deal_id: string; p_name?: string; p_template_id: string }
         Returns: string
       }
+      current_app_role: { Args: Record<PropertyKey, never>; Returns: string }
+      current_company_id: { Args: Record<PropertyKey, never>; Returns: string }
+      current_partner_id: { Args: Record<PropertyKey, never>; Returns: string }
+      current_user_id: { Args: Record<PropertyKey, never>; Returns: string }
       deal_gate_missing: {
         Args: { p_deal_id: string; p_gate: string }
         Returns: string[]
       }
       dearmor: { Args: { "": string }; Returns: string }
+      duplicate_quote: {
+        Args: { p_name?: string; p_quote_id: string }
+        Returns: string
+      }
       gen_random_uuid: { Args: Record<PropertyKey, never>; Returns: string }
       gen_salt: { Args: { "": string }; Returns: string }
-      move_project_to_milestone: {
-        Args: { p_milestone_key: string; p_project_id: string }
+      import_price_list: {
+        Args: {
+          p_collections: Json
+          p_company_id: string
+          p_cost_multiplier: number
+          p_effective_date: string
+          p_list_name: string
+          p_source_file: string
+          p_vendor: string
+        }
+        Returns: {
+          collection: string
+          items_deactivated: number
+          items_upserted: number
+        }[]
+      }
+      is_assigned_to_deal: { Args: { p_deal_id: string }; Returns: boolean }
+      is_assigned_to_project: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
+      is_owner: { Args: Record<PropertyKey, never>; Returns: boolean }
+      is_team: { Args: Record<PropertyKey, never>; Returns: boolean }
+      materialize_quote_into_project: {
+        Args: { p_project_id: string; p_quote_id: string }
         Returns: undefined
+      }
+      next_deal_doc_number: {
+        Args: { p_deal_id: string; p_kind: string }
+        Returns: string
       }
       next_deal_number: {
         Args: { p_at?: string; p_company_id: string }
         Returns: {
-          deal_date: string
           deal_number: string
           deal_seq: number
           deal_year: number
+          opened_on: string
         }[]
       }
       pgp_armor_headers: {
         Args: { "": string }
         Returns: Record<string, unknown>[]
       }
+      rep_year_summary:
+        | {
+            Args: { p_mileage_rate_cents?: number; p_year: number }
+            Returns: {
+              commissions_owed_cents: number
+              commissions_paid_cents: number
+              commissions_pipeline_cents: number
+              expenses_cents: number
+              mileage_deduction_cents: number
+              miles: number
+              net_cents: number
+            }[]
+          }
+        | {
+            Args: { p_rate_cents_per_mile: number; p_year: number }
+            Returns: {
+              commissions_owed_cents: number
+              commissions_paid_cents: number
+              commissions_pipeline_cents: number
+              expenses_cents: number
+              mileage_deduction_cents: number
+              miles: number
+              net_cents: number
+            }[]
+          }
+      requirement_applies: {
+        Args: {
+          p_applies_when: string
+          p_deal: Omit<
+            Database["public"]["Tables"]["deals"]["Row"],
+            Database["public"]["Tables"]["deals"]["ComputedFields"]
+          >
+        }
+        Returns: boolean
+      }
       seed_company_defaults: { Args: { p_company: string }; Returns: undefined }
+      seed_default_compliance: {
+        Args: { p_company_id: string }
+        Returns: undefined
+      }
       seed_default_deal_jacket: {
         Args: { p_company_id: string }
+        Returns: undefined
+      }
+      seed_default_estimating: {
+        Args: { p_company_id: string }
+        Returns: undefined
+      }
+      seed_default_handoff: {
+        Args: { p_company_id: string }
+        Returns: undefined
+      }
+      seed_sales_defaults: { Args: { p_company: string }; Returns: undefined }
+      set_quote_collection: {
+        Args: { p_collection_id: string; p_quote_id: string }
+        Returns: {
+          code: string
+          status: string
+        }[]
+      }
+      swap_line_item: {
+        Args: { p_catalog_item_id: string; p_line_id: string }
         Returns: undefined
       }
     }

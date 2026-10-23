@@ -80,16 +80,6 @@ export async function setTaskStatus(input: {
         .select("project_id, title")
         .single(),
     );
-    if (v.status === "done" || v.status === "blocked") {
-      // Shows in "Team updates" on Today, so the others see progress without a call.
-      await s.db.from("activities").insert({
-        company_id: s.companyId,
-        project_id: t.project_id,
-        type: "note",
-        summary: `${v.status === "done" ? "Done" : "Blocked"}: ${t.title}`,
-        created_by: s.userId,
-      });
-    }
     revalidate(t.project_id);
   });
 }
@@ -124,13 +114,6 @@ export async function receivePayment(_: ActionState, fd: FormData): Promise<Acti
         .select("project_id, label")
         .single(),
     );
-    await s.db.from("activities").insert({
-      company_id: s.companyId,
-      project_id: p.project_id,
-      type: "system",
-      summary: `Payment received: ${p.label}`,
-      created_by: s.userId,
-    });
     revalidate(p.project_id);
     return { ok: true, message: "Payment recorded" };
   });

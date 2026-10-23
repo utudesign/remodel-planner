@@ -131,6 +131,7 @@ create table public.scheduled_messages (
   channel     text not null check (channel in ('sms', 'email', 'call_reminder')),
   body        text not null,
   send_at     timestamptz not null,
+  reminded_at timestamptz,                       -- push reminder went out at send time
   sent_at     timestamptz,
   created_by  uuid references public.users (id) on delete set null,
   created_at  timestamptz not null default now(),

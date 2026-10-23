@@ -1,6 +1,6 @@
 -- =============================================================================
 -- Local demo data. Runs after migrations on `supabase db reset`.
--- Demo company "Demo Kitchens" is linked to a Clerk org by running (once, after you create your org):
+-- Demo company "RenoDesign (demo)" is linked to a Clerk org by running (once, after you create your org):
 --   update public.companies set clerk_org_id = 'org_XXXX' where id = '00000000-0000-0000-0000-0000000000c1';
 -- Then sign in: you become admin + default owner (seed users don't count as real members).
 -- All dates are relative to today (US Eastern) so the Today screen always has something on it.
@@ -20,7 +20,7 @@ declare
   cat_mat uuid; cat_lab uuid; cat_sub uuid;
   tpl_full uuid; tpl_cab uuid; tpl_tasks uuid;
 begin
-  insert into public.companies (id, name) values (c, 'Demo Kitchens');
+  insert into public.companies (id, name) values (c, 'RenoDesign (demo)');
   perform public.seed_company_defaults(c);
 
   insert into public.users (id, company_id, clerk_id, name, email, role, is_default_owner) values

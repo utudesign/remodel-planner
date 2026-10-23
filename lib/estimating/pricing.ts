@@ -5,6 +5,7 @@
  * Rules
  *   ext cost  = round(qty × unit cost)
  *   price     = round(ext cost / (1 − margin))      ← margin, never markup
+ *   fixed     = round(qty × unit price)              ← market-priced lines (quartz); margin is derived
  *   contingency cost = round(direct cost × contingency rate)
  *   tax cost         = round(taxable cost × tax rate)
  *   contingency + tax are priced at the quote's target margin
@@ -14,7 +15,7 @@
  */
 
 export type CostCategory =
-  "materials" | "labor" | "subcontractor" | "permit" | "delivery" | "disposal" | "other";
+  | 'materials' | 'labor' | 'subcontractor' | 'permit' | 'delivery' | 'disposal' | 'other';
 
 export interface QuoteAssumptions {
   /** 0.35 = 35%. Must be < 0.95. */
@@ -25,11 +26,14 @@ export interface QuoteAssumptions {
 }
 
 export interface LineInput {
-  qty: number; // up to 2 decimals
-  unitCostCents: number; // integer
+  qty: number;              // up to 2 decimals
+  unitCostCents: number;    // integer
   usesLaborRate: boolean;
   marginOverride: number | null;
   taxable: boolean;
+  /** 'fixed' = sell at unitPriceCents (market-priced items such as quartz); default 'margin' */
+  pricingMode?: 'margin' | 'fixed';
+  unitPriceCents?: number | null;
   sectionId?: string;
   costCategory?: CostCategory;
 }
@@ -61,9 +65,7 @@ export interface QuoteTotals {
 /** Integer division rounded half away from zero (Postgres round(numeric) semantics). */
 export function divRound(numerator: number, denominator: number): number {
   if (!Number.isSafeInteger(numerator) || !Number.isSafeInteger(denominator) || denominator === 0) {
-    throw new RangeError(
-      `divRound needs safe integers and a non-zero denominator (${numerator}/${denominator})`,
-    );
+    throw new RangeError(`divRound needs safe integers and a non-zero denominator (${numerator}/${denominator})`);
   }
   const sign = Math.sign(numerator) * Math.sign(denominator);
   const n = Math.abs(numerator);
@@ -110,13 +112,19 @@ export function priceLine(line: LineInput, a: QuoteAssumptions): PricedLine {
   const effectiveUnitCostCents = line.usesLaborRate ? a.laborRateCents : line.unitCostCents;
   const extCostCents = divRound(toHundredths(line.qty) * effectiveUnitCostCents, 100);
   const effectiveMargin = line.marginOverride ?? a.targetMargin;
-  const priceCents = priceFromCost(extCostCents, effectiveMargin);
+  let priceCents: number;
+  if (line.pricingMode === 'fixed') {
+    if (line.unitPriceCents == null) throw new RangeError('fixed-price line needs unitPriceCents');
+    priceCents = divRound(toHundredths(line.qty) * line.unitPriceCents, 100);
+  } else {
+    priceCents = priceFromCost(extCostCents, effectiveMargin);
+  }
   return {
     effectiveUnitCostCents,
     extCostCents,
     effectiveMargin,
     priceCents,
-    lineMargin: extCostCents === 0 ? 0 : ratio4(priceCents - extCostCents, priceCents),
+    lineMargin: priceCents === 0 ? 0 : ratio4(priceCents - extCostCents, priceCents),
   };
 }
 
@@ -171,10 +179,7 @@ export function sectionTotals(
     out.set(line.sectionId, (out.get(line.sectionId) ?? 0) + priceLine(line, a).priceCents);
   }
   const t = quoteTotals(lines, a);
-  out.set(
-    absorbingSectionId,
-    (out.get(absorbingSectionId) ?? 0) + t.contingencyPriceCents + t.taxPriceCents,
-  );
+  out.set(absorbingSectionId, (out.get(absorbingSectionId) ?? 0) + t.contingencyPriceCents + t.taxPriceCents);
   return out;
 }
 
@@ -195,4 +200,4 @@ function toBasisPointsAllowFull(rate: number): number {
 }
 
 export const formatUsd = (cents: number): string =>
-  (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+  (cents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });

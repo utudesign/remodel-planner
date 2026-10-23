@@ -5,8 +5,8 @@
 
 -- Link the demo company to a fake Clerk org and add an admin + an unassigned field user.
 update public.companies set clerk_org_id = 'org_test' where id = '00000000-0000-0000-0000-0000000000c1';
-select public.bootstrap_membership('org_test', 'Demo Kitchens', 'user_admin', 'Admin', 'a@x.com', 'crew');
-select public.bootstrap_membership('org_test', 'Demo Kitchens', 'user_field_other', 'Other', 'o@x.com', 'crew');
+select public.bootstrap_membership('org_test', 'RenoDesign (demo)', 'user_admin', 'Admin', 'a@x.com', 'crew');
+select public.bootstrap_membership('org_test', 'RenoDesign (demo)', 'user_field_other', 'Other', 'o@x.com', 'crew');
 
 create or replace function pg_temp.act_as(p_sub text) returns void language sql as $$
   select set_config('request.jwt.claims', json_build_object('sub', p_sub, 'o', json_build_object('id', 'org_test'))::text, false);

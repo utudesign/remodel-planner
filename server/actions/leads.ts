@@ -1,6 +1,8 @@
 "use server";
 
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/require-role";
 import { datetimeLocalToUtc } from "@/lib/dates";
@@ -15,6 +17,9 @@ import {
 } from "@/lib/validation/lead";
 import { formToObject, maybe, must, ok, run, type ActionState } from "@/server/action-utils";
 import { countOutboundSince } from "@/server/queries/leads";
+import { routeNewLead, nextSendTime } from "@/lib/routing";
+import { uploadImages } from "@/lib/storage";
+import { flushNotifications } from "@/server/push";
 import { getFollowUpRules } from "@/server/queries/settings";
 
 const TEAM_ROLES = ["owner", "team"] as const;
@@ -49,7 +54,13 @@ export async function createLead(_: ActionState, fd: FormData): Promise<ActionSt
         .select("id")
         .single(),
     );
-    // owner + next_follow_up_at (now + 1h) are set by the DB (rule 6)
+    // Routing (FIELD-AND-OFFICE §3): whoever is live gets it; else default owner + "waiting for live shift".
+    const [windows, members] = await Promise.all([
+      must(await s.db.from("work_windows").select("user_id, weekday, start_time, end_time, kind")),
+      must(await s.db.from("users").select("id, role, active, is_default_owner")),
+    ]);
+    const route = routeNewLead({ windows, members, tz: s.timezone });
+    // next_follow_up_at (now + 1h, rule 6) is set by the DB.
     const lead = must(
       await s.db
         .from("leads")
@@ -63,18 +74,23 @@ export async function createLead(_: ActionState, fd: FormData): Promise<ActionSt
           budget_max_cents: v.budget_max,
           desired_timeline: v.desired_timeline,
           notes: v.notes,
+          owner_id: route.ownerId,
+          waiting_for_live: route.waitingForLive,
         })
         .select("id")
         .single(),
     );
-    await s.db.from("activities").insert({
-      company_id: s.companyId,
-      lead_id: lead.id,
-      type: "system",
-      summary: "Lead created",
-      created_by: s.userId,
-    });
+    const photos = fd.getAll("photos").filter((f): f is File => f instanceof File && f.size > 0);
+    if (photos.length) {
+      const paths = await uploadImages(photos, s.companyId, `leads/${lead.id}`);
+      ok(
+        await s.db.from("files").insert(
+          paths.map((path) => ({ company_id: s.companyId, lead_id: lead.id, kind: "photo", path, uploaded_by: s.userId })),
+        ),
+      );
+    }
     newId = lead.id;
+    after(() => flushNotifications(s.companyId));
     revalidateLead();
   });
   if (res?.ok && newId) redirect(`/leads/${newId}`);
@@ -288,4 +304,77 @@ export async function suggestFollowUpFor(leadId: string): Promise<string> {
     attempt: attempt + 1,
     tz: s.timezone,
   }).toISOString();
+}
+
+
+// ---------------------------------------------------------------- reassign (one tap)
+export async function reassignLead(input: { lead_id: string; owner_id: string }): Promise<ActionState> {
+  return run(async () => {
+    const v = z.object({ lead_id: z.uuid(), owner_id: z.uuid() }).parse(input);
+    const s = await requireRole(...TEAM_ROLES);
+    ok(await s.db.from("leads").update({ owner_id: v.owner_id }).eq("id", v.lead_id));
+    after(() => flushNotifications(s.companyId));
+    revalidateLead(v.lead_id);
+  });
+}
+
+// ---------------------------------------------------------------- scheduled client messages
+const scheduleSchema = z.object({
+  lead_id: z.uuid(),
+  channel: z.enum(["sms", "email", "call_reminder"]),
+  body: z.string().trim().min(1, "write the message").max(1600),
+  send_at: z.string().optional(), // datetime-local; empty = now, or 8:00 AM if it's quiet hours
+});
+
+/** Phase 1: a reminder at send time (no SMS provider yet). Quiet hours push it to the morning. */
+export async function scheduleMessage(_: ActionState, fd: FormData): Promise<ActionState> {
+  return run(async () => {
+    const v = scheduleSchema.parse(formToObject(fd));
+    const s = await requireRole(...TEAM_ROLES);
+    const wanted = v.send_at ? datetimeLocalToUtc(v.send_at, s.timezone) : new Date();
+    const sendAt = nextSendTime(wanted, s.rules, s.timezone);
+    ok(
+      await s.db.from("scheduled_messages").insert({
+        company_id: s.companyId,
+        lead_id: v.lead_id,
+        channel: v.channel,
+        body: v.body,
+        send_at: sendAt.toISOString(),
+        created_by: s.userId,
+      }),
+    );
+    revalidateLead(v.lead_id);
+    revalidatePath("/command");
+    const moved = sendAt.getTime() - wanted.getTime() > 60_000;
+    return { ok: true, message: moved ? "Quiet hours — saved for the morning" : "Saved" };
+  });
+}
+
+export async function markMessageSent(input: { message_id: string }): Promise<ActionState> {
+  return run(async () => {
+    const v = z.object({ message_id: z.uuid() }).parse(input);
+    const s = await requireRole(...TEAM_ROLES);
+    const m = must(
+      await s.db
+        .from("scheduled_messages")
+        .update({ sent_at: new Date().toISOString() })
+        .eq("id", v.message_id)
+        .select("lead_id, channel, body")
+        .single(),
+    );
+    if (m.lead_id && m.channel !== "call_reminder") {
+      ok(
+        await s.db.from("activities").insert({
+          company_id: s.companyId,
+          lead_id: m.lead_id,
+          type: m.channel === "sms" ? "text" : "email",
+          direction: "out",
+          summary: m.body.slice(0, 200),
+          created_by: s.userId,
+        }),
+      );
+    }
+    revalidateLead(m.lead_id ?? undefined);
+    revalidatePath("/command");
+  });
 }

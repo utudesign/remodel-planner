@@ -4,6 +4,7 @@ import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
 import { createServerSupabase, type Db } from "@/lib/supabase/server";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { isRole, roleFromClerk, type Role } from "@/lib/auth/roles";
+import { companyRules, type CompanyRules } from "@/lib/routing";
 
 export type Session = {
   db: Db;
@@ -14,7 +15,8 @@ export type Session = {
   timezone: string;
   role: Role;
   name: string;
-  settings: { targetMarginBps: number };
+  settings: { targetMarginBps: number; designDueDays: number; raw: Record<string, unknown> };
+  rules: CompanyRules;
 };
 
 export class ForbiddenError extends Error {
@@ -76,7 +78,7 @@ export const getSession = cache(async (): Promise<Session> => {
       "Your account isn't linked to this company yet. Check that Supabase third-party auth for Clerk is configured (docs/DEPLOY.md).",
     );
   }
-  const settings = (member.company.settings_json ?? {}) as { target_margin_bps?: number };
+  const settings = (member.company.settings_json ?? {}) as Record<string, unknown>;
   return {
     db,
     clerkUserId,
@@ -86,7 +88,12 @@ export const getSession = cache(async (): Promise<Session> => {
     timezone: member.company.timezone,
     role: member.role,
     name: member.name,
-    settings: { targetMarginBps: settings.target_margin_bps ?? 3500 },
+    settings: {
+      targetMarginBps: typeof settings.target_margin_bps === "number" ? settings.target_margin_bps : 3500,
+      designDueDays: typeof settings.design_due_days === "number" ? settings.design_due_days : 5,
+      raw: settings,
+    },
+    rules: companyRules(settings),
   };
 });
 

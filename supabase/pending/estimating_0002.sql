@@ -127,6 +127,33 @@ create table public.catalog_categories (
 );
 
 -- ---------------------------------------------------------------------
+-- 4a. Vendor price lists and color groups ("collections")
+--     e.g. TimberPeak MSRP list, cost = MSRP x 0.33; Group 1 = TSW/TSB/TSG/DBG
+-- ---------------------------------------------------------------------
+create table public.price_lists (
+  id               uuid primary key default gen_random_uuid(),
+  company_id       uuid not null references public.companies(id) on delete cascade,
+  vendor           text not null,
+  name             text not null,
+  cost_multiplier  numeric(6,4) not null check (cost_multiplier > 0 and cost_multiplier <= 1.5),
+  effective_date   date not null default current_date,
+  source_file      text,
+  created_at       timestamptz not null default now(),
+  unique (company_id, name)
+);
+
+create table public.catalog_collections (
+  id             uuid primary key default gen_random_uuid(),
+  company_id     uuid not null references public.companies(id) on delete cascade,
+  price_list_id  uuid references public.price_lists(id) on delete cascade,
+  name           text not null,
+  colors         text[] not null default '{}',
+  sort_order     int not null default 0,
+  active         boolean not null default true,
+  unique (company_id, name)
+);
+
+-- ---------------------------------------------------------------------
 -- 4. Price book
 -- ---------------------------------------------------------------------
 -- qty_source keys are computed in lib/estimating/takeoff.ts. Keep both lists in sync.
@@ -150,13 +177,27 @@ create table public.catalog_items (
   cost_category     text check (cost_category in
                       ('materials','labor','subcontractor','permit','delivery','disposal','other')),
   notes             text,
+  collection_id     uuid references public.catalog_collections(id) on delete cascade, -- vendor color group
+  list_price_cents  bigint check (list_price_cents >= 0),   -- vendor MSRP; cost = MSRP x multiplier
+  -- 'margin': price = cost / (1 - margin).  'fixed': sell at unit_price_cents (market-priced items, e.g. quartz)
+  pricing_mode      text not null default 'margin' check (pricing_mode in ('margin','fixed')),
+  unit_price_cents  bigint check (unit_price_cents >= 0),
+  -- where the cost (or fixed price) came from, so stale or sample prices are visible
+  price_source      text not null default 'sample' check (price_source in
+                      ('vendor_list','home_depot','market','supplier_quote','sample')),
+  source_url        text,
+  source_checked_on date,
   active            boolean not null default true,
   cost_updated_at   timestamptz not null default now(),
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now(),
-  unique (company_id, category_id, code, name)
+  constraint catalog_items_fixed_has_price check (pricing_mode = 'margin' or unit_price_cents is not null)
 );
 create index catalog_items_company on public.catalog_items (company_id, active);
+create unique index catalog_items_generic_key on public.catalog_items (company_id, category_id, code, name)
+  where collection_id is null;
+create unique index catalog_items_vendor_key on public.catalog_items (company_id, collection_id, code)
+  where collection_id is not null;
 
 create or replace function public.catalog_items_touch_cost()
 returns trigger language plpgsql as $$
@@ -209,6 +250,7 @@ alter table public.quotes
   add column if not exists tax_rate             numeric(5,4),
   add column if not exists labor_rate_cents     bigint,
   add column if not exists takeoff              jsonb not null default '{}'::jsonb,
+  add column if not exists collection_id        uuid references public.catalog_collections(id) on delete set null,
   add column if not exists approved_price_cents bigint,
   add column if not exists approved_cost_cents  bigint,
   add column if not exists created_by           uuid references public.users(id),
@@ -307,6 +349,10 @@ create table public.quote_line_items (
   unit_cost_cents   bigint not null default 0 check (unit_cost_cents >= 0), -- snapshot of the price book
   uses_labor_rate   boolean not null default false,
   margin_override   numeric(5,4) check (margin_override is null or (margin_override >= 0 and margin_override < 0.95)),
+  pricing_mode      text not null default 'margin' check (pricing_mode in ('margin','fixed')),
+  unit_price_cents  bigint check (unit_price_cents >= 0),   -- sell price when pricing_mode = 'fixed'
+  list_price_cents  bigint check (list_price_cents >= 0),   -- vendor MSRP snapshot (cabinets)
+  collection_id     uuid references public.catalog_collections(id) on delete set null,
   taxable           boolean not null default true,
   is_allowance      boolean not null default false,
   vendor            text,
@@ -314,7 +360,8 @@ create table public.quote_line_items (
   note              text,
   sort_order        int not null default 0,
   created_at        timestamptz not null default now(),
-  updated_at        timestamptz not null default now()
+  updated_at        timestamptz not null default now(),
+  constraint quote_line_items_fixed_has_price check (pricing_mode = 'margin' or unit_price_cents is not null)
 );
 create index quote_line_items_quote on public.quote_line_items (quote_id, sort_order);
 
@@ -414,16 +461,17 @@ select
   u.effective_unit_cost_cents,
   c.ext_cost_cents,
   m.effective_margin,
-  round(c.ext_cost_cents / (1 - m.effective_margin))::bigint as price_cents,
-  case when c.ext_cost_cents = 0 then 0
-       else round((round(c.ext_cost_cents / (1 - m.effective_margin)) - c.ext_cost_cents)
-                  / round(c.ext_cost_cents / (1 - m.effective_margin)), 4) end as line_margin
+  p.price_cents,
+  case when p.price_cents = 0 then 0
+       else round((p.price_cents - c.ext_cost_cents)::numeric / p.price_cents, 4) end as line_margin
 from public.quote_line_items li
 join public.quotes q on q.id = li.quote_id
 cross join lateral (select case when li.uses_labor_rate then q.labor_rate_cents
                                 else li.unit_cost_cents end as effective_unit_cost_cents) u
 cross join lateral (select round(li.qty * u.effective_unit_cost_cents)::bigint as ext_cost_cents) c
-cross join lateral (select coalesce(li.margin_override, q.target_margin) as effective_margin) m;
+cross join lateral (select coalesce(li.margin_override, q.target_margin) as effective_margin) m
+cross join lateral (select case when li.pricing_mode = 'fixed' then round(li.qty * li.unit_price_cents)::bigint
+                                else round(c.ext_cost_cents / (1 - m.effective_margin))::bigint end as price_cents) p;
 
 create view public.quote_totals with (security_invoker = true) as
 with lines as (
@@ -522,11 +570,12 @@ begin
   insert into public.quote_line_items
     (company_id, quote_id, section_id, category_id, pick_phase_id, catalog_item_id, cost_category,
      code, name, qty, unit, unit_cost_cents, uses_labor_rate, taxable, is_allowance, vendor,
-     qty_source, note, sort_order)
+     qty_source, note, sort_order, pricing_mode, unit_price_cents, list_price_cents, collection_id)
   select v_company, v_quote, coalesce(ci.section_id, cc.default_section_id), cc.id, cc.default_pick_phase_id,
          ci.id, coalesce(ci.cost_category, cc.cost_category),
          ci.code, ci.name, ti.qty, ci.unit, ci.unit_cost_cents, ci.uses_labor_rate, ci.taxable,
-         ci.is_allowance, ci.vendor, ci.qty_source, coalesce(ti.note, ci.notes), ti.sort_order
+         ci.is_allowance, ci.vendor, ci.qty_source, coalesce(ti.note, ci.notes), ti.sort_order,
+         ci.pricing_mode, ci.unit_price_cents, ci.list_price_cents, ci.collection_id
   from public.quote_template_items ti
   join public.catalog_items ci      on ci.id = ti.catalog_item_id
   join public.catalog_categories cc on cc.id = ci.category_id
@@ -551,19 +600,19 @@ begin
   if not found then raise exception 'Quote % not found', p_quote_id; end if;
   select coalesce(max(version), 0) + 1 into v_ver from public.quotes where lead_id = q.lead_id;
 
-  insert into public.quotes (company_id, lead_id, version, name, template_id, takeoff, status,
+  insert into public.quotes (company_id, lead_id, version, name, template_id, takeoff, status, collection_id,
                              target_margin, contingency_rate, tax_rate, labor_rate_cents, created_by)
-  values (q.company_id, q.lead_id, v_ver, coalesce(p_name, q.name), q.template_id, q.takeoff, 'draft',
+  values (q.company_id, q.lead_id, v_ver, coalesce(p_name, q.name), q.template_id, q.takeoff, 'draft', q.collection_id,
           q.target_margin, q.contingency_rate, q.tax_rate, q.labor_rate_cents, public.current_user_id())
   returning id into v_new;
 
   insert into public.quote_line_items
     (company_id, quote_id, section_id, category_id, pick_phase_id, catalog_item_id, cost_category,
      code, name, qty, unit, unit_cost_cents, uses_labor_rate, margin_override, taxable, is_allowance,
-     vendor, qty_source, note, sort_order)
+     vendor, qty_source, note, sort_order, pricing_mode, unit_price_cents, list_price_cents, collection_id)
   select company_id, v_new, section_id, category_id, pick_phase_id, catalog_item_id, cost_category,
          code, name, qty, unit, unit_cost_cents, uses_labor_rate, margin_override, taxable, is_allowance,
-         vendor, qty_source, note, sort_order
+         vendor, qty_source, note, sort_order, pricing_mode, unit_price_cents, list_price_cents, collection_id
   from public.quote_line_items where quote_id = p_quote_id;
 
   return v_new;
@@ -642,6 +691,247 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
+-- 10b. Vendor price list import + quote helpers for the quick estimate
+-- ---------------------------------------------------------------------
+-- p_collections = [{ "name", "colors": [..], "sort_order",
+--                    "items": [{ "code","description","unit","list_price_cents","cost_cents","category" }] }]
+-- Built by lib/estimating/vendorImport.ts from the vendor's spreadsheet.
+-- Upserts by (collection, code); items missing from the new list are deactivated.
+create or replace function public.import_price_list(
+  p_company_id uuid, p_vendor text, p_list_name text, p_cost_multiplier numeric,
+  p_effective_date date, p_source_file text, p_collections jsonb)
+returns table (collection text, items_upserted int, items_deactivated int)
+language plpgsql security invoker set search_path = public as $$
+declare
+  v_list uuid;
+  v_coll uuid;
+  c jsonb;
+  v_up int;
+  v_off int;
+begin
+  if not public.is_team() and auth.jwt() ->> 'sub' is not null then
+    raise exception 'Only owners or team members can import price lists' using errcode = '42501';
+  end if;
+
+  insert into public.price_lists (company_id, vendor, name, cost_multiplier, effective_date, source_file)
+  values (p_company_id, p_vendor, p_list_name, p_cost_multiplier, coalesce(p_effective_date, current_date), p_source_file)
+  on conflict (company_id, name) do update
+    set cost_multiplier = excluded.cost_multiplier, effective_date = excluded.effective_date,
+        source_file = excluded.source_file, vendor = excluded.vendor
+  returning id into v_list;
+
+  for c in select * from jsonb_array_elements(p_collections) loop
+    insert into public.catalog_collections (company_id, price_list_id, name, colors, sort_order)
+    values (p_company_id, v_list, c->>'name',
+            array(select jsonb_array_elements_text(coalesce(c->'colors', '[]'::jsonb))),
+            coalesce((c->>'sort_order')::int, 0))
+    on conflict (company_id, name) do update
+      set price_list_id = excluded.price_list_id, colors = excluded.colors, sort_order = excluded.sort_order, active = true
+    returning id into v_coll;
+
+    if exists (select 1 from jsonb_array_elements(c->'items') i
+               where not exists (select 1 from public.catalog_categories cc
+                                 where cc.company_id = p_company_id and cc.name = i->>'category')) then
+      raise exception 'Unknown category in price list (create it first): %',
+        (select string_agg(distinct i->>'category', ', ') from jsonb_array_elements(c->'items') i
+         where not exists (select 1 from public.catalog_categories cc
+                           where cc.company_id = p_company_id and cc.name = i->>'category'));
+    end if;
+
+    insert into public.catalog_items
+      (company_id, category_id, collection_id, code, name, unit, list_price_cents, unit_cost_cents,
+       taxable, vendor, price_source, source_checked_on, active)
+    select p_company_id, cc.id, v_coll, i->>'code', i->>'description', coalesce(i->>'unit', 'ea'),
+           (i->>'list_price_cents')::bigint, (i->>'cost_cents')::bigint,
+           true, p_vendor, 'vendor_list', coalesce(p_effective_date, current_date), true
+    from jsonb_array_elements(c->'items') i
+    join public.catalog_categories cc on cc.company_id = p_company_id and cc.name = i->>'category'
+    on conflict (company_id, collection_id, code) where collection_id is not null do update
+      set name = excluded.name, unit = excluded.unit, category_id = excluded.category_id,
+          list_price_cents = excluded.list_price_cents, unit_cost_cents = excluded.unit_cost_cents,
+          vendor = excluded.vendor, price_source = 'vendor_list',
+          source_checked_on = excluded.source_checked_on, active = true;
+    get diagnostics v_up = row_count;
+
+    update public.catalog_items ci set active = false
+     where ci.collection_id = v_coll and ci.active
+       and not exists (select 1 from jsonb_array_elements(c->'items') i where i->>'code' = ci.code);
+    get diagnostics v_off = row_count;
+
+    collection := c->>'name'; items_upserted := v_up; items_deactivated := v_off;
+    return next;
+  end loop;
+end $$;
+
+-- Re-price a quote in another color group: every line whose code exists in the target
+-- collection is swapped to that item (cost, MSRP, description). Returns what happened per code.
+create or replace function public.set_quote_collection(p_quote_id uuid, p_collection_id uuid)
+returns table (code text, status text)
+language plpgsql security invoker set search_path = public as $$
+declare q public.quotes%rowtype;
+begin
+  if not public.is_team() then
+    raise exception 'Only owners or team members can change quotes' using errcode = '42501';
+  end if;
+  select * into q from public.quotes where id = p_quote_id;
+  if not found then raise exception 'Quote % not found', p_quote_id; end if;
+  perform 1 from public.catalog_collections where id = p_collection_id and company_id = q.company_id;
+  if not found then raise exception 'Color group % not found for this company', p_collection_id; end if;
+
+  update public.quotes set collection_id = p_collection_id where id = p_quote_id;
+
+  return query
+  with target as (
+    select ci.* from public.catalog_items ci where ci.collection_id = p_collection_id and ci.active
+  ),
+  swapped as (
+    update public.quote_line_items li
+       set catalog_item_id = t.id, collection_id = t.collection_id, category_id = t.category_id,
+           name = t.name, unit = t.unit, unit_cost_cents = t.unit_cost_cents,
+           list_price_cents = t.list_price_cents, pricing_mode = t.pricing_mode,
+           unit_price_cents = t.unit_price_cents, vendor = t.vendor
+      from target t
+     where li.quote_id = p_quote_id and li.code <> '' and li.code = t.code
+    returning li.code
+  )
+  select s.code, 'swapped'::text from swapped s
+  union all
+  select li.code, 'missing in color group'::text
+    from public.quote_line_items li
+    join public.catalog_categories cc on cc.id = li.category_id
+   where li.quote_id = p_quote_id and cc.name in ('Cabinets', 'Fillers & trim', 'Cabinet accessories')
+     and li.qty > 0 and li.code <> ''
+     and not exists (select 1 from target t where t.code = li.code);
+end $$;
+
+-- Swap one line to another price-book item, keeping qty (quartz level, faucet, sink…).
+create or replace function public.swap_line_item(p_line_id uuid, p_catalog_item_id uuid)
+returns void language plpgsql security invoker set search_path = public as $$
+declare
+  li public.quote_line_items%rowtype;
+  ci public.catalog_items%rowtype;
+begin
+  if not public.is_team() then
+    raise exception 'Only owners or team members can change quotes' using errcode = '42501';
+  end if;
+  select * into li from public.quote_line_items where id = p_line_id;
+  if not found then raise exception 'Line % not found', p_line_id; end if;
+  select * into ci from public.catalog_items where id = p_catalog_item_id and company_id = li.company_id;
+  if not found then raise exception 'Price-book item % not found', p_catalog_item_id; end if;
+  update public.quote_line_items
+     set catalog_item_id = ci.id, collection_id = ci.collection_id, category_id = ci.category_id,
+         code = ci.code, name = ci.name, unit = ci.unit, unit_cost_cents = ci.unit_cost_cents,
+         uses_labor_rate = ci.uses_labor_rate, taxable = ci.taxable, is_allowance = ci.is_allowance,
+         vendor = ci.vendor, qty_source = coalesce(ci.qty_source, li.qty_source),
+         pricing_mode = ci.pricing_mode, unit_price_cents = ci.unit_price_cents,
+         list_price_cents = ci.list_price_cents
+   where id = p_line_id;
+end $$;
+
+-- ---------------------------------------------------------------------
+-- 10c. Competitor comparison (Home Depot)
+--   comparison_prices: what the same/closest item costs at a retailer, with URL + date.
+--   Matched to quote lines by catalog item, or by code for vendor cabinet codes (any color group).
+--   comparison_adjustments: retailer fees/quotes that are not items (measure fee, an actual install quote).
+-- ---------------------------------------------------------------------
+create table public.comparison_sources (
+  id          uuid primary key default gen_random_uuid(),
+  company_id  uuid not null references public.companies(id) on delete cascade,
+  name        text not null,
+  disclaimer  text not null,
+  active      boolean not null default true,
+  unique (company_id, name)
+);
+
+create table public.comparison_prices (
+  id                uuid primary key default gen_random_uuid(),
+  company_id        uuid not null references public.companies(id) on delete cascade,
+  source_id         uuid not null references public.comparison_sources(id) on delete cascade,
+  catalog_item_id   uuid references public.catalog_items(id) on delete cascade,
+  match_code        text,                -- e.g. 'SB36' matches that code in every color group
+  product_name      text not null,
+  sku               text,
+  url               text,
+  pack_qty          numeric(10,2) not null default 1 check (pack_qty > 0),
+  pack_price_cents  bigint not null check (pack_price_cents >= 0),
+  is_substitute     boolean not null default false,  -- closest available, not the same item
+  verified          boolean not null default false,  -- price read from the retailer page on checked_on
+  checked_on        date not null,
+  notes             text,
+  constraint comparison_prices_target check (num_nonnulls(catalog_item_id, match_code) = 1)
+);
+create unique index comparison_prices_item on public.comparison_prices (source_id, catalog_item_id)
+  where catalog_item_id is not null;
+create unique index comparison_prices_code on public.comparison_prices (source_id, match_code)
+  where match_code is not null;
+
+create table public.comparison_adjustments (
+  id            uuid primary key default gen_random_uuid(),
+  company_id    uuid not null references public.companies(id) on delete cascade,
+  source_id     uuid not null references public.comparison_sources(id) on delete cascade,
+  quote_id      uuid references public.quotes(id) on delete cascade, -- null = applies to every quote
+  label         text not null,
+  amount_cents  bigint not null,
+  verified      boolean not null default false,
+  url           text,
+  checked_on    date,
+  sort_order    int not null default 0
+);
+
+-- One row per quote line per source: our price vs the retailer's materials cost.
+-- Packs are rounded up (you can't buy 0.3 of a box). Retailer sales tax is added at the quote's tax rate.
+create view public.quote_comparison_lines with (security_invoker = true) as
+select li.quote_id, s.id as source_id, s.name as source_name, li.id as line_id, li.sort_order,
+       li.section_id, li.code, li.name, li.qty, li.unit, li.price_cents as our_price_cents,
+       cp.product_name, cp.sku, cp.url, cp.pack_qty, cp.pack_price_cents, cp.is_substitute,
+       cp.verified, cp.checked_on,
+       case when cp.id is null then null
+            else ceil(li.qty / cp.pack_qty)::int end as packs,
+       case when cp.id is null then null
+            else round(ceil(li.qty / cp.pack_qty) * cp.pack_price_cents * (1 + q.tax_rate))::bigint
+       end as retailer_cost_cents
+from public.quote_line_items_priced li
+join public.quotes q on q.id = li.quote_id
+join public.comparison_sources s on s.company_id = li.company_id and s.active
+left join lateral (
+  select c.* from public.comparison_prices c
+   where c.source_id = s.id
+     and (c.catalog_item_id = li.catalog_item_id or (c.match_code is not null and c.match_code = li.code))
+   order by (c.catalog_item_id is not null) desc
+   limit 1
+) cp on true
+where li.qty > 0;
+
+create view public.quote_comparison_totals with (security_invoker = true) as
+with l as (
+  select quote_id, source_id, source_name,
+         count(*) filter (where retailer_cost_cents is not null)                       as covered_lines,
+         count(*) filter (where retailer_cost_cents is null)                           as uncovered_lines,
+         coalesce(sum(retailer_cost_cents), 0)::bigint                                  as retailer_materials_cents,
+         coalesce(sum(our_price_cents) filter (where retailer_cost_cents is not null), 0)::bigint
+                                                                                        as our_price_covered_cents,
+         count(*) filter (where retailer_cost_cents is not null and not verified)       as unverified_lines,
+         count(*) filter (where is_substitute)                                          as substitute_lines,
+         min(checked_on)                                                                as oldest_price_date
+  from public.quote_comparison_lines
+  group by quote_id, source_id, source_name
+),
+a as (
+  select q.id as quote_id, ca.source_id, coalesce(sum(ca.amount_cents), 0)::bigint as adjustments_cents,
+         bool_and(ca.verified) as adjustments_verified
+  from public.quotes q
+  join public.comparison_adjustments ca on ca.company_id = q.company_id
+       and (ca.quote_id is null or ca.quote_id = q.id)
+  group by q.id, ca.source_id
+)
+select l.*, coalesce(a.adjustments_cents, 0) as adjustments_cents, a.adjustments_verified,
+       (l.retailer_materials_cents + coalesce(a.adjustments_cents, 0))::bigint as retailer_total_cents,
+       t.total_price_cents as our_total_price_cents
+from l
+join public.quote_totals t on t.quote_id = l.quote_id
+left join a on a.quote_id = l.quote_id and a.source_id = l.source_id;
+
+-- ---------------------------------------------------------------------
 -- 11. Row Level Security
 -- ---------------------------------------------------------------------
 alter table public.estimating_settings  enable row level security;
@@ -654,6 +944,29 @@ alter table public.quote_template_items enable row level security;
 alter table public.quotes               enable row level security;
 alter table public.quote_line_items     enable row level security;
 alter table public.project_materials    enable row level security;
+alter table public.price_lists          enable row level security;
+alter table public.catalog_collections  enable row level security;
+alter table public.comparison_sources   enable row level security;
+alter table public.comparison_prices    enable row level security;
+alter table public.comparison_adjustments enable row level security;
+
+create policy price_lists_team on public.price_lists for all to authenticated
+  using (company_id = public.current_company_id() and public.is_team())
+  with check (company_id = public.current_company_id() and public.is_team());
+create policy collections_read on public.catalog_collections for select to authenticated
+  using (company_id = public.current_company_id());
+create policy collections_team on public.catalog_collections for all to authenticated
+  using (company_id = public.current_company_id() and public.is_team())
+  with check (company_id = public.current_company_id() and public.is_team());
+create policy comparison_sources_team on public.comparison_sources for all to authenticated
+  using (company_id = public.current_company_id() and public.is_team())
+  with check (company_id = public.current_company_id() and public.is_team());
+create policy comparison_prices_team on public.comparison_prices for all to authenticated
+  using (company_id = public.current_company_id() and public.is_team())
+  with check (company_id = public.current_company_id() and public.is_team());
+create policy comparison_adjustments_team on public.comparison_adjustments for all to authenticated
+  using (company_id = public.current_company_id() and public.is_team())
+  with check (company_id = public.current_company_id() and public.is_team());
 
 -- Settings-style tables: owners change them; team reads all; crew reads section/phase names only.
 create policy est_settings_read  on public.estimating_settings for select to authenticated
@@ -715,6 +1028,12 @@ revoke execute on function public.create_quote_from_template(uuid, uuid, text) f
 revoke execute on function public.duplicate_quote(uuid, text)                  from public, anon;
 revoke execute on function public.approve_quote(uuid)                          from public, anon;
 revoke execute on function public.materialize_quote_into_project(uuid, uuid)   from public, anon;
+revoke execute on function public.import_price_list(uuid, text, text, numeric, date, text, jsonb) from public, anon;
+revoke execute on function public.set_quote_collection(uuid, uuid)             from public, anon;
+revoke execute on function public.swap_line_item(uuid, uuid)                   from public, anon;
+grant  execute on function public.import_price_list(uuid, text, text, numeric, date, text, jsonb) to authenticated, service_role;
+grant  execute on function public.set_quote_collection(uuid, uuid)             to authenticated;
+grant  execute on function public.swap_line_item(uuid, uuid)                   to authenticated;
 grant  execute on function public.create_quote_from_template(uuid, uuid, text) to authenticated;
 grant  execute on function public.duplicate_quote(uuid, text)                  to authenticated;
 grant  execute on function public.approve_quote(uuid)                          to authenticated;

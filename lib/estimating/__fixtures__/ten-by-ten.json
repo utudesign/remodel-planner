@@ -1,0 +1,736 @@
+{
+ "assumptions": {
+  "targetMargin": 0.35,
+  "contingencyRate": 0.07,
+  "taxRate": 0.06,
+  "laborRateCents": 6000
+ },
+ "lines": [
+  {
+   "name": "Lazy susan corner base",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 52000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "3-drawer base",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 43000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Sink base, 2 doors",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 33000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Base, 1 door + 1 drawer",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 26000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Base, 2 doors + 2 drawers",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 42000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Diagonal corner wall",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 30000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Wall cabinet 33 x 30",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 26000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Wall cabinet 24 x 30",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 21000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Wall cabinet 27 x 30",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 23500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Wall cabinet over microwave 30 x 18",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 16500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Wall cabinet 36 x 30",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 28000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Wall over fridge, 24in deep",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 29000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Base filler 3 x 34.5",
+   "costCategory": "materials",
+   "qty": 3.0,
+   "unitCostCents": 3500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Wall filler 3 x 30",
+   "costCategory": "materials",
+   "qty": 3.0,
+   "unitCostCents": 3000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Fridge end panel 24 x 96",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 21000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Wall skin panel 12 x 30",
+   "costCategory": "materials",
+   "qty": 2.0,
+   "unitCostCents": 5500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Crown molding, 8 ft",
+   "costCategory": "materials",
+   "qty": 4.0,
+   "unitCostCents": 6500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Sub-crown / batten, 8 ft (frameless only)",
+   "costCategory": "materials",
+   "qty": 0.0,
+   "unitCostCents": 2500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Light rail, 8 ft",
+   "costCategory": "materials",
+   "qty": 3.0,
+   "unitCostCents": 4500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Toe kick, 8 ft",
+   "costCategory": "materials",
+   "qty": 3.0,
+   "unitCostCents": 2500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Scribe molding, 8 ft",
+   "costCategory": "materials",
+   "qty": 2.0,
+   "unitCostCents": 1800,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Outside corner molding, 8 ft",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 1500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Touch-up kit (markers, fill, paint)",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 3500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Cabinet freight / delivery",
+   "costCategory": "delivery",
+   "qty": 1.0,
+   "unitCostCents": 25000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": false
+  },
+  {
+   "name": "Door pulls",
+   "costCategory": "materials",
+   "qty": 21.0,
+   "unitCostCents": 600,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Drawer pulls",
+   "costCategory": "materials",
+   "qty": 8.0,
+   "unitCostCents": 700,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Spare shelf pins / bumpers",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 800,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "3 cm quartz, fabricated + installed",
+   "costCategory": "subcontractor",
+   "qty": 35.0,
+   "unitCostCents": 5800,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": false
+  },
+  {
+   "name": "Undermount sink cutout",
+   "costCategory": "subcontractor",
+   "qty": 1.0,
+   "unitCostCents": 20000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": false
+  },
+  {
+   "name": "Faucet / soap holes",
+   "costCategory": "subcontractor",
+   "qty": 2.0,
+   "unitCostCents": 4000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": false
+  },
+  {
+   "name": "Backsplash, 4in quartz",
+   "costCategory": "subcontractor",
+   "qty": 0.0,
+   "unitCostCents": 3000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": false
+  },
+  {
+   "name": "33in undermount sink, single bowl",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 25000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Faucet (allowance)",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 25000,
+   "usesLaborRate": false,
+   "marginOverride": 0.1,
+   "taxable": true
+  },
+  {
+   "name": "Garbage disposal 1/2-3/4 HP + flange",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 15000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Disposal power cord kit",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 2000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Faucet supply lines, braided 3/8in",
+   "costCategory": "materials",
+   "qty": 2.0,
+   "unitCostCents": 1200,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Quarter-turn angle stops",
+   "costCategory": "materials",
+   "qty": 2.0,
+   "unitCostCents": 1500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Dishwasher water line kit",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 3000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "DW drain extension + high loop / air gap",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 1500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "1.5in P-trap / continuous waste kit",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 2500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Teflon tape, putty, pipe dope",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 1500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "DW side-mount bracket kit",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 1500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "DW power cord kit",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 2000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Range anti-tip bracket",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 2000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Range cord 4-wire or gas flex + shutoff",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 3500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "OTR microwave vent kit or charcoal filter",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 6000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Toggle bolts for microwave plate",
+   "costCategory": "materials",
+   "qty": 4.0,
+   "unitCostCents": 200,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Fridge water line kit",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 2500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "GFCI / dual-function receptacles, TR",
+   "costCategory": "materials",
+   "qty": 5.0,
+   "unitCostCents": 2800,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Box extenders",
+   "costCategory": "materials",
+   "qty": 5.0,
+   "unitCostCents": 500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Cover plates",
+   "costCategory": "materials",
+   "qty": 6.0,
+   "unitCostCents": 400,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "LED tape / bars",
+   "costCategory": "materials",
+   "qty": 12.0,
+   "unitCostCents": 900,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Aluminum channel + diffuser + caps",
+   "costCategory": "materials",
+   "qty": 12.0,
+   "unitCostCents": 600,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "LED driver 24 V",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 6500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "LED-compatible dimmer",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 4500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Low-voltage wire 18/2, in-wall rated",
+   "costCategory": "materials",
+   "qty": 25.0,
+   "unitCostCents": 60,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Connectors, jumpers, grommets",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 3000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "2.5in cabinet screws (box of 100)",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 2500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "1.25-2in joining screws",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 1500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Composite shims",
+   "costCategory": "materials",
+   "qty": 2.0,
+   "unitCostCents": 800,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "18 ga brads (1.25in and 2in)",
+   "costCategory": "materials",
+   "qty": 2.0,
+   "unitCostCents": 1000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "23 ga pins 1in",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 1000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Wood glue + construction adhesive",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 1500,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Ledger board 1x4 x 8 ft",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 1000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Paintable caulk + silicone",
+   "costCategory": "materials",
+   "qty": 4.0,
+   "unitCostCents": 800,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Floor protection + tape",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 4000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Dust barrier + poles",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 6000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Haul-away / dumpster",
+   "costCategory": "disposal",
+   "qty": 1.0,
+   "unitCostCents": 35000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": false
+  },
+  {
+   "name": "Drywall patch kit",
+   "costCategory": "materials",
+   "qty": 1.0,
+   "unitCostCents": 6000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Primer + paint for patches",
+   "costCategory": "materials",
+   "qty": 2.0,
+   "unitCostCents": 4000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": true
+  },
+  {
+   "name": "Demo & protect",
+   "costCategory": "labor",
+   "qty": 8.0,
+   "unitCostCents": 0,
+   "usesLaborRate": true,
+   "marginOverride": null,
+   "taxable": false
+  },
+  {
+   "name": "Layout & prep",
+   "costCategory": "labor",
+   "qty": 4.0,
+   "unitCostCents": 0,
+   "usesLaborRate": true,
+   "marginOverride": null,
+   "taxable": false
+  },
+  {
+   "name": "Cabinet install",
+   "costCategory": "labor",
+   "qty": 20.0,
+   "unitCostCents": 0,
+   "usesLaborRate": true,
+   "marginOverride": null,
+   "taxable": false
+  },
+  {
+   "name": "Fillers, panels, crown, light rail, toe kick",
+   "costCategory": "labor",
+   "qty": 10.0,
+   "unitCostCents": 0,
+   "usesLaborRate": true,
+   "marginOverride": null,
+   "taxable": false
+  },
+  {
+   "name": "Hardware install + adjust",
+   "costCategory": "labor",
+   "qty": 4.0,
+   "unitCostCents": 0,
+   "usesLaborRate": true,
+   "marginOverride": null,
+   "taxable": false
+  },
+  {
+   "name": "Cleanup + punch list",
+   "costCategory": "labor",
+   "qty": 4.0,
+   "unitCostCents": 0,
+   "usesLaborRate": true,
+   "marginOverride": null,
+   "taxable": false
+  },
+  {
+   "name": "Plumber: sink, faucet, disposal, DW, fridge water",
+   "costCategory": "subcontractor",
+   "qty": 1.0,
+   "unitCostCents": 65000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": false
+  },
+  {
+   "name": "Electrician: GFCI, microwave outlet, LED feed + driver",
+   "costCategory": "subcontractor",
+   "qty": 1.0,
+   "unitCostCents": 95000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": false
+  },
+  {
+   "name": "Electrical permit + inspection",
+   "costCategory": "permit",
+   "qty": 1.0,
+   "unitCostCents": 15000,
+   "usesLaborRate": false,
+   "marginOverride": null,
+   "taxable": false
+  }
+ ],
+ "expected": {
+  "line_count": 79,
+  "direct_cost_cents": 1452000,
+  "taxable_cost_cents": 686000,
+  "lines_price_cents": 2223164,
+  "contingency_cost_cents": 101640,
+  "tax_cost_cents": 41160,
+  "contingency_price_cents": 156369,
+  "tax_price_cents": 63323,
+  "total_cost_cents": 1594800,
+  "total_price_cents": 2442856,
+  "gross_profit_cents": 848056,
+  "gross_margin": 0.3472
+ },
+ "_note": "Exported from Postgres (quote_totals view) for the 10x10 template with labor at $60/hr and the faucet at a 10% margin override. TS must match to the cent."
+}

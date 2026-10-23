@@ -1291,6 +1291,7 @@ export type Database = {
       }
       deals: {
         Row: {
+          booking_token: string
           budget_max_cents: number | null
           budget_min_cents: number | null
           cancel_deadline: string | null
@@ -1343,6 +1344,7 @@ export type Database = {
         }
         ComputedFields: never
         Insert: {
+          booking_token?: string
           budget_max_cents?: number | null
           budget_min_cents?: number | null
           cancel_deadline?: string | null
@@ -1394,6 +1396,7 @@ export type Database = {
           year_built?: number | null
         }
         Update: {
+          booking_token?: string
           budget_max_cents?: number | null
           budget_min_cents?: number | null
           cancel_deadline?: string | null
@@ -1626,6 +1629,116 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "follow_up_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_submissions: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          deal_id: string | null
+          id: number
+          ip_hash: string
+          kind: string
+        }
+        ComputedFields: never
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          deal_id?: string | null
+          id?: never
+          ip_hash: string
+          kind: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          deal_id?: string | null
+          id?: never
+          ip_hash?: string
+          kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_submissions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_submissions_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_commissions"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "form_submissions_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_jacket_checklist"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "form_submissions_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_recap"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "form_submissions_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deal_warranty"
+            referencedColumns: ["deal_id"]
+          },
+          {
+            foreignKeyName: "form_submissions_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_links: {
+        Row: {
+          active: boolean
+          company_id: string
+          created_at: string
+          id: string
+          label: string
+          slug: string
+          source: string
+        }
+        ComputedFields: never
+        Insert: {
+          active?: boolean
+          company_id: string
+          created_at?: string
+          id?: string
+          label?: string
+          slug: string
+          source?: string
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          created_at?: string
+          id?: string
+          label?: string
+          slug?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_links_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"

@@ -5,11 +5,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PageHeader } from "@/components/shared/states";
 import { PushToggle } from "@/components/shared/push-toggle";
 import { requireOwner } from "@/lib/auth/require-role";
+import { CopyButton } from "@/components/shared/copy-button";
+import { appUrl } from "@/lib/app-url";
 
 export const metadata = { title: "More" };
 
 export default async function MorePage() {
-  await requireOwner();
+  const s = await requireOwner();
+  const { data: link } = await s.db
+    .from("lead_links")
+    .select("slug, active")
+    .eq("company_id", s.companyId)
+    .eq("active", true)
+    .limit(1)
+    .maybeSingle();
+  const shareUrl = link ? `${await appUrl()}/l/${link.slug}` : null;
   const links = [
     { href: "/partners", label: "Partners + commission plans", icon: Handshake, hint: "RenoDesign, plans, Crystal's login" },
     { href: "/notifications", label: "Notifications", icon: Bell, hint: "Everything that happened" },
@@ -33,6 +43,25 @@ export default async function MorePage() {
           </li>
         ))}
       </ul>
+      {shareUrl ? (
+        <Card className="mb-5">
+          <CardHeader>
+            <CardTitle>My share link</CardTitle>
+            <CardDescription>
+              Post it in Facebook groups. People fill a short form and land on Today as a new lead.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <p className="truncate rounded-xl bg-secondary px-3 py-2.5 font-mono text-sm">{shareUrl}</p>
+            <div className="flex gap-2">
+              <CopyButton text={shareUrl} label="Copy link" />
+              <a href={shareUrl} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center rounded-xl px-4 text-sm font-semibold text-primary">
+                Preview
+              </a>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
       <Card className="mb-5">
         <CardHeader>
           <CardTitle>Push on this phone</CardTitle>

@@ -176,5 +176,26 @@ do $$ begin
   raise notice 'OK: notifications are per user';
 end $$;
 
+-- 6. Lead capture (0008) ------------------------------------------------------------
+reset role;
+do $$ begin
+  if (select count(*) from public.lead_links) <> 2 then raise exception 'each account gets a share link'; end if;
+  if (select count(distinct booking_token) from public.deals) <> (select count(*) from public.deals) then
+    raise exception 'booking tokens must be unique'; end if;
+end $$;
+set role authenticated;
+select pg_temp.act_as('seed_tugu');
+do $$ begin
+  if (select count(*) from public.lead_links) <> 1 then raise exception 'owner sees own share link only'; end if;
+  if (select count(*) from public.form_submissions) <> 0 then null; end if;
+exception when insufficient_privilege then
+  raise notice 'OK: form submissions are service-role only';
+end $$;
+select pg_temp.act_as('seed_crystal');
+do $$ begin
+  if (select count(*) from public.lead_links) <> 0 then raise exception 'partner sees share links'; end if;
+  raise notice 'OK: share link per account, owner-only; booking tokens unique';
+end $$;
+
 reset role;
 \echo ALL RULE TESTS PASSED

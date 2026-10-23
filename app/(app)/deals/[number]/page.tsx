@@ -13,6 +13,10 @@ import {
   StageForm,
 } from "@/components/deals/jacket-forms";
 import { UploadButton } from "@/components/deals/upload-button";
+import { AutoReplyCard } from "@/components/deals/auto-reply-card";
+import { CopyButton } from "@/components/shared/copy-button";
+import { appUrl } from "@/lib/app-url";
+import { fillAutoReply } from "@/lib/leads/auto-reply";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/states";
 import { requireOwner } from "@/lib/auth/require-role";
@@ -91,6 +95,8 @@ export default async function DealJacket({
   const photos = files.filter((f) => f.folder === "photos");
   const requiredLeft = checklist.filter((i) => i.required && !i.satisfied).length;
   const requiredTotal = checklist.filter((i) => i.required).length;
+  const bookingLink = `${await appUrl()}/book/${deal.booking_token}`;
+  const needsReply = deal.stage === "new" && !deal.first_response_at;
 
   return (
     <div className="-mx-4 -mt-5 lg:mx-0 lg:mt-0">
@@ -173,6 +179,14 @@ export default async function DealJacket({
       <div className="flex flex-col gap-4 px-4 pt-4 lg:px-0">
         {tab === "overview" ? (
           <>
+            {needsReply ? (
+              <AutoReplyCard
+                dealId={deal.id}
+                phone={c?.phone ?? null}
+                waitingLabel={step.label.replace("Reply · ", "")}
+                message={fillAutoReply(s.settings.autoReply, { customerName: c?.name, myName: s.name, link: bookingLink })}
+              />
+            ) : null}
             <div className="grid grid-cols-2 gap-3 rounded-2xl bg-card p-4 ring-1 ring-border">
               <Stat label={deal.sold_price_cents ? "Sold price" : "Value"} value={value ? formatCentsWhole(value) : "—"} />
               <Stat
@@ -221,7 +235,7 @@ export default async function DealJacket({
               </CardContent>
             </Card>
 
-            <Visits dealId={deal.id} tz={s.timezone} minutes={s.settings.booking.minutes} />
+            <Visits dealId={deal.id} tz={s.timezone} minutes={s.settings.booking.minutes} bookingLink={bookingLink} />
 
             <Card>
               <CardHeader>
@@ -379,7 +393,7 @@ function Checklist({ items, dealId }: { items: ChecklistItem[]; dealId: string }
   );
 }
 
-async function Visits({ dealId, tz, minutes }: { dealId: string; tz: string; minutes: number }) {
+async function Visits({ dealId, tz, minutes, bookingLink }: { dealId: string; tz: string; minutes: number; bookingLink: string }) {
   const s = await requireOwner();
   const meetings = await getMeetings(s, dealId);
   const upcoming = meetings.filter((m) => m.status === "scheduled");
@@ -407,6 +421,13 @@ async function Visits({ dealId, tz, minutes }: { dealId: string; tz: string; min
             </p>
           ))}
         <BookVisitForm dealId={dealId} minutes={minutes} />
+        <div className="flex items-center justify-between gap-2 rounded-xl bg-secondary p-3">
+          <p className="min-w-0 text-sm">
+            <span className="block font-medium">Client booking link</span>
+            <span className="block truncate text-xs text-muted-foreground">{bookingLink}</span>
+          </p>
+          <CopyButton text={bookingLink} />
+        </div>
       </CardContent>
     </Card>
   );

@@ -1,5 +1,7 @@
 import webpush from "web-push";
 import { createAdminSupabase } from "@/lib/supabase/admin";
+import { readSettings } from "@/lib/auth/require-role";
+import { isDayJob } from "@/lib/workday";
 
 /**
  * Sends pending notifications as Web Push (CONTEXT §4). Runs after mutations (next/server `after`)
@@ -23,38 +25,52 @@ export async function flushNotifications(
   const db = createAdminSupabase();
   let q = db
     .from("notifications")
-    .select("id, user_id, kind, title, body, url")
+    .select("id, user_id, kind, title, body, url, company:companies(timezone, settings_json)")
     .is("pushed_at", null)
-    .gte("created_at", new Date(Date.now() - 6 * 3600_000).toISOString())
+    .gte("created_at", new Date(Date.now() - 12 * 3600_000).toISOString())
     .limit(200);
   if (companyId) q = q.eq("company_id", companyId);
   const { data: pending } = await q;
   if (!pending?.length) return { sent: 0, skipped: 0 };
 
-  const now = new Date().toISOString();
+  // During the day job only new leads go out; everything else waits for the 3:30 PM run.
+  const at = new Date();
+  const ready = pending.filter((n) => {
+    if (n.kind === "new_lead" || !n.company) return true;
+    const st = readSettings((n.company.settings_json ?? {}) as Record<string, unknown>);
+    return !isDayJob(at, st.workday, n.company.timezone);
+  });
+  if (!ready.length) return { sent: 0, skipped: pending.length };
+  const now = at.toISOString();
   if (!configure()) {
     await db
       .from("notifications")
       .update({ pushed_at: now })
       .in(
         "id",
-        pending.map((n) => n.id),
+        ready.map((n) => n.id),
       );
     return { sent: 0, skipped: pending.length };
   }
 
-  const userIds = [...new Set(pending.map((n) => n.user_id))];
+  const userIds = [...new Set(ready.map((n) => n.user_id))];
+  const { data: unread } = await db
+    .from("notifications")
+    .select("user_id")
+    .in("user_id", userIds)
+    .is("read_at", null);
+  const badge = (uid: string) => (unread ?? []).filter((u) => u.user_id === uid).length;
   const { data: subs } = await db
     .from("push_subscriptions")
     .select("id, user_id, endpoint, keys")
     .in("user_id", userIds);
   let sent = 0;
-  for (const n of pending) {
+  for (const n of ready) {
     for (const sub of (subs ?? []).filter((x) => x.user_id === n.user_id)) {
       try {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: sub.keys as { p256dh: string; auth: string } },
-          JSON.stringify({ title: n.title, body: n.body, url: n.url, tag: n.id }),
+          JSON.stringify({ title: n.title, body: n.body, url: n.url, tag: n.id, badge: badge(n.user_id) }),
           { TTL: 3600 },
         );
         sent++;
@@ -70,9 +86,9 @@ export async function flushNotifications(
     .update({ pushed_at: now })
     .in(
       "id",
-      pending.map((n) => n.id),
+      ready.map((n) => n.id),
     );
-  return { sent, skipped: pending.length - sent };
+  return { sent, skipped: pending.length - ready.length };
 }
 
 /** Push to specific users right now (digest, scheduled-message reminders). */

@@ -122,3 +122,14 @@ payments schedule, close/margin lock screens) was removed; it's in git history b
 | Digest: Vercel cron 19:30 + 20:30 UTC Mon–Fri; the run that is 3:30 PM in New York sends it | DST-safe with two fixed UTC crons |
 | Buttons/inputs are 44 px tall on phones (h-11), 36 px on desktop | Master prompt: 44 px tap targets |
 | Photos in Step 1 upload through a server action (≤ 4 MB per request, compressed to 2560 px on the phone) | Vercel's 4.5 MB request cap; signed direct uploads + offline queue come in Step 3 |
+
+### Step 2: leads without an admin
+
+| Decision | Why |
+| --- | --- |
+| Paste-a-message parser is regex rules (`lib/leads/parse-message.ts`), no AI service | PLAN Q7: no paid services. Results prefill the form; the rep fixes anything wrong |
+| Missed call = "+ → Missed call" quick entry (source `call`) | PLAN Q3: a web app can't read the iPhone call log; automatic capture needs a paid business number |
+| Auto-reply is sent by me: **Text it** (opens Messages prefilled) or **Copy for Messenger**; either one logs the first reply | The app can't post into Facebook Messenger; logging on tap keeps speed-to-lead honest |
+| Share link `/l/<slug>` and booking `/book/<token>` are public pages that write with the service role after validating the slug/token, a honeypot field and 5 submissions / hour / hashed IP | No anon database access at all; no CAPTCHA service (PLAN Q9) |
+| Booking slots: weekday 5:30–8:00 PM and Saturday 9–5, 90-minute visits, 30-minute drive buffer, nothing within 4 hours, Sundays off (Settings) | PLAN Q6 |
+| Pushes during the day job: only new leads; everything else is held and goes out with the 3:30 PM run. The push carries the unread count for the home-screen badge | PLAN Q2: iOS doesn't allow silent web pushes |

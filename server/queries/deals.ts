@@ -111,6 +111,7 @@ export type DealDetail = DealRow & {
   partner_note: string | null;
   partner_gross_profit_cents: number | null;
   job_completed_at: string | null;
+  booking_token: string;
   contact: {
     name: string | null;
     phone: string | null;
@@ -129,7 +130,7 @@ export async function getDealByNumber(s: Session, number: string): Promise<DealD
         DEAL_LIST_SELECT.replace(
           "contact:contacts(name, phone, address, city)",
           "company_id, contact_id, notes, budget_min_cents, budget_max_cents, timeline, decision_maker, owns_home, " +
-            "knowledge_level, year_built, stage_entered_at, partner_note, partner_gross_profit_cents, job_completed_at, " +
+            "knowledge_level, year_built, stage_entered_at, partner_note, partner_gross_profit_cents, job_completed_at, booking_token, " +
             "contact:contacts(name, phone, email, address, city, zip)",
         ),
       )

@@ -7,16 +7,21 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: "Remodel Planner", body: event.data ? event.data.text() : "" };
+    data = { title: "Kitchen Sales", body: event.data ? event.data.text() : "" };
   }
+  // Home-screen icon badge = unread count (iOS 16.4+ web apps, Chrome/Edge).
+  const badge =
+    typeof data.badge === "number" && self.navigator.setAppBadge
+      ? self.navigator.setAppBadge(data.badge).catch(() => {})
+      : Promise.resolve();
   event.waitUntil(
-    self.registration.showNotification(data.title || "Remodel Planner", {
+    badge.then(() => self.registration.showNotification(data.title || "Kitchen Sales", {
       body: data.body || "",
       tag: data.tag,
       icon: "/icon-192.png",
       badge: "/icon-192.png",
       data: { url: data.url || "/today" },
-    }),
+    })),
   );
 });
 

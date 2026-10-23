@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Calculator, Camera, PhoneCall, Plus, UserPlus, X } from "lucide-react";
+import { Calculator, Camera, ClipboardPaste, PhoneCall, PhoneMissed, Plus, UserPlus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** Floating + : New deal · Paste a message · Quick estimate · Take photos · Log call · Add expense · Log trip. */
 const ACTIONS = [
   { href: "/deals/new", label: "New deal", icon: UserPlus },
+  { href: "/deals/new?paste=1", label: "Paste a message", icon: ClipboardPaste },
+  { href: "/deals/new?call=1", label: "Missed call", icon: PhoneMissed },
   { href: "/pick?for=estimate", label: "Quick estimate", icon: Calculator },
   { href: "/pick?for=photos", label: "Take photos", icon: Camera },
   { href: "/pick?for=log", label: "Log call", icon: PhoneCall },

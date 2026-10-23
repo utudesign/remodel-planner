@@ -1,0 +1,24 @@
+# Playbook → app mapping
+
+Source: **Kitchen Remodel Sales & Estimating Playbook** (your Claude doc:
+https://claude.ai/artifact/Pp1huK2YhBw3x1A1kEZcuN). It's the human reference for how a job runs.
+Every project can differ. The app ships the playbook as **editable defaults**, not as hard-coded rules.
+
+| Playbook                                                                               | In the app                                                                              | Phase                         | Where                                    |
+| -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ----------------------------- | ---------------------------------------- |
+| "The deposit is the only gate"                                                         | Lead → project only via _Deposit received_; DB refuses `won` without a project          | 1 ✅                          | `convert_lead_to_project`, `leads_guard` |
+| §1 Reply within 1 hour                                                                 | New lead follow-up = now + 1h, default owner                                            | 1 ✅                          | follow-up rules (Settings)               |
+| §1 Qualifying questions (scope, layout, appliances, timeline, budget, decision makers) | Lead fields: scope, budget range, timeline, source + **qualifying notes**               | 1 ✅                          | lead detail                              |
+| §1 Step 2 reminder 24h before measure                                                  | Meeting Booked follow-up rule                                                           | 1 ✅ (reminder SMS = Phase 3) | follow-up rules                          |
+| §1 Step 4 design within 5 days                                                         | Initial Meeting Done → +5 days rule                                                     | 1 ✅                          | follow-up rules                          |
+| §5 Cost buckets (cabinets, countertop, materials, labor, subs, job costs, contingency) | Default **cost categories**; estimate vs actual per bucket                              | 1 ✅                          | Settings → Cost categories               |
+| §5 Target margin 35–45%                                                                | `companies.settings_json.target_margin_bps` (default 35%), shown on margin list         | 1 ✅                          | Analytics                                |
+| §6 Payment schedules (3 job types)                                                     | Default **payment templates**                                                           | 1 ✅                          | Settings → Payment templates             |
+| §7 Install phases (pick list) + §9 handoff                                             | Default **task template** "Standard kitchen (playbook)" (16 tasks mapped to milestones) | 1 ✅                          | Settings → Task templates                |
+| §7 Phase 8 punch list "written in the planner"                                         | Tasks with kind = **punch**; close gate requires 0 open                                 | 1 ✅                          | project → Tasks                          |
+| §9 Change orders in writing                                                            | `change_orders` table (revenue includes approved ones)                                  | table 1 ✅, UI Phase 2        | —                                        |
+| §2 Measure & discovery checklist (+12 photos)                                          | Structured measure form + photo upload on the lead                                      | **2**                         | —                                        |
+| §3–4 Design rules / item list                                                          | Cabinet list builder                                                                    | **2–3**                       | —                                        |
+| §6 Quote structure, Good/Better/Best tiers                                             | Quote builder (`quotes` table exists)                                                   | **2**                         | —                                        |
+| §9 "Nothing ordered until every box is ticked"                                         | Order-readiness checklist that blocks _Materials Ordered_                               | **2**                         | —                                        |
+| §8 Permits/licensing                                                                   | Notes only; "Permit applied for" task in default template                               | 1 ✅ (task)                   | —                                        |

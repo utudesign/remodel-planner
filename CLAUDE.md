@@ -15,6 +15,8 @@ If a request conflicts with the spec, flag it and propose a spec update. Never d
 - Settings (stages, rules, templates) drives workflow behavior without code changes.
 - If the boards and `docs/CONTEXT.md` disagree, flag it. The spec wins until it's updated.
 - Calendar appears on the sitemap but is Phase 2. It's not in the Phase 1 nav.
+- **Sales & Estimating Playbook** (owner's Claude doc): https://claude.ai/artifact/Pp1huK2YhBw3x1A1kEZcuN.
+  Shipped as editable defaults (templates, cost buckets, follow-ups). Mapping + phase per section: `docs/PLAYBOOK-MAPPING.md`.
 
 ## Current phase
 
@@ -87,11 +89,11 @@ components/
   leads/ projects/ payments/ shared/
 lib/
   auth/require-role.ts
-  supabase/{server,client,admin}.ts
+  supabase/{server,admin}.ts   (no browser client: all data access is server-side)
   money.ts dates.ts margin.ts follow-up.ts close-rule.ts payment-schedule.ts
   validation/*.ts             Zod schemas
 server/actions/*.ts
-supabase/migrations/  supabase/seed.sql
+supabase/migrations/  supabase/seed.sql  supabase/tests/rules_test.sql
 tests/                        Vitest
 docs/CONTEXT.md DECISIONS.md DEPLOY.md
 proxy.ts                      Clerk middleware (Next 16+ name; middleware.ts on ≤15)

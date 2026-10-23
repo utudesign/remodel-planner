@@ -33,7 +33,7 @@ export async function getTeam(s: Session) {
   return must(
     await s.db
       .from("users")
-      .select("id, name, email, role, active, is_default_owner")
+      .select("id, name, email, phone, role, active, is_default_owner")
       .order("name"),
   );
 }

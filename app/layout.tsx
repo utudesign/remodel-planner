@@ -5,6 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: { default: "Remodel Planner", template: "%s · Remodel Planner" },
   description: "Kitchen remodel leads, projects, payments and margin in one place.",
+  appleWebApp: { capable: true, title: "Remodel", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

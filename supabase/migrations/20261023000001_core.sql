@@ -236,6 +236,7 @@ create table public.tasks (
   title        text not null,
   description  text,
   assignee_id  uuid references public.users (id) on delete set null,
+  trade        text,                         -- who does it when they have no login: Install crew, Plumber, Electrician…
   due_date     date,
   priority     text not null default 'normal' check (priority in ('low', 'normal', 'high')),
   status       text not null default 'todo' check (status in ('todo', 'doing', 'blocked', 'done')),

@@ -1156,6 +1156,7 @@ export type Database = {
           sort_order: number
           status: string
           title: string
+          trade: string | null
         }
         ComputedFields: never
         Insert: {
@@ -1172,6 +1173,7 @@ export type Database = {
           sort_order?: number
           status?: string
           title: string
+          trade?: string | null
         }
         Update: {
           assignee_id?: string | null
@@ -1187,6 +1189,7 @@ export type Database = {
           sort_order?: number
           status?: string
           title?: string
+          trade?: string | null
         }
         Relationships: [
           {

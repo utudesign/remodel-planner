@@ -66,7 +66,9 @@ export async function POST(req: NextRequest) {
     case "user.updated": {
       const u = evt.data;
       const name = [u.first_name, u.last_name].filter(Boolean).join(" ");
-      const email = u.email_addresses.find((e) => e.id === u.primary_email_address_id)?.email_address;
+      const email = u.email_addresses.find(
+        (e) => e.id === u.primary_email_address_id,
+      )?.email_address;
       await db
         .from("users")
         .update({ ...(name ? { name } : {}), ...(email ? { email } : {}) })

@@ -9,3 +9,10 @@ export function isRole(value: unknown): value is Role {
 export function roleFromClerk(clerkRole: string | null | undefined): Role {
   return clerkRole === "org:admin" ? "admin" : "field";
 }
+
+/** Display names. "designer" is the office role (sees everything, no Settings / close). */
+export const ROLE_LABELS: Record<Role, string> = {
+  admin: "Admin",
+  designer: "Office",
+  field: "Field",
+};

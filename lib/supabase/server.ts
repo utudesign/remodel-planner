@@ -10,8 +10,12 @@ export type Db = ReturnType<typeof createServerSupabase>;
  * Supabase verifies the Clerk session token (third-party auth), so every query goes through RLS.
  */
 export function createServerSupabase() {
-  return createClient<Database>(env("NEXT_PUBLIC_SUPABASE_URL"), env("NEXT_PUBLIC_SUPABASE_ANON_KEY"), {
-    accessToken: async () => (await auth()).getToken(),
-    auth: { persistSession: false },
-  });
+  return createClient<Database>(
+    env("NEXT_PUBLIC_SUPABASE_URL"),
+    env("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+    {
+      accessToken: async () => (await auth()).getToken(),
+      auth: { persistSession: false },
+    },
+  );
 }

@@ -3,6 +3,7 @@ import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
 import { Settings } from "lucide-react";
 import { BottomNav, SidebarNav } from "@/components/shared/nav";
 import { navFor } from "@/lib/nav";
+import { ROLE_LABELS } from "@/lib/auth/roles";
 import { getSession } from "@/lib/auth/require-role";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -25,7 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <UserButton />
             <div className="min-w-0">
               <p className="truncate font-medium">{session.name || "You"}</p>
-              <p className="text-xs capitalize text-muted-foreground">{session.role}</p>
+              <p className="text-xs text-muted-foreground">{ROLE_LABELS[session.role]}</p>
             </div>
           </div>
         </div>

@@ -8,11 +8,12 @@ Build the **deal jacket** described in `docs/DEALS.md`. In this app **everything
 
 These files are already in the repo and tested; use them, don't rewrite them:
 - `supabase/migrations/0004_deal_jacket.sql`: deal numbers (trigger + `next_deal_number()`), `deal_files`, `document_requirements`, `deal_jacket_checklist` and `deal_recap` views, order/close gates, storage bucket + policies, `seed_default_deal_jacket()`
-- `lib/deals/dealNumber.ts` + tests: Eastern-Time date, format/parse/label, storage paths
+- `lib/deals/dealNumber.ts` + tests: year rule, deal + document numbers, parse/label, file names, storage paths
 
 ## Deal number rules (do not change without asking me)
-- MMDD + that day's count, Eastern Time: Oct 23 first = `10231`, second = `10232`; Oct 24 first = `10241`; Jan 5 first = `01051`; 10th of a day = `102310`.
-- Restarts every year; `deal_year` is stored; show `#10231`, and `#10231 · 2025` for older years.
+- `YY-NNNN`: year + that year's count from 1001 (`26-1001`, `26-1002` … `27-1001`), company time zone. Show it as `#26-1047`.
+- Documents extend it: `26-1047-E2`, `-CO1`, `-R3`, `-PO1`, `-INV1`, `-W1` from `next_deal_doc_number(deal, kind)`. Put them on every PDF, receipt, PO and email subject.
+- Opened date lives in `opened_on`, job type is a badge; neither is encoded in the number.
 - Assigned only by the database; never edited, never reused (soft delete).
 
 ## Step 0 — Reconcile, then stop
@@ -21,11 +22,11 @@ These files are already in the repo and tested; use them, don't rewrite them:
 
 ## Step 1 — Numbers everywhere
 - Apply 0004. Call `seed_default_deal_jacket(company)` in onboarding and `supabase/seed.sql`.
-- Show `#number` on every deal card, header, notification, quote, PDF and file name. Search accepts `10231`, `#10231`, `2025-10231` (`parseDealNumber()`).
-- Test: two deals created at the same instant get consecutive numbers; 11:30 PM ET belongs to that day.
+- Show `#number` on every deal card, header, notification, quote, PDF and file name. Search accepts `26-1047`, `#26-1047`, `261047`, `1047` (this year) and document numbers like `26-1047-CO2` (`parseDealNumber()`).
+- Test: 50 deals created at the same instant get 50 consecutive numbers; 11:30 PM ET on Dec 31 belongs to the old year.
 
 ## Step 2 — Deal jacket shell (phone first, 375 px)
-- Route `/deals/[year]/[number]`. Sticky header: #number, name, address, stage, owner/PM avatars, **Call · Text · Navigate · Log**, checklist badge.
+- Route `/deals/[number]` (e.g. `/deals/26-1047`). Sticky header: #number, name, address, stage, owner/PM avatars, **Call · Text · Navigate · Log**, checklist badge.
 - Tabs: **Overview · Estimates · Photos · Files · Money · Tasks · Activity**. Hide Estimates and Money and money files from crew (RLS already enforces it; the UI must not even show the tabs).
 - Floating **+**: New deal · Quick estimate · Take photos · Log call · Record payment.
 
@@ -49,7 +50,7 @@ These files are already in the repo and tested; use them, don't rewrite them:
 - "Print recap" → one-page PDF like a car deal recap.
 
 ## Step 7 — Export jacket
-- Owners/team: `Export` → ZIP streamed from a server route: every non-deleted file in its folder + recap PDF + approved quote PDF, named `#10231 <customer> <scope>.zip`.
+- Owners/team: `Export` → ZIP streamed from a server route: every non-deleted file in its folder + recap PDF + approved quote PDF, named `26-1047 <customer> <scope>.zip` (`dealFileName()`).
 
 ## Rules
 - Phone first: 44 px targets, one-handed camera flow, works on spotty signal.

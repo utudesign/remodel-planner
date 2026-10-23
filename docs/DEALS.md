@@ -10,13 +10,16 @@ Code: `supabase/migrations/0004_deal_jacket.sql` (tested), `lib/deals/dealNumber
 
 | Rule | Detail |
 |---|---|
-| Format | **MMDD + that day's count**. Oct 23 first deal = `10231`, second = `10232`, tenth = `102310`; Oct 24 first = `10241` |
-| January–September | Month is always 2 digits: Jan 5 first deal = `01051`. Without this, Jan 12 #31 and Nov 23 #1 would both be `11231` |
-| Which day | **Eastern Time**: a deal opened at 11:30 PM Oct 23 is `1023x`, even though it's already Oct 24 in UTC |
-| Year | Restarts every Jan 1. Each deal also stores `deal_year`; the app shows `#10231` this year and `#10231 · 2025` for older years |
+| Format | **`YY-NNNN`**: year + that year's count, starting at **1001**. First deal of 2026 = `26-1001`, next `26-1002`; first of 2027 = `27-1001` |
+| Why this shape | Easy to say on the phone ("twenty-six ten forty-seven"); the year is in the number, so old deals never get confused; it sorts correctly as text; it doesn't change with the day a deal was opened; starting at 1001 means the first customer doesn't see "#1" |
+| Which year | Company time zone (Eastern): a deal opened 11:30 PM Dec 31 is still last year's |
+| Start | `companies.deal_number_start` (default 1001), owner setting; applies from the next new year's series |
+| Opened date | Stored separately in `opened_on` (shown on the card), not encoded in the number |
+| Documents | Every document inside a deal extends the number: **`26-1047-E2`** estimate v2, **`-CO1`** change order, **`-R3`** payment receipt, **`-PO1`** supplier purchase order, **`-INV1`** invoice, **`-W1`** warranty claim (`next_deal_doc_number()`). A check, a PDF or a supplier email with that number always finds its deal |
+| Job type | Shown as a badge (Kitchen, Bath, Cabinets only, …), not encoded in the number, because scope changes during a sale |
 | Assigned | Automatically by the database when the deal is created (`deals_number` trigger → `next_deal_number()`). Two deals opened at the same moment never get the same number |
 | Permanent | Can't be edited (trigger) and is never reused: deals are soft-deleted (`deleted_at`) |
-| Search | Typing `10231`, `#10231` or `2025-10231` finds the deal (`parseDealNumber()`) |
+| Search | Typing `26-1047`, `#26-1047`, `261047`, `26 1047`, `1047` (this year) or a document number `26-1047-CO2` finds the deal (`parseDealNumber()`) |
 
 ## 2. Lifecycle (one deal, three views)
 
@@ -31,7 +34,7 @@ Code: `supabase/migrations/0004_deal_jacket.sql` (tested), `lib/deals/dealNumber
 
 ## 3. The deal jacket screen
 
-Header (always visible): **#10231**, customer name, address, stage chip, owner + PM avatars, big **Call · Text · Navigate · Log** buttons, jacket checklist badge (e.g. "Order: 2 of 3").
+Header (always visible): **#26-1047**, customer name, address, stage chip, owner + PM avatars, big **Call · Text · Navigate · Log** buttons, jacket checklist badge (e.g. "Order: 2 of 3").
 
 | Tab | What's in it | Who sees it |
 |---|---|---|
@@ -43,7 +46,7 @@ Header (always visible): **#10231**, customer name, address, stage chip, owner +
 | **Tasks** | Milestones + tasks + punch list | Everyone on the deal |
 | **Activity** | Timeline (calls, texts, stage changes, uploads, payments) + comments with @mentions | Everyone on the deal (money events hidden from crew) |
 
-**Export jacket** (owners/team): one ZIP with every file in its folder + recap PDF + approved quote PDF, named `#10231 Lee kitchen.zip`.
+**Export jacket** (owners/team): one ZIP with every file in its folder + recap PDF + approved quote PDF, named `26-1047 Lee kitchen.zip`.
 
 ## 4. Photos: capture pipeline (phone first)
 
@@ -89,16 +92,18 @@ Storage bucket `deal-files` is private; files are served with short-lived signed
 ## 7. Data model + functions (0004)
 
 ```
-deals += deal_year, deal_date, deal_seq, deal_number, permit_required, deleted_at
-deal_number_counters (company_id, deal_date, last_seq)        -- only next_deal_number() touches it
+deals += deal_year, deal_seq, deal_number, opened_on, permit_required, deleted_at
+companies += deal_number_start (default 1001)
+deal_number_counters (company_id, deal_year, last_seq)        -- only next_deal_number() touches it
+deal_doc_counters (deal_id, kind, last_n)                     -- only next_deal_doc_number() touches it
 deal_files    deal_id, folder, photo_tag, title, storage_path, mime_type, size_bytes, width, height,
               taken_at, site_visit_id, quote_id, requirement_id, crew_visible, uploaded_by,
               created_at, deleted_at, deleted_by
 document_requirements  gate, folder, label, required, applies_when ('always'|'permit_required')
 views         deal_jacket_checklist, deal_recap
-functions     next_deal_number(), deal_gate_missing(), is_assigned_to_deal(), seed_default_deal_jacket()
+functions     next_deal_number(), next_deal_doc_number(deal, kind), deal_gate_missing(), is_assigned_to_deal(), seed_default_deal_jacket()
 triggers      deals_number, deals_number_guard, deal_files_insert/update, projects_jacket_gates
 storage       bucket 'deal-files' + read/insert policies
-TS            lib/deals/dealNumber.ts: easternDate, formatDealNumber, previewDealNumber,
-              parseDealNumber, dealLabel, dealStoragePath
+TS            lib/deals/dealNumber.ts: dealYearAt, formatDealNumber, formatDocNumber, parseDealNumber,
+              dealLabel, dealFileName, dealStoragePath, DOC_KINDS
 ```

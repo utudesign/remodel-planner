@@ -1,54 +1,61 @@
-# Handoff: kitchen remodel planner (design → build)
+# Handoff: my kitchen sales tool (design → build)
 
-This bundle is the output of the design chat. The real app gets built in a separate Claude Code project using these files.
+These files come out of the design chat. The real app is built in a separate Claude Code project from them.
+
+**What the app is:** Tugu's personal sales tool. He finds and prepares kitchen and cabinet deals, hands them off to a licensed contractor partner (RenoDesign Inc., Crystal's company), and tracks his commission. It also tracks his own business money, kept separate from his day job.
+
+## Start here
+1. Create the repo (e.g. `~/Projects/kitchen-sales`), unzip this bundle at its root, open it in VS Code and start Claude Code.
+2. Paste **`docs/PROMPT-v2-master.md`**. Approve the Step 0 plan before any code is written. That prompt calls `PROMPT-deals.md` and `PROMPT-estimating.md` at the right steps.
+3. Ship one step at a time and use it on real leads for a week before starting the next.
 
 ## What's inside
-
 | Path | What it is | Status |
 |---|---|---|
-| `docs/CONTEXT.md` | Source of truth: team, lifecycle, data model, screens, automations, analytics, **build phases** | Spec |
-| `docs/FIELD-AND-OFFICE.md` | How the three of you work: admin split shift, lead routing, Site Visit form, ballpark, design queue, command center | Spec |
-| `docs/ESTIMATING.md` | Price book, quotes, takeoff, approval, materials/pick list | Spec |
-| `docs/QUICK-ESTIMATE.md` | Phone quick estimate, vendor price lists + color groups, quartz levels, Home Depot comparison, company profile, monthly price check | Spec |
-| `docs/research/Kitchen remodel price research.md` | NoVA quartz market, live Home Depot prices, Hampton Bay 10x10 comparison (sources + dates) | Research, Oct 23, 2026 |
-| `docs/DEALS.md` | Everything is a deal: deal numbers (10231…), the deal jacket (estimates, photos, files, money), checklist gates, export | Spec |
-| `docs/PROMPT-kickoff.md` | Paste to start **Phase 1** | Prompt |
-| `docs/PROMPT-deals.md` | Paste for deal numbers + deal jacket (Steps 0–2 in Phase 1, rest as each tab's data arrives) | Prompt |
-| `docs/PROMPT-estimating.md` | Paste to start **Phase 3** | Prompt |
-| `supabase/migrations/0002_estimating.sql` | Estimating tables, views, RLS, approve/convert functions | Tested on Postgres 16 |
-| `supabase/migrations/0003_estimating_seed.sql` | `seed_default_estimating()`: 86-item starter price book (38 live Home Depot prices, 6 market quartz/countertop prices, the rest placeholders), 10x10 template, Home Depot comparison prices | Tested |
-| `supabase/pending/seed/timberpeak-msrp-sheets.json` + `timberpeak_msrp_2026.sql` | Your vendor list (4 color groups × 279 items) and its import, cost = MSRP × 0.33 | Tested |
-| `supabase/migrations/0004_deal_jacket.sql` | Deal numbers, deal files + storage rules, jacket checklist gates, deal recap | Tested |
-| `scripts/price-list-to-sql.ts` | Builds the import SQL from a price list | Tested |
-| `lib/deals/dealNumber.ts` | Deal number format/parse/label (Eastern Time), storage paths + tests | Tested |
-| `lib/estimating/` | `pricing.ts`, `takeoff.ts`, `ballpark.ts`, `vendorImport.ts`, `comparison.ts` + 61 tests + fixtures exported from Postgres | Tested, strict TS |
+| `docs/PROMPT-v2-master.md` | The prompt that drives the whole build | Prompt |
+| `docs/SALES-REP-MODE.md` | Who's who, deal lifecycle, hand-off, commission plans, partner login, my money, automations | **Spec: wins over the other docs** |
+| `docs/DEALS.md` | Deal numbers `26-1047`, document numbers `26-1047-E1`/`-D1`/`-CO1`/`-R1`/`-PO1`, the deal jacket, photos | Spec |
+| `docs/QUICK-ESTIMATE.md`, `docs/ESTIMATING.md` | Quick estimate, TimberPeak list × 0.33, quartz levels, Home Depot comparison, quote math | Spec |
+| `docs/COMPLIANCE-AND-OPS.md` | §0: the rep's own obligations. §1–4: the contractor's Virginia rules and gap list (useful for Crystal) | Spec |
+| `docs/CONTEXT.md`, `docs/FIELD-AND-OFFICE.md` | Original company-wide design. Team, admin and crew are now an **optional contractor module** | Reference |
+| `docs/PROMPT-deals.md`, `docs/PROMPT-estimating.md` | Step-level prompts, called from the master prompt | Prompt |
+| `docs/PROMPT-kickoff.md` | Original Phase 1 prompt (replaced by v2) | Old |
+| `docs/research/` | Price research and business-gaps research, with sources | Research, Oct 23, 2026 |
+| `supabase/migrations/0002_estimating.sql`, `0003_estimating_seed.sql` | Price book, quotes, takeoff, price lists, Home Depot comparison | Tested |
+| `supabase/migrations/0004_deal_jacket.sql` | Deal and document numbers, deal files and storage rules, checklist gates, recap | Tested |
+| `supabase/migrations/0005_compliance.sql` | Contractor module: 3-day cancel window, signed change orders, lead-safe items, subs, warranty, lead-source stats | Tested (optional module) |
+| `supabase/migrations/0006_sales_rep.sql` | Partners, commission plans, hand-off gate, partner login limits, commissions view, expenses, mileage, year summary | Tested |
+| `supabase/seed/` | The TimberPeak price list (4 color groups) and its import | Tested |
+| `lib/estimating/`, `lib/deals/`, `lib/commission/` | Pricing, takeoff, ballpark, vendor import, comparison, deal numbers, commission. **75 tests**, strict TypeScript | Tested |
+| `test/` | Stub of 0001 plus SQL tests; `run_all.sh` shows the order | Tests |
 
-## How to use it
+## Before the first hand-off
+- **Sign a written commission agreement with RenoDesign.** It should cover:
+  - rate and basis;
+  - when the commission is earned;
+  - what happens on cancellation or refund;
+  - change orders;
+  - when you get paid;
+  - who owns the lead;
+  - what happens to deals already handed off if you stop working together.
 
-1. Create the repo (e.g. `~/Projects/remodel-planner`), unzip this bundle at the root, open it in VS Code, start Claude Code.
-2. Add `docs/` to the Claude Project's knowledge (or keep them in the repo; `CLAUDE.md` will point to them).
-3. Paste `docs/PROMPT-kickoff.md`. Approve the Step 0 plan before any code is written. During Phase 1, also run Steps 0–2 of `docs/PROMPT-deals.md` so every deal gets its number from day one.
-4. Phase 2 (field → design): ask Claude Code to build CONTEXT §9 Phase 2 from FIELD-AND-OFFICE §4, §6, §9.
-5. Phase 3: paste `docs/PROMPT-estimating.md`. It reconciles 0002/0003 with the real 0001 before applying them.
-6. Ship each phase to the team, use it for a week, then start the next one.
-
-## Before the first real quote
-- Enter your **fabricator's dealer price** for each quartz level (costs are placeholders at 70% of the market price).
-- Ask TimberPeak about the **Group 3 light rail price** ($51.06, likely a typo) and the DBG/DCB label.
-- Enter your **DPOR license number** (not on the website; quotes can't be sent without it).
-- Replace the remaining sample costs (labor rate, plumber, electrician, haul-away, freight) with real numbers.
-- Confirm the admin's hours and enter them as work windows (FIELD-AND-OFFICE §2).
-- Set up the shared business phone number and decide how Facebook messages reach the app (FIELD-AND-OFFICE §8).
+  Then put those terms into the commission plans (the seeded ones are placeholders).
+- **Ask Fairfax County Cable and Consumer Services** whether in-home sales by appointment need a solicitor license, and whether you need your own.
+- **Selling to Maryland homes?** That needs a Maryland salesperson license.
+- **Get RenoDesign's contract package for your hand-off kit:** the contract with its license number, the 3-day cancellation notice, and the Statement of Consumer Protections.
+- **Taxes:** set the tax set-aside % and the IRS mileage rate in Settings.
 
 ## Verified numbers
 | Check | Result |
 |---|---|
-| 10x10 cabinets + trim, TimberPeak group 1, at your cost | $3,076.87 (vendor sheet: $3,076.92; cent rounding) |
-| Same list in group 4 (CWO) | $6,524.56 |
-| Quick estimate, group 1 + Level 3 quartz (sample labor/subs) | $20,896.43, 34.2% margin |
-| Hampton Bay equivalent at Home Depot | $4,033.55 before tax (matches research) |
-| Home Depot materials for the whole quote | $6,176.89 with tax; 57 of 79 lines covered |
-| TS vs SQL totals | identical to the cent |
-| Deal numbers | 03141, 03142, 03143 (11:30 PM still that day), 03151; Jan 5 → 01051; 10th → 031510; next year restarts |
-| Deal jacket gates | Order blocked until contract + design + deposit are filed; close blocked until final payment + sign-off + after photos |
-| Crew access | Photos + design on assigned deals only; no money documents; nothing on other deals |
+| 10x10 cabinets, TimberPeak group 1, at cost (× 0.33) | $3,076.87 (sheet $3,076.92) |
+| Quick estimate with group 1 + Level 3 quartz | $20,896.43; at 5% that pays you $1,044.82 |
+| Hampton Bay equivalent at Home Depot | $4,033.55 before tax |
+| Deal numbers | 26-1001, 26-1002, …. 11:30 PM Dec 31 ET still counts as 26-; Jan 1 → 27-1001. 50 deals created at once get 50 consecutive numbers |
+| Hand-off | Refused without a partner and plan, without a plan from that same partner, or without photos + measurements + appliance list |
+| Kitchen commission | $38,500 × 5% = $1,925. Half is earned at deposit. After a $1,500 change order and payment in full it's $2,000, with $1,037.50 still owed once $962.50 is received |
+| Cabinets-only commission | $4,200 × 8% = $336, all earned at deposit. A $1,800 job pays the $250 floor |
+| Cancelled before deposit | $0 |
+| Crystal's login | Sees only the 3 deals handed to RenoDesign, not other partners' deals or your expenses. Can update only job progress and price. Can't record commission payments |
+| Year summary | $962.50 received − $74.99 expenses − 42.5 mi × 70¢ = $857.76 net |
+| TypeScript vs SQL | Identical to the cent |

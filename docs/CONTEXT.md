@@ -1,11 +1,14 @@
 # Project Context: Kitchen Remodel Project Planner (Web App)
 
 ## 1. What we're building
+
+> **Update (Oct 23, 2026): sales-rep mode.** The app is Tugu's own sales tool. He prepares deals and hands them to a licensed contractor partner (RenoDesign Inc., Crystal's company), who signs, builds and collects; Tugu earns a commission. `docs/SALES-REP-MODE.md` overrides this file where they conflict. The team/admin/crew material below describes the optional contractor module. Start from `docs/PROMPT-v2-master.md`.
+
 An easy, phone-first, Asana-style web app for **RenoDesign Inc.** (Chantilly, VA; renodesigninc.com), a small remodeling company: kitchens first, also baths, basements and whole-home projects (more templates later). Company profile and client-facing stages: `docs/QUICK-ESTIMATE.md` §5. It tracks every job from the first phone call to the final payment, then shows margin and profit per job and per month.
 
 The company runs **4–5 active projects every 1–2 months**, gets **many calls and messages**, and loses money when leads go cold or payments get missed. The team is **three people who rarely meet**, so the app *is* the meeting: everyone sees the same leads, jobs, money and changes from their phone, and nothing falls through the cracks.
 
-**Everything is a deal.** A deal is opened at first contact and is the one record for that customer job until the final payment, like a car deal jacket. It gets a permanent **deal number** (MMDD + that day's count, Eastern Time, restarting each year: Oct 23 first deal = `10231`, second = `10232`; Jan 5 first = `01051`). Sales stages and job milestones are stages of the same deal; the UI never shows separate "lead" or "project" objects. Details: `docs/DEALS.md`.
+**Everything is a deal.** A deal is opened at first contact and is the one record for that customer job until the final payment, like a car deal jacket. It gets a permanent **deal number** (`YY-NNNN`, e.g. `26-1047`: year + that year's count from 1001; documents inside it extend it, e.g. change order `26-1047-CO1`). Sales stages and job milestones are stages of the same deal; the UI never shows separate "lead" or "project" objects. Details: `docs/DEALS.md`.
 
 **Who uses it**
 | Role | Who | Sees | Main needs |
@@ -77,8 +80,8 @@ Every record moves through two linked pipelines: **Lead → Deal** (sales) and *
 Configurable per project. Default templates:
 | Template | Schedule |
 |---|---|
-| Cabinets only | 70% deposit at order → 30% on delivery |
-| Full remodel | 50% deposit → 25% at mid-project → 25% at final inspection |
+| Cabinets only | 70% deposit at order → 30% on delivery (cabinets sold **without** install = a materials sale: Virginia sales tax is collected and shown; see COMPLIANCE-AND-OPS §2) |
+| Full remodel | 30% at signing → 30% cabinets delivered → 30% countertops installed → 10% final (editable; see COMPLIANCE-AND-OPS §3 on deposit guidance) |
 | Custom | Any number of installments, by % or fixed $ |
 
 Each installment has: amount, due trigger (milestone or date), method (check, Zelle, card, cash), check #, received date, status (due / received / overdue).
@@ -120,7 +123,7 @@ users              id, clerk_id, company_id, name, role (owner|team|crew), phone
                    notify_prefs jsonb
 contacts           id, company_id, name, phone, email, address, city, zip, notes
 deals              id, company_id, contact_id, source, stage, owner_id,
-                   deal_year, deal_date, deal_seq, deal_number (assigned by trigger; see DEALS.md),
+                   deal_year, deal_seq, deal_number, opened_on (assigned by trigger; see DEALS.md),
                    permit_required, deleted_at (soft delete; numbers are never reused),
                    budget_min, budget_max, scope (cabinets|counters|full|other),
                    desired_timeline, next_follow_up_at, lost_reason, created_at
@@ -172,7 +175,7 @@ RLS by `company_id`. `owner` + `team` read everything. `crew` reads only project
 | **Site visit** | Phone form with required-photo checklist, sketch photo, walls, appliances, ballpark (FIELD-AND-OFFICE §4) |
 | **Ballpark** | Template + rough size → price range from the live price book (FIELD-AND-OFFICE §5) |
 | **Design queue** | Crystal's list of site visits by due date and status (FIELD-AND-OFFICE §6) |
-| **Deals** | List by segment and stage (board on tablet/desktop); search by deal number, name, phone, address; card = **#10231**, name, scope, value, owner avatar, next date, unread dot |
+| **Deals** | List by segment and stage (board on tablet/desktop); search by deal number, name, phone, address; card = **#26-1047**, name, scope, value, owner avatar, next date, unread dot |
 | **Deal jacket** | One screen per deal (DEALS.md §3): header with #number and big Call · Text · Navigate · Log buttons; tabs **Overview · Estimates · Photos · Files · Money · Tasks · Activity**; jacket checklist |
 | **Jobs** | Active projects by milestone; card = client, PM, next date, balance due, open issues |
 | **Job detail** | Key dates header; tabs: Tasks, Materials, Issues, Payments, Costs, Files, Comments |

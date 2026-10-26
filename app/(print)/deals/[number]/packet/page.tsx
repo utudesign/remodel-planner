@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { PrintButton } from "@/components/public/print-button";
-import { requireOwner } from "@/lib/auth/require-role";
+import { requireStaff } from "@/lib/auth/require-role";
 import { formatDateTime } from "@/lib/dates";
 import { scopeInfo, sourceLabel, timelineLabel } from "@/lib/deals/display";
 import { formatBudget, formatCents } from "@/lib/money";
@@ -14,7 +14,7 @@ export const metadata = { title: "Hand-off packet" };
 /** The hand-off packet as one printable page: customer, scope, budget, notes, measurements, estimate, photos. */
 export default async function Packet({ params }: { params: Promise<{ number: string }> }) {
   const { number } = await params;
-  const s = await requireOwner();
+  const s = await requireStaff();
   const deal = await getDealByNumber(s, number);
   if (!deal) notFound();
   const [files, quotes, visit] = await Promise.all([

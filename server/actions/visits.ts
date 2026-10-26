@@ -78,7 +78,7 @@ async function fileText(
 export async function saveSiteVisit(input: VisitInput): Promise<ActionState & { low?: number; high?: number }> {
   try {
     const v = visitSchema.parse(input);
-    const s = await requireRole("owner");
+    const s = await requireRole("owner", "partner");
     const deal = must(
       await s.db
         .from("deals")

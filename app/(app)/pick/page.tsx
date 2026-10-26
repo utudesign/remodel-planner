@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ScopeBadge } from "@/components/deals/deal-card";
 import { EmptyState, PageHeader } from "@/components/shared/states";
-import { requireOwner } from "@/lib/auth/require-role";
+import { requireStaff } from "@/lib/auth/require-role";
 import { getStages, listDeals } from "@/server/queries/deals";
 
 export const metadata = { title: "Pick a deal" };
@@ -16,7 +16,7 @@ const FOR = {
 export default async function PickDeal({ searchParams }: { searchParams: Promise<{ for?: string }> }) {
   const { for: f } = await searchParams;
   const target = FOR[(f ?? "log") as keyof typeof FOR] ?? FOR.log;
-  const s = await requireOwner();
+  const s = await requireStaff();
   const [stages, deals] = await Promise.all([getStages(s), listDeals(s)]);
   const open = new Set(stages.filter((x) => x.kind === "open").map((x) => x.key));
   const list = deals

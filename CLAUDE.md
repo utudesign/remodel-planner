@@ -6,7 +6,8 @@ Read first, in this order (earlier wins on conflict): `docs/SALES-REP-MODE.md`, 
 The approved build plan is `docs/PLAN.md`; decisions go in `docs/DECISIONS.md`.
 If a request conflicts with the spec, flag it and propose a spec update. Never diverge silently.
 
-Roles: `owner` (Tugu, the rep), `partner` (Crystal at RenoDesign, optional login), `team`/`crew` unused.
+Roles: `owner` (Tugu, the rep), `partner` (Crystal at RenoDesign: a team member since 0013 — sees every deal,
+creates RenoDesign's own deals, estimates, jobs, KPIs; no Money/Settings/plans), `team`/`crew` unused.
 
 **Tested handoff code — use it, don't rewrite it:** `supabase/migrations/0002`–`0006`,
 `lib/estimating/*`, `lib/deals/dealNumber.ts`, `lib/commission/commission.ts`, `supabase/seed/*`,
@@ -51,7 +52,8 @@ Ask before adding any dependency not listed here.
 1. Every open deal has `next_follow_up_at` (new lead = +1 h; each stage/touch resets it from the rules).
 2. Lost requires a lost reason. Deals are never hard-deleted; numbers (`26-1047`) are never reused.
 3. Hand-off requires a partner, one of that partner's plans and the `before_handoff` checklist (0006).
-4. A partner can update only job progress and price (0006). Only the owner records commission payments.
+4. On the rep's deals a partner updates only job progress and price (0006/0013); her own deals (`origin = 'partner'`)
+   are RenoDesign's: no commission, no hand-off. Only the owner records commission payments.
 5. No client money in this app except as reported by the partner.
 6. Commission = plan rate × (sold price + change orders), floor per plan; first payout at deposit,
    rest at paid in full (`deal_commissions`, `lib/commission`).
@@ -80,5 +82,5 @@ tests/  lib/**/__tests__      Vitest
 
 - Adding a paid service or a heavy library, or changing an applied table.
 - Something is hard to undo (data deletes, auth model, production env).
-- Building the contractor module's screens (team/admin/crew).
+- Building more of the contractor module (team/admin/crew screens). Jobs (milestones, tasks, costs) + KPIs exist (0013).
   Otherwise pick the simplest option, log it in `docs/DECISIONS.md`, keep going.

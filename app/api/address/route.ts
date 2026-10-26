@@ -16,7 +16,7 @@ const query = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    await requireRole("owner");
+    await requireRole("owner", "partner");
   } catch {
     return NextResponse.json({ error: "Not allowed" }, { status: 403 });
   }

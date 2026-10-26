@@ -127,10 +127,19 @@ export async function requireRole(...roles: Role[]): Promise<Session> {
   return session;
 }
 
-/** For the rep's pages: partners go to their own screens, anyone else to /no-access. */
+/** The rep's own pages (money, settings, partners/plans): Crystal goes to Today. */
 export async function requireOwner(): Promise<Session> {
   const session = await getSession();
-  if (session.role === "partner") redirect("/p");
+  if (session.role === "partner") redirect("/today");
   if (session.role !== "owner") redirect("/no-access");
   return session;
 }
+
+/** Shared work pages (Today, deals, estimates, visits, jobs, KPIs): the rep and the partner (0013). */
+export async function requireStaff(): Promise<Session> {
+  const session = await getSession();
+  if (session.role !== "owner" && session.role !== "partner") redirect("/no-access");
+  return session;
+}
+
+export const isPartner = (s: Pick<Session, "role">) => s.role === "partner";

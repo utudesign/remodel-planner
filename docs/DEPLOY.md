@@ -35,7 +35,7 @@ pnpm install
 cp .env.example .env.local                     # fill in as you go
 echo "CLERK_FRONTEND_API_DOMAIN=<your-app>.clerk.accounts.dev" > supabase/.env
 pnpm db:start                                  # prints API URL + anon + service_role keys → .env.local
-pnpm db:reset                                  # migrations 0001–0011 + demo data + TimberPeak list
+pnpm db:reset                                  # migrations 0001–0013 + demo data + TimberPeak list
 pnpm dev                                       # http://localhost:3000
 ```
 
@@ -80,7 +80,7 @@ PGHOST=/tmp PGPORT=5432 scripts/test-db.sh       # SQL tests on a plain Postgres
    ```bash
    pnpm supabase login
    pnpm supabase link --project-ref <ref>
-   pnpm supabase db push           # 0001–0011; creates the private deal-files bucket too
+   pnpm supabase db push           # 0001–0013; creates the private deal-files bucket too
    ```
 4. Project Settings → API → URL, `anon` key, `service_role` key.
 
@@ -150,7 +150,9 @@ npx web-push generate-vapid-keys   # prints a public and a private key
 | 14 | Job progress: Contract signed, sold $38,500, deposit today → Save | Money: $962.50 owed (5% plan, half at deposit) |
 | 15 | Money → Record a payment I received → $962.50 Zelle | Owed $0, "part paid"; Year tab shows it; CSV downloads |
 | 16 | + → Add expense (receipt photo) and + → Log trip (24 mi) | Year: net = commissions − expenses − 24 × 72.5¢ |
-| 17 | More → Partners → Invite Crystal's email; she signs in on her phone | She sees only handed-off deals at /p, can update job progress; you get a push |
+| 17 | More → Partners → Invite Crystal's email; she signs in on her phone | Her tabs: Today · Deals · Jobs · KPIs · More (no Money). She sees every deal; a deal she adds is marked RenoDesign (no commission) |
+| 18 | Handed-off deal → Job tab → Start the job → tick Deposit received | Timeline with 13 steps; the deal shows deposit received and Money shows the commission earned |
+| 19 | More → Jobs, then More → KPIs | One bar per job; KPIs show won, costs, commission, profit |
 
 ## 6. Changing the schema later
 

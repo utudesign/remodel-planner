@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { PhotoCapture } from "@/components/photos/photo-capture";
 import { VisitForm } from "@/components/visits/visit-form";
-import { requireOwner } from "@/lib/auth/require-role";
+import { requireStaff } from "@/lib/auth/require-role";
 import { addressForMaps } from "@/lib/address";
 import { cn } from "@/lib/utils";
 import { maybe } from "@/server/action-utils";
@@ -22,7 +22,7 @@ const REQUIRED = [
 
 export default async function SiteVisitPage({ params }: { params: Promise<{ number: string }> }) {
   const { number } = await params;
-  const s = await requireOwner();
+  const s = await requireStaff();
   const deal = await getDealByNumber(s, number);
   if (!deal) notFound();
   const [files, checklist, visit] = await Promise.all([

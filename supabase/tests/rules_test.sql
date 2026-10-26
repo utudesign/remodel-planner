@@ -66,20 +66,71 @@ end $$;
 
 select pg_temp.act_as('seed_crystal');
 do $$ begin
-  if (select count(*) from public.deals) <> 3 then raise exception 'partner should see 3 handed-off deals, sees %', (select count(*) from public.deals); end if;
-  if (select count(*) from public.contacts) <> 3 then raise exception 'partner reads only the customers of her 3 deals'; end if;
+  -- 0013: Crystal is on the team: every deal and customer, never my money.
+  if (select count(*) from public.deals) <> 8 then raise exception 'partner should see all 8 deals, sees %', (select count(*) from public.deals); end if;
+  if (select count(*) from public.contacts) < 8 then raise exception 'partner reads the customers'; end if;
   if (select count(*) from public.business_expenses) + (select count(*) from public.mileage_trips) <> 0 then raise exception 'partner sees my money'; end if;
-  if (select count(*) from public.activities) <> 0 then raise exception 'partner sees my activity log'; end if;
-  if (select count(*) from public.deal_commissions) <> 3 then raise exception 'partner sees commissions on her deals'; end if;
-  raise notice 'OK: partner sees only her 3 deals and their customers, no notes or expenses';
+  if (select count(*) from public.deal_commissions) <> 3 then raise exception 'partner sees commissions on handed-off deals'; end if;
+  raise notice 'OK: partner sees every deal and customer, commissions, not my expenses or mileage';
 end $$;
 select pg_temp.expect_error($$update public.deals set stage = 'new' where id = '00000000-0000-0000-0000-0000000000d3'$$,
                             'Partners can only update%');
+select pg_temp.expect_error($$insert into public.commission_payments (company_id, deal_id, amount_cents, paid_on, method)
+                              values ('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000d3', 100, current_date, 'zelle')$$,
+                            '%row-level security%');
 do $$ begin
   update public.deals set job_status = 'ordered', deposit_received_at = now() where id = '00000000-0000-0000-0000-0000000000d3';
   if not found then raise exception 'partner could not update job progress'; end if;
-  raise notice 'OK: partner updates job progress, not the stage';
+  raise notice 'OK: on my deals the partner updates job progress, not the stage; she cannot record my commission';
 end $$;
+
+-- Her own deal (RenoDesign's): no commission, no hand-off; signing makes it a job.
+do $$
+declare d public.deals; v_job uuid;
+begin
+  insert into public.deals (company_id, source, stage, scope, title)
+  values ('00000000-0000-0000-0000-0000000000c1', 'referral', 'new', 'kitchen', 'Reno own') returning * into d;
+  if d.origin <> 'partner' or d.partner_id is null or d.owner_id <> public.current_user_id() then
+    raise exception 'partner deal should be origin=partner, her partner + owner (%, %, %)', d.origin, d.partner_id, d.owner_id; end if;
+  update public.deals set stage = 'estimate', notes = 'her notes' where id = d.id;
+  begin
+    perform public.start_job(d.id);
+    raise exception 'job before signing';
+  exception when check_violation then null;
+  end;
+  update public.deals set job_status = 'signed', sold_price_cents = 2500000 where id = d.id returning * into d;
+  if d.stage <> 'handed_off' then raise exception 'signed partner deal should leave the pipeline, stage %', d.stage; end if;
+  v_job := public.start_job(d.id);
+  if public.start_job(d.id) <> v_job then raise exception 'start_job not idempotent'; end if;
+  if (select count(*) from public.job_milestones where project_id = v_job) <> 13 then raise exception 'milestones not planned'; end if;
+  insert into public.costs (project_id, category, actual_amount) values (v_job, 'cabinets', 900000);
+  insert into public.tasks (project_id, title, due_date) values (v_job, 'Order cabinets', current_date + 3);
+  if (select count(*) from public.deal_commissions where deal_id = d.id) <> 0 then raise exception 'her deal has no commission'; end if;
+  raise notice 'OK: partner creates RenoDesign deals (no commission); signing moves it to a job with 13 milestones, costs, tasks';
+end $$;
+select pg_temp.expect_error($$update public.deals set commission_plan_id = (select id from public.commission_plans limit 1),
+                              handed_off_at = now() where title = 'Reno own'$$, '%can''t change who%');
+do $$ begin
+  update public.text_templates set body = 'x';
+  if (select count(*) from public.text_templates) = 0 then raise exception 'partner uses the texts'; end if;
+  if exists (select 1 from public.text_templates where body = 'x') then raise exception 'partner edited my texts'; end if;
+end $$;
+reset role;
+set role authenticated;
+select pg_temp.act_as('seed_tugu');
+select pg_temp.expect_error($$update public.deals set commission_plan_id = (select id from public.commission_plans limit 1),
+                              partner_id = (select partner_id from public.commission_plans limit 1),
+                              handed_off_at = now() where title = 'Reno own'$$, '%no commission%');
+select pg_temp.expect_error($$select public.start_job('00000000-0000-0000-0000-0000000000d8')$$, 'A job starts after%');
+do $$ begin
+  if public.start_job('00000000-0000-0000-0000-0000000000d2') is null then raise exception 'job for a handed-off deal'; end if;
+  raise notice 'OK: I can''t hand off her deal; jobs start only after hand-off/signing';
+end $$;
+reset role;
+delete from public.costs; delete from public.tasks; delete from public.job_milestones; delete from public.projects;
+delete from public.activities where deal_id in (select id from public.deals where title = 'Reno own');
+delete from public.deals where title = 'Reno own';
+set role authenticated;
 
 select pg_temp.act_as('seed_crew');
 do $$ begin
@@ -222,11 +273,12 @@ begin
 end $$;
 select pg_temp.act_as('seed_crystal');
 do $$ begin
-  if (select count(*) from public.quotes) + (select count(*) from public.quote_line_items) <> 0 then
-    raise exception 'partner sees my estimates'; end if;
-  raise notice 'OK: partner never sees my estimates';
+  if (select count(*) from public.quotes) = 0 then raise exception 'partner (team) works on estimates'; end if;
+  if public.share_quote((select id from public.quotes limit 1)) !~ '-E1$' then raise exception 'partner shares an estimate'; end if;
+  raise notice 'OK: partner (team) sees and shares estimates (0013)';
 end $$;
-select pg_temp.expect_error($$select public.share_quote((select id from public.quotes limit 1))$$, 'Only the owner%');
+select pg_temp.act_as('seed_crew');
+select pg_temp.expect_error($$select public.share_quote((select id from public.quotes limit 1))$$, 'Only the team%');
 
 -- 8. Hand-off + partner login (0010) ------------------------------------------------
 reset role;
@@ -283,9 +335,9 @@ begin
 end $$;
 select pg_temp.act_as('seed_crystal');
 do $$ begin
-  if (select count(*) from public.text_templates) <> 0 or (select count(*) from public.text_sends) <> 0 then
-    raise exception 'partner must not see my texts'; end if;
-  raise notice 'OK: texts and sends are owner-only, per company';
+  if (select count(*) from public.text_templates) <> 11 then raise exception 'partner (team) reads the texts'; end if;
+  if (select count(*) from public.text_sends) <> 0 then raise exception 'other company''s sends are hidden'; end if;
+  raise notice 'OK: texts are per company; the team reads them, only the owner edits';
 end $$;
 reset role;
 
@@ -302,16 +354,14 @@ do $$ begin
 end $$;
 select pg_temp.act_as('seed_crystal');
 do $$ begin
-  if (select count(*) from public.deal_intake) <> 1
-     or not exists (select 1 from public.deal_intake where deal_id = '00000000-0000-0000-0000-0000000000d2') then
-    raise exception 'partner sees only intakes of deals handed to her'; end if;
+  if (select count(*) from public.deal_intake) <> 2 then raise exception 'partner (team) reads the form answers'; end if;
   update public.deal_intake set summary = 'x';
   if exists (select 1 from public.deal_intake where summary = 'x') then raise exception 'partner cannot edit intake'; end if;
 end $$;
 select pg_temp.act_as('user_other_rep');
 do $$ begin
   if (select count(*) from public.deal_intake) <> 0 then raise exception 'other company sees no intakes'; end if;
-  raise notice 'OK: form answers: owner sees all, partner only handed-off deals (read-only), other companies none';
+  raise notice 'OK: form answers: owner + partner read, partner cannot edit, other companies none';
 end $$;
 reset role;
 

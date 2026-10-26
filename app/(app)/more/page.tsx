@@ -1,17 +1,17 @@
 import Link from "next/link";
-import { Bell, ChevronRight, Handshake, MessageSquare, Settings, SlidersHorizontal } from "lucide-react";
+import { BarChart3, Bell, ChevronRight, GanttChart, Handshake, MessageSquare, Settings, SlidersHorizontal } from "lucide-react";
 import { SignOutButton } from "@clerk/nextjs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/states";
 import { PushToggle } from "@/components/shared/push-toggle";
-import { requireOwner } from "@/lib/auth/require-role";
+import { requireStaff } from "@/lib/auth/require-role";
 import { CopyButton } from "@/components/shared/copy-button";
 import { appUrl } from "@/lib/app-url";
 
 export const metadata = { title: "More" };
 
 export default async function MorePage() {
-  const s = await requireOwner();
+  const s = await requireStaff();
   const { data: link } = await s.db
     .from("lead_links")
     .select("slug, active")
@@ -20,13 +20,20 @@ export default async function MorePage() {
     .limit(1)
     .maybeSingle();
   const shareUrl = link ? `${await appUrl()}/l/${link.slug}` : null;
+  const owner = s.role === "owner";
   const links = [
+    ...(owner
+      ? [
+          { href: "/jobs", label: "Jobs", icon: GanttChart, hint: "Timeline of every job after hand-off" },
+          { href: "/kpis", label: "KPIs", icon: BarChart3, hint: "Estimated, won, expenses, profit by deal" },
+        ]
+      : []),
     { href: "/partners", label: "Partners + commission plans", icon: Handshake, hint: "RenoDesign, plans, Crystal's login" },
     { href: "/notifications", label: "Notifications", icon: Bell, hint: "Everything that happened" },
     { href: "/settings", label: "Settings", icon: Settings, hint: "Hours, booking slots, tax, mileage, auto-reply" },
     { href: "/settings/texts", label: "My texts", icon: MessageSquare, hint: "On my way, thanks, estimate follow-ups" },
     { href: "/settings/pipeline", label: "Stages + follow-ups", icon: SlidersHorizontal, hint: "My pipeline and cadence" },
-  ];
+  ].filter((l) => owner || l.href === "/notifications");
   return (
     <>
       <PageHeader title="More" />
@@ -44,7 +51,7 @@ export default async function MorePage() {
           </li>
         ))}
       </ul>
-      {shareUrl ? (
+      {owner && shareUrl ? (
         <Card className="mb-5">
           <CardHeader>
             <CardTitle>My share link</CardTitle>

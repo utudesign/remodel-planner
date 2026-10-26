@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CalendarClock, Check, Clock, MessageCircle, Navigation, Reply, Wallet } from "lucide-react";
 import { ScopeBadge } from "@/components/deals/deal-card";
 import { EmptyState } from "@/components/shared/states";
-import { requireOwner } from "@/lib/auth/require-role";
+import { requireStaff } from "@/lib/auth/require-role";
 import { formatTime } from "@/lib/dates";
 import { formatCents, formatCentsWhole } from "@/lib/money";
 import { nextStep } from "@/lib/deals/segments";
@@ -65,12 +65,19 @@ function Row({
 }
 
 export default async function TodayPage() {
-  const s = await requireOwner();
+  const s = await requireStaff();
   const now = new Date();
   const t = await getToday(s, now);
-  const dayJob = isDayJob(now, s.settings.workday, s.timezone);
+  const dayJob = !t.partner && isDayJob(now, s.settings.workday, s.timezone);
   const nothing =
-    !t.replyNow.length && !t.followUps.length && !t.meetings.length && !t.ready.length && !t.askPartner.length && !t.owed.length && !t.noTouch.length;
+    !t.replyNow.length &&
+    !t.followUps.length &&
+    !t.meetings.length &&
+    !t.ready.length &&
+    !t.askPartner.length &&
+    !t.owed.length &&
+    !t.noTouch.length &&
+    !t.jobSteps.length;
   const dateLabel = new Date(`${t.today}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 
   return (
@@ -90,7 +97,11 @@ export default async function TodayPage() {
       <div className="grid grid-cols-3 gap-2">
         <Tile label="New leads" value={String(t.replyNow.length)} />
         <Tile label="Visits" value={String(t.meetings.length)} />
-        <Tile label="Owed to you" value={formatCentsWhole(t.owedTotal)} dark href="/money" />
+        {t.partner ? (
+          <Tile label="Job steps due" value={String(t.jobSteps.length)} dark href="/jobs" />
+        ) : (
+          <Tile label="Owed to you" value={formatCentsWhole(t.owedTotal)} dark href="/money" />
+        )}
       </div>
 
       {nothing ? <EmptyState title="All caught up" description="New leads, follow-ups and visits show up here." /> : null}
@@ -107,6 +118,25 @@ export default async function TodayPage() {
               subTone="text-destructive font-semibold"
             />
           ))}
+        </Section>
+      ) : null}
+
+      {t.jobSteps.length ? (
+        <Section title="Job steps due" tone={t.jobSteps.some((m) => (m.planned_on ?? "") < t.today) ? "red" : undefined}>
+          {t.jobSteps.map((m) => {
+            const late = (m.planned_on ?? "") < t.today;
+            return (
+              <Row
+                key={m.id}
+                d={m.project!.deal!}
+                href={`/deals/${m.project!.deal!.deal_number}?tab=job`}
+                icon={CalendarClock}
+                iconTone={late ? "bg-destructive text-white" : "bg-accent text-accent-foreground"}
+                sub={`${m.label} · ${late ? "late, was " : ""}${new Date(`${m.planned_on}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+                subTone={late ? "text-destructive font-semibold" : undefined}
+              />
+            );
+          })}
         </Section>
       ) : null}
 

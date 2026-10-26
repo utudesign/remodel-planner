@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Plus, Search } from "lucide-react";
 import { DealCard } from "@/components/deals/deal-card";
 import { EmptyState, PageHeader } from "@/components/shared/states";
-import { requireOwner } from "@/lib/auth/require-role";
+import { requireStaff } from "@/lib/auth/require-role";
 import { todayIn } from "@/lib/dates";
 import { parseDealNumber } from "@/lib/deals/dealNumber";
 import { defaultPlanFor, previewFor, type PlanRow } from "@/lib/deals/plans";
@@ -38,7 +38,7 @@ function matcher(q: string, currentYear: number) {
 
 export default async function DealsPage({ searchParams }: { searchParams: Promise<{ seg?: string; q?: string }> }) {
   const { seg: segParam, q = "" } = await searchParams;
-  const s = await requireOwner();
+  const s = await requireStaff();
   const [stages, deals, commissions, partners] = await Promise.all([
     getStages(s),
     listDeals(s),

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarCheck, FolderKanban, Menu, Wallet, type LucideIcon } from "lucide-react";
+import { BarChart3, CalendarCheck, FolderKanban, GanttChart, Menu, Wallet, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { NavIcon, NavItem } from "@/lib/nav";
 
@@ -11,6 +11,8 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   deals: FolderKanban,
   money: Wallet,
   more: Menu,
+  jobs: GanttChart,
+  kpis: BarChart3,
 };
 
 const MORE_PATHS = ["/more", "/settings", "/notifications", "/partners"];

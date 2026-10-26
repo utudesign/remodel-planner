@@ -1322,6 +1322,7 @@ export type Database = {
       }
       deals: {
         Row: {
+          origin: string
           booking_token: string
           budget_max_cents: number | null
           budget_min_cents: number | null
@@ -1375,6 +1376,7 @@ export type Database = {
         }
         ComputedFields: never
         Insert: {
+          origin?: string
           booking_token?: string
           budget_max_cents?: number | null
           budget_min_cents?: number | null
@@ -1427,6 +1429,7 @@ export type Database = {
           year_built?: number | null
         }
         Update: {
+          origin?: string
           booking_token?: string
           budget_max_cents?: number | null
           budget_min_cents?: number | null
@@ -1734,6 +1737,107 @@ export type Database = {
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_cost_categories: {
+        Row: {
+          active: boolean
+          company_id: string
+          id: string
+          key: string
+          label: string
+          sort_order: number
+        }
+        ComputedFields: never
+        Insert: {
+          active?: boolean
+          company_id: string
+          id?: string
+          key: string
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          id?: string
+          key?: string
+          label?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      job_milestone_templates: {
+        Row: {
+          active: boolean
+          company_id: string
+          id: string
+          key: string
+          label: string
+          plan_days: number
+          sort_order: number
+        }
+        ComputedFields: never
+        Insert: {
+          active?: boolean
+          company_id: string
+          id?: string
+          key: string
+          label: string
+          plan_days?: number
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          id?: string
+          key?: string
+          label?: string
+          plan_days?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      job_milestones: {
+        Row: {
+          company_id: string
+          done_on: string | null
+          id: string
+          key: string
+          label: string
+          planned_on: string | null
+          project_id: string
+          sort_order: number
+        }
+        ComputedFields: never
+        Insert: {
+          company_id: string
+          done_on?: string | null
+          id?: string
+          key: string
+          label: string
+          planned_on?: string | null
+          project_id: string
+          sort_order?: number
+        }
+        Update: {
+          company_id?: string
+          done_on?: string | null
+          id?: string
+          key?: string
+          label?: string
+          planned_on?: string | null
+          project_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_milestones_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -4133,6 +4237,8 @@ export type Database = {
       }
       seed_sales_defaults: { Args: { p_company: string }; Returns: undefined }
       seed_text_templates: { Args: { p_company: string }; Returns: undefined }
+      seed_job_defaults: { Args: { p_company: string }; Returns: undefined }
+      start_job: { Args: { p_deal: string }; Returns: string }
       set_quote_collection: {
         Args: { p_collection_id: string; p_quote_id: string }
         Returns: {

@@ -30,7 +30,7 @@ export function DealCard({
 }) {
   const step = nextStep({ ...d, stageKind, owedCents: commission?.owed_cents }, now);
   const value = d.sold_price_cents ? d.sold_price_cents + d.change_orders_cents : d.estimated_value_cents;
-  const pays = commission ? commission.expected_cents : (previewCents ?? null);
+  const pays = d.origin === "partner" ? null : commission ? commission.expected_cents : (previewCents ?? null);
   const name = d.contact?.name || d.title || "No name yet";
   return (
     <Link
@@ -47,6 +47,7 @@ export function DealCard({
       <p className="mt-0.5 truncate text-base font-semibold">{name}</p>
       <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted-foreground">
         <ScopeBadge scope={d.scope} />
+        {d.origin === "partner" ? <span className="rounded-full bg-secondary px-1.5 text-[11px] font-bold text-foreground">RenoDesign</span> : null}
         {stageKind === "handed_off" ? (
           <span>{jobStatusLabel(d.job_status)}</span>
         ) : (

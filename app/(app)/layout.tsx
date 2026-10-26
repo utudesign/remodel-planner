@@ -4,7 +4,7 @@ import { Bell } from "lucide-react";
 import { BottomNav, SidebarNav } from "@/components/shared/nav";
 import { Fab } from "@/components/shared/fab";
 import { PhotoQueueRunner } from "@/components/photos/photo-queue-runner";
-import { TAB_ITEMS } from "@/lib/nav";
+import { tabsFor } from "@/lib/nav";
 import { getSession } from "@/lib/auth/require-role";
 
 function BellLink({ count }: { count: number }) {
@@ -24,7 +24,7 @@ function BellLink({ count }: { count: number }) {
   );
 }
 
-/** The rep's app shell. Partner logins use the /p shell instead. */
+/** App shell for me and for Crystal (partner): her tabs swap Money for Jobs + KPIs. */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const s = await getSession();
   const { count } = await s.db
@@ -38,11 +38,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <aside className="sticky top-0 hidden h-dvh flex-col gap-6 border-r bg-card px-3 py-5 lg:flex">
         <div className="flex items-center justify-between px-3">
           <Link href="/today" className="truncate text-base font-semibold tracking-tight">
-            Kitchen Sales
+            {s.role === "partner" ? "RenoDesign" : "Kitchen Sales"}
           </Link>
           <BellLink count={unread} />
         </div>
-        <SidebarNav items={TAB_ITEMS} />
+        <SidebarNav items={tabsFor(s.role)} />
         <div className="mt-auto flex items-center gap-2 px-3 text-sm">
           <UserButton />
           <p className="truncate font-medium">{s.name || "You"}</p>
@@ -60,9 +60,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </header>
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-5 pb-40 lg:px-8 lg:pt-8 lg:pb-12">{children}</main>
       </div>
-      {s.role === "owner" ? <Fab /> : null}
-      {s.role === "owner" ? <PhotoQueueRunner /> : null}
-      <BottomNav items={TAB_ITEMS} />
+      {s.role === "owner" || s.role === "partner" ? <Fab partner={s.role === "partner"} /> : null}
+      {s.role === "owner" || s.role === "partner" ? <PhotoQueueRunner /> : null}
+      <BottomNav items={tabsFor(s.role)} />
     </div>
   );
 }

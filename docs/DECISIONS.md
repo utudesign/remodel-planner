@@ -197,3 +197,16 @@ payments schedule, close/margin lock screens) was removed; it's in git history b
 | --- | --- |
 | The item box lists nothing until you type. Codes match from the start: "B36" shows B36 first, then B36FH… (never SB36). Enter or + adds the top one and clears the box for the next code. "2 B36" / "B36 x2" adds two. Words (sink, faucet) search names only when no code matches | Tugu adds cabinets by the codes on the TimberPeak list; a long list on a phone is slow |
 | The same code in the estimate's collection beats the generic (no-collection) item; without a collection only generic items show (as before) | Each TimberPeak collection repeats the same 279 codes at its own price |
+
+### Crystal on the team + jobs timeline + KPIs (2026-10-26, Tugu's answers)
+
+| Decision | Why |
+| --- | --- |
+| **Spec change** (SALES-REP-MODE §1, CLAUDE.md rule 4): Crystal's partner login is a team member of my company (0013 widens `is_team()`): she sees **every** deal, creates deals, estimates (and shares them), books visits, uploads photos, uses the texts. She does not see Money (expenses, mileage, recording commission payments), Settings, Partners/plans or the share link | Tugu: "she must have access to create new deal, today, estimate… not the money part" + chose "Everything" |
+| Deals she creates are **RenoDesign's own** (`deals.origin = 'partner'`, set by trigger): never a commission plan, never handed off. Signing the contract (job status) moves her deal to the hand-off-kind stage, and it can become a job | Tugu chose "Always RenoDesign's" |
+| On my deals she still changes only job progress + price (0006 rule kept); she sees my commission per deal | Tugu chose "Yes, show it" |
+| Today is per person (deals I own vs deals she owns); hers swaps "Owed to you" for "Job steps due" | Her deals shouldn't clutter my queue (and the reverse) |
+| Jobs = CONTEXT §5 `projects` (one per deal, `start_job()`), with `job_milestones` from `job_milestone_templates` (13 kitchen steps, planned from the start day), `tasks`, `costs` (categories in `job_cost_categories`). Ticking contract/deposit/ordered/install/walkthrough/paid updates the deal's job fields (so the commission engine stays in sync) | The "Asana" part from the original plan, rebuilt on the existing tables, mobile-first |
+| /jobs: one bar per job (start → last planned step, filled = steps done, red = late, line = today) + lists. Her tabs: Today · Deals · Jobs · KPIs · More; mine keep Money, with Jobs + KPIs under More | Timeline view without a heavy Gantt library |
+| /kpis: estimated (latest estimate, else estimated value), won (sold + change orders, not cancelled), job costs, my commission, profit = won − costs − commission, win rate, average deal; filters: all / from Tugu / RenoDesign's own, this year / last / all | Tugu's list: total estimated, won final amount, expenses, profit, by deal |
+| Old partner screens (/p) redirect into the main app (packet links keep working) | One app for both |

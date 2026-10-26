@@ -9,7 +9,7 @@ import {
   ShareBar,
 } from "@/components/estimates/builder";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { requireOwner } from "@/lib/auth/require-role";
+import { requireStaff } from "@/lib/auth/require-role";
 import { appUrl } from "@/lib/app-url";
 import { defaultPlanFor, previewFor, type PlanRow } from "@/lib/deals/plans";
 import type { TakeoffInputs } from "@/lib/estimating/takeoff";
@@ -27,7 +27,7 @@ export default async function QuoteBuilder({
   params: Promise<{ number: string; quoteId: string }>;
 }) {
   const { number, quoteId } = await params;
-  const s = await requireOwner();
+  const s = await requireStaff();
   const [deal, data, partners] = await Promise.all([getDealByNumber(s, number), getQuote(s, quoteId), getPartnersWithPlans(s)]);
   if (!deal || !data || data.quote.deal_id !== deal.id) notFound();
   const { quote, lines, sections, totals, sectionTotals, comparison, collections, quartz } = data;

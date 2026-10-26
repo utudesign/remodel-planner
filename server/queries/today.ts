@@ -21,16 +21,19 @@ export async function getToday(s: Session, now = new Date()) {
     getCommissions(s),
     s.db
       .from("meetings")
-      .select("id, starts_at, kind, deal:deals(deal_number, scope, title, contact:contacts(name, address, city))")
+      .select("id, starts_at, kind, deal:deals(deal_number, scope, title, owner_id, contact:contacts(name, address, city))")
       .eq("company_id", s.companyId)
       .eq("status", "scheduled")
       .gte("starts_at", start.toISOString())
       .lt("starts_at", end.toISOString())
       .order("starts_at"),
   ]);
-  const meetings = must(meetingsRes);
+  // Each of us sees our own deals (Crystal's are RenoDesign's; mine are mine). 0013
+  const partner = s.role === "partner";
+  const mine = deals.filter((d) => d.owner_id === s.userId);
+  const meetings = must(meetingsRes).filter((m) => m.deal?.owner_id === s.userId);
   const kind = new Map(stages.map((x) => [x.key, x.kind]));
-  const open = deals.filter((d) => kind.get(d.stage) === "open");
+  const open = mine.filter((d) => kind.get(d.stage) === "open");
 
   const replyNow = open.filter((d) => d.stage === "new" && !d.first_response_at);
   const replyIds = new Set(replyNow.map((d) => d.id));
@@ -46,7 +49,7 @@ export async function getToday(s: Session, now = new Date()) {
   );
   const ready = open.filter((d) => d.stage === "ready");
 
-  const withPartner = deals.filter((d) => {
+  const withPartner = (partner ? [] : mine).filter((d) => {
     const c = commissions.get(d.id);
     return (
       kind.get(d.stage) === "handed_off" &&
@@ -72,7 +75,22 @@ export async function getToday(s: Session, now = new Date()) {
       return { ...x, days: at ? Math.floor((now.getTime() - new Date(at).getTime()) / DAY) : 0 };
     })
     .sort((a, b) => b.days - a.days);
-  const owedTotal = [...commissions.values()].reduce((n, c) => n + Math.max(0, c.owed_cents), 0);
+  const owedTotal = partner ? 0 : [...commissions.values()].reduce((n, c) => n + Math.max(0, c.owed_cents), 0);
 
-  return { today, replyNow, followUps, noTouch, ready, askPartner, owed, owedTotal, meetings };
+  // Job steps due within 2 days (Crystal runs the jobs).
+  const soon = new Date(start.getTime() + 2 * DAY).toISOString().slice(0, 10);
+  const jobSteps = partner
+    ? must(
+        await s.db
+          .from("job_milestones")
+          .select("id, label, planned_on, project:projects(deal:deals(deal_number, scope, title, contact:contacts(name)))")
+          .eq("company_id", s.companyId)
+          .is("done_on", null)
+          .lte("planned_on", soon)
+          .order("planned_on")
+          .limit(30),
+      ).filter((m) => m.project?.deal)
+    : [];
+
+  return { today, replyNow, followUps, noTouch, ready, askPartner, owed, owedTotal, meetings, jobSteps, partner };
 }

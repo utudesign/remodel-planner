@@ -55,7 +55,7 @@ export async function newQuickEstimate(_: ActionState, fd: FormData): Promise<Ac
   let target = "";
   const res = await run(async () => {
     const v = z.object({ deal_id: z.uuid(), template_id: z.uuid() }).parse(formToObject(fd));
-    const s = await requireRole("owner");
+    const s = await requireRole("owner", "partner");
     const deal = must(
       await s.db.from("deals").select("id, deal_number").eq("id", v.deal_id).eq("company_id", s.companyId).single(),
     );
@@ -106,7 +106,7 @@ const measureSchema = z.object({
 export async function saveMeasurements(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = measureSchema.parse(formToObject(fd));
-    const s = await requireRole("owner");
+    const s = await requireRole("owner", "partner");
     const q = await quoteRef(s, v.quote_id);
     const walls = parseFeetList(v.walls);
     if (!walls.length) throw new Error("Enter at least one wall length in feet, like 10, 12");
@@ -141,7 +141,7 @@ export async function saveMeasurements(_: ActionState, fd: FormData): Promise<Ac
 export async function setColorGroup(input: { quote_id: string; collection_id: string }): Promise<ActionState> {
   return run(async () => {
     const v = z.object({ quote_id: z.uuid(), collection_id: z.uuid() }).parse(input);
-    const s = await requireRole("owner");
+    const s = await requireRole("owner", "partner");
     const q = await quoteRef(s, v.quote_id);
     const rows = must(await s.db.rpc("set_quote_collection", { p_quote_id: q.id, p_collection_id: v.collection_id }));
     const missing = rows.filter((r) => r.status !== "swapped").map((r) => r.code);
@@ -156,7 +156,7 @@ export async function setColorGroup(input: { quote_id: string; collection_id: st
 export async function setQuartzLevel(input: { quote_id: string; catalog_item_id: string }): Promise<ActionState> {
   return run(async () => {
     const v = z.object({ quote_id: z.uuid(), catalog_item_id: z.uuid() }).parse(input);
-    const s = await requireRole("owner");
+    const s = await requireRole("owner", "partner");
     const q = await quoteRef(s, v.quote_id);
     const lines = must(await s.db.from("quote_line_items").select("id").eq("quote_id", q.id).like("code", "QZ%"));
     if (!lines.length) throw new Error("This estimate has no quartz line. Add one from the price list.");
@@ -168,7 +168,7 @@ export async function setQuartzLevel(input: { quote_id: string; catalog_item_id:
 export async function setLineQty(input: { line_id: string; qty: number }): Promise<ActionState> {
   return run(async () => {
     const v = z.object({ line_id: z.uuid(), qty: z.number().min(0).max(10000) }).parse(input);
-    const s = await requireRole("owner");
+    const s = await requireRole("owner", "partner");
     const line = must(
       await s.db
         .from("quote_line_items")
@@ -186,7 +186,7 @@ export async function setLineQty(input: { line_id: string; qty: number }): Promi
 export async function removeLine(input: { line_id: string }): Promise<ActionState> {
   return run(async () => {
     const v = z.object({ line_id: z.uuid() }).parse(input);
-    const s = await requireRole("owner");
+    const s = await requireRole("owner", "partner");
     const line = must(
       await s.db.from("quote_line_items").select("quote_id").eq("id", v.line_id).eq("company_id", s.companyId).single(),
     );
@@ -202,7 +202,7 @@ export async function addCatalogItem(input: { quote_id: string; catalog_item_id:
     const v = z
       .object({ quote_id: z.uuid(), catalog_item_id: z.uuid(), qty: z.number().min(0.01).max(10000).default(1) })
       .parse(input);
-    const s = await requireRole("owner");
+    const s = await requireRole("owner", "partner");
     const q = await quoteRef(s, v.quote_id);
     const ci = must(
       await s.db
@@ -269,7 +269,7 @@ export async function addCustomLine(_: ActionState, fd: FormData): Promise<Actio
         qty: z.coerce.number().min(0.01).max(10000).default(1),
       })
       .parse(formToObject(fd));
-    const s = await requireRole("owner");
+    const s = await requireRole("owner", "partner");
     const q = await quoteRef(s, v.quote_id);
     const other = must(
       await s.db
@@ -302,7 +302,7 @@ export async function addCustomLine(_: ActionState, fd: FormData): Promise<Actio
 export async function shareQuote(input: { quote_id: string }): Promise<ActionState> {
   return run(async () => {
     const v = z.object({ quote_id: z.uuid() }).parse(input);
-    const s = await requireRole("owner");
+    const s = await requireRole("owner", "partner");
     const q = await quoteRef(s, v.quote_id);
     const doc = must(await s.db.rpc("share_quote", { p_quote_id: q.id })) as string;
     const t = must(await s.db.from("quote_totals").select("total_price_cents").eq("quote_id", q.id).single());
@@ -316,7 +316,7 @@ export async function duplicateQuote(input: { quote_id: string }): Promise<Actio
   let target = "";
   const res = await run(async () => {
     const v = z.object({ quote_id: z.uuid() }).parse(input);
-    const s = await requireRole("owner");
+    const s = await requireRole("owner", "partner");
     const q = await quoteRef(s, v.quote_id);
     const id = must(await s.db.rpc("duplicate_quote", { p_quote_id: q.id })) as string;
     target = `/deals/${q.number}/estimate/${id}`;
@@ -334,7 +334,7 @@ export async function findCatalogItems(input: { quote_id: string; q: string }): 
   const v = z.object({ quote_id: z.uuid(), q: z.string().max(80) }).parse(input);
   const { term } = parseItemQuery(v.q);
   if (term.length < 1) return [];
-  const s = await requireRole("owner");
+  const s = await requireRole("owner", "partner");
   const quote = must(
     await s.db.from("quotes").select("collection_id").eq("id", v.quote_id).eq("company_id", s.companyId).single(),
   );

@@ -18,7 +18,7 @@ const ACTIONS = [
   { href: "/money/mileage/new", label: "Log trip", icon: Car },
 ] as const;
 
-export function Fab() {
+export function Fab({ partner = false }: { partner?: boolean }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   if (pathname.includes("/estimate/") || pathname.includes("/visit")) return null; // those screens have their own bottom bar
@@ -28,7 +28,7 @@ export function Fab() {
         <>
           <button aria-label="Close" className="fixed inset-0 -z-10 bg-black/30" onClick={() => setOpen(false)} />
           <ul className="mb-3 flex flex-col items-end gap-2">
-            {ACTIONS.map((a) => (
+            {ACTIONS.filter((a) => !partner || !a.href.startsWith("/money")).map((a) => (
               <li key={a.href}>
                 <Link
                   href={a.href}

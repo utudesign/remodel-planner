@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, ChevronRight, Handshake, Settings, SlidersHorizontal } from "lucide-react";
+import { Bell, ChevronRight, Handshake, MessageSquare, Settings, SlidersHorizontal } from "lucide-react";
 import { SignOutButton } from "@clerk/nextjs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/states";
@@ -24,6 +24,7 @@ export default async function MorePage() {
     { href: "/partners", label: "Partners + commission plans", icon: Handshake, hint: "RenoDesign, plans, Crystal's login" },
     { href: "/notifications", label: "Notifications", icon: Bell, hint: "Everything that happened" },
     { href: "/settings", label: "Settings", icon: Settings, hint: "Hours, booking slots, tax, mileage, auto-reply" },
+    { href: "/settings/texts", label: "My texts", icon: MessageSquare, hint: "On my way, thanks, estimate follow-ups" },
     { href: "/settings/pipeline", label: "Stages + follow-ups", icon: SlidersHorizontal, hint: "My pipeline and cadence" },
   ];
   return (

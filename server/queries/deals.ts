@@ -220,3 +220,40 @@ export async function getPartnersWithPlans(s: Session) {
       .order("name"),
   );
 }
+
+/** Settings → Texts, in sequence order. */
+export async function getTextTemplates(s: Session) {
+  return must(
+    await s.db
+      .from("text_templates")
+      .select("key, label, body, stage_key, after_days, sort_order, active")
+      .eq("company_id", s.companyId)
+      .order("sort_order"),
+  );
+}
+
+/** Template keys sent on this deal since a moment (the stage start). */
+export async function getTextSends(s: Session, dealId: string, since: string) {
+  const rows = must(
+    await s.db
+      .from("text_sends")
+      .select("template_key, sent_at")
+      .eq("deal_id", dealId)
+      .gte("sent_at", since)
+      .order("sent_at", { ascending: false }),
+  );
+  return rows;
+}
+
+/** The newest estimate I shared with the client (has a document number), for {link}. */
+export async function getSharedQuoteToken(s: Session, dealId: string): Promise<string | null> {
+  const { data } = await s.db
+    .from("quotes")
+    .select("client_token, sent_at")
+    .eq("deal_id", dealId)
+    .not("doc_number", "is", null)
+    .order("sent_at", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.client_token ?? null;
+}

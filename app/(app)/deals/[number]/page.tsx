@@ -15,6 +15,7 @@ import {
 import { UploadButton } from "@/components/deals/upload-button";
 import { PhotoCapture } from "@/components/photos/photo-capture";
 import { AutoReplyCard } from "@/components/deals/auto-reply-card";
+import { QuickTexts } from "@/components/deals/quick-texts";
 import { HandoffForm, JobForm, PacketButtons } from "@/components/handoff/handoff-panel";
 import { dealFileName } from "@/lib/deals/dealNumber";
 import { lastName, scopeInfo } from "@/lib/deals/display";
@@ -24,6 +25,8 @@ import { getTemplates, listQuotes } from "@/server/queries/estimates";
 import { CopyButton } from "@/components/shared/copy-button";
 import { appUrl } from "@/lib/app-url";
 import { fillAutoReply } from "@/lib/leads/auto-reply";
+import { addressForMaps } from "@/lib/address";
+import { buildTextVars, fillText, orderForStage, suggestText, type TextTemplate } from "@/lib/texts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/states";
 import { requireOwner } from "@/lib/auth/require-role";
@@ -44,7 +47,10 @@ import {
   getLostReasons,
   getMeetings,
   getPartnersWithPlans,
+  getSharedQuoteToken,
   getStages,
+  getTextSends,
+  getTextTemplates,
   type ChecklistItem,
 } from "@/server/queries/deals";
 
@@ -81,13 +87,17 @@ export default async function DealJacket({
   if (!deal) notFound();
   const tab: Tab = TABS.find((t) => t.key === tabParam)?.key ?? "overview";
 
-  const [stages, reasons, files, checklist, commissions, partners] = await Promise.all([
+  const [stages, reasons, files, checklist, commissions, partners, templates, sends, meetings, quoteToken] = await Promise.all([
     getStages(s),
     getLostReasons(s),
     getDealFiles(s, deal.id),
     getChecklist(s, deal.id, "before_handoff"),
     getCommissions(s),
     getPartnersWithPlans(s),
+    getTextTemplates(s),
+    getTextSends(s, deal.id, deal.stage_entered_at),
+    getMeetings(s, deal.id),
+    getSharedQuoteToken(s, deal.id),
   ]);
   const stage = stages.find((x) => x.key === deal.stage);
   const commission = commissions.get(deal.id);
@@ -98,12 +108,51 @@ export default async function DealJacket({
   const pays = commission?.expected_cents ?? previewFor(defaultPlanFor(plans, deal.scope), deal.estimated_value_cents);
   const c = deal.contact;
   const phone = telHref(c?.phone);
-  const address = [c?.address, c?.city].filter(Boolean).join(", ");
+  const address = addressForMaps(c?.address, c?.city, c?.zip);
   const photos = files.filter((f) => f.folder === "photos");
   const requiredLeft = checklist.filter((i) => i.required && !i.satisfied).length;
   const requiredTotal = checklist.filter((i) => i.required).length;
   const bookingLink = `${await appUrl()}/book/${deal.booking_token}`;
   const needsReply = deal.stage === "new" && !deal.first_response_at;
+
+  // Ready-made texts (Settings → Texts): the next unsent one for this stage first.
+  const partner = partners.find((p) => p.id === deal.partner_id) ?? partners.find((p) => p.active) ?? null;
+  const nextVisit = meetings
+    .filter((m) => m.status === "scheduled" && new Date(m.starts_at).getTime() > now.getTime() - 3 * 3600_000)
+    .sort((a, b) => a.starts_at.localeCompare(b.starts_at))[0];
+  const appBase = await appUrl();
+  const vars = buildTextVars({
+    customerName: c?.name,
+    myName: s.name,
+    partnerName: partner?.name,
+    partnerContact: partner?.contact_name,
+    nextVisitAt: nextVisit?.starts_at,
+    estimateLink: quoteToken ? `${appBase}/q/${quoteToken}` : null,
+    bookingLink,
+    tz: s.timezone,
+    now,
+  });
+  const sentKeys = new Set(sends.map((r) => r.template_key));
+  const sug = suggestText({
+    templates: templates as TextTemplate[],
+    stage: deal.stage,
+    stageEnteredAt: new Date(deal.stage_entered_at),
+    sentKeysSinceStage: sentKeys,
+    now,
+    tz: s.timezone,
+  });
+  const quickTexts = orderForStage(templates as TextTemplate[], deal.stage).map((t) => ({
+    key: t.key,
+    label: t.label,
+    text: fillText(t.body, vars),
+    sent: sentKeys.has(t.key),
+    missingLink: t.body.includes("{link}") && !quoteToken,
+  }));
+  const textHint = sug.current
+    ? sug.early && sug.dueAt
+      ? `★ Next in your sequence, due ${formatDateTime(sug.dueAt.toISOString(), s.timezone)}`
+      : "★ Next in your sequence"
+    : null;
 
   return (
     <div className="-mx-4 -mt-5 lg:mx-0 lg:mt-0">
@@ -192,6 +241,16 @@ export default async function DealJacket({
                 phone={c?.phone ?? null}
                 waitingLabel={step.label.replace("Reply · ", "")}
                 message={fillAutoReply(s.settings.autoReply, { customerName: c?.name, myName: s.name, link: bookingLink })}
+              />
+            ) : null}
+            {!needsReply && stage?.kind !== "lost" && quickTexts.length ? (
+              <QuickTexts
+                dealId={deal.id}
+                phone={c?.phone ?? null}
+                firstName={vars.first === "there" ? "the client" : vars.first}
+                texts={quickTexts}
+                suggestedKey={sug.current?.key ?? null}
+                hint={textHint}
               />
             ) : null}
             <div className="grid grid-cols-2 gap-3 rounded-2xl bg-card p-4 ring-1 ring-border">

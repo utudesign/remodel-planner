@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
+import { AddressInput } from "@/components/shared/address-input";
 import { Field, FormMessage, SubmitButton } from "@/components/shared/form";
+import { formatAddressLine } from "@/lib/address";
 import { KNOWLEDGE, SCOPES, TIMELINES } from "@/lib/deals/display";
 import { centsToInput } from "@/lib/money";
 import { ACTIVITY_TYPES } from "@/lib/validation/deal";
@@ -199,16 +201,10 @@ export function ContactForm({
         <Field label="Email" htmlFor="c_email">
           <Input id="c_email" name="email" type="email" defaultValue={c?.email ?? ""} />
         </Field>
-        <Field label="Street address" htmlFor="c_address">
-          <Input id="c_address" name="address" defaultValue={c?.address ?? ""} />
-        </Field>
-        <Field label="Town" htmlFor="c_city">
-          <Input id="c_city" name="city" defaultValue={c?.city ?? ""} />
-        </Field>
-        <Field label="ZIP" htmlFor="c_zip">
-          <Input id="c_zip" name="zip" inputMode="numeric" defaultValue={c?.zip ?? ""} />
-        </Field>
       </div>
+      <Field label="Project address" htmlFor="c_address">
+        <AddressInput id="c_address" defaultValue={formatAddressLine(c?.address, c?.city, c?.zip)} />
+      </Field>
       <FormMessage state={state} />
       <SubmitButton variant="secondary" className="w-full sm:w-auto">
         Save contact

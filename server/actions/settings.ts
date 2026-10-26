@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/require-role";
-import { companySchema, followUpRulesSchema, lookupRowsSchema, slugify } from "@/lib/validation/settings";
+import { companySchema, followUpRulesSchema, lookupRowsSchema, slugify, textTemplateSchema } from "@/lib/validation/settings";
 import { formToObject, must, ok, run, type ActionState } from "@/server/action-utils";
 
 /** Stages the app's logic relies on (new lead, booking, visit done, hand-off, lost). */
@@ -83,5 +83,34 @@ export async function saveCompany(_: ActionState, fd: FormData): Promise<ActionS
     };
     ok(await s.db.from("companies").update({ name: v.name, settings_json: settings }).eq("id", s.companyId));
     return done("/settings");
+  });
+}
+
+/** Settings → Texts: save one ready-made text (or add a new one). */
+export async function saveTextTemplate(_: ActionState, fd: FormData): Promise<ActionState> {
+  return run(async () => {
+    const v = textTemplateSchema.parse({ active: "false", ...formToObject(fd) });
+    const s = await requireRole("owner");
+    const row = {
+      label: v.label,
+      body: v.body,
+      stage_key: v.stage_key || null,
+      after_days: v.stage_key ? v.after_days : null,
+      sort_order: v.sort_order,
+      active: v.active,
+    };
+    if (v.key) {
+      ok(await s.db.from("text_templates").update(row).eq("company_id", s.companyId).eq("key", v.key));
+    } else {
+      const existing = new Set(
+        must(await s.db.from("text_templates").select("key").eq("company_id", s.companyId)).map((r) => r.key),
+      );
+      let key = slugify(v.label).slice(0, 36);
+      if (key.length < 2) key = `text_${key}`;
+      while (existing.has(key)) key = `${key.slice(0, 32)}_${Math.floor(Math.random() * 1000)}`;
+      ok(await s.db.from("text_templates").insert({ ...row, key, company_id: s.companyId }));
+    }
+    revalidatePath("/deals", "layout");
+    return done("/settings/texts", "Text saved");
   });
 }

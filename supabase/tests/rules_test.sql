@@ -258,5 +258,36 @@ do $$ begin
   raise notice 'OK: partner sees her customers; her job updates are logged and notify me';
 end $$;
 
+-- 0011 texts ------------------------------------------------------------------------
+do $$
+declare c uuid := (select company_id from public.users where clerk_id = 'user_other_rep');
+begin
+  if (select count(*) from public.text_templates where company_id = c) <> 11 then raise exception 'texts not seeded'; end if;
+  if (select body from public.text_templates where company_id = c and key = 'on_my_way') not like 'Hi {first}, this is {me} from {brand}. I''m on my way%' then
+    raise exception 'first text is not "on my way"'; end if;
+  if (select count(*) from public.follow_up_rules where company_id = c and stage_key = 'estimate') <> 4 then
+    raise exception 'estimate follow-ups should run to day 30'; end if;
+  perform public.seed_company_defaults(c);
+  if (select count(*) from public.text_templates where company_id = c) <> 11 then raise exception 'texts duplicated'; end if;
+  raise notice 'OK: texts seeded for new accounts (on my way first), estimate cadence to 30 days, idempotent';
+end $$;
+set role authenticated;
+select pg_temp.act_as('user_other_rep');
+do $$
+declare c uuid := public.current_company_id(); d uuid;
+begin
+  insert into public.deals (company_id) values (c) returning id into d;
+  insert into public.text_sends (company_id, deal_id, template_key) values (c, d, 'on_my_way');
+  if (select count(*) from public.text_sends) <> 1 then raise exception 'owner logs a text'; end if;
+  if (select count(*) from public.text_templates) <> 11 then raise exception 'owner sees own texts only'; end if;
+end $$;
+select pg_temp.act_as('seed_crystal');
+do $$ begin
+  if (select count(*) from public.text_templates) <> 0 or (select count(*) from public.text_sends) <> 0 then
+    raise exception 'partner must not see my texts'; end if;
+  raise notice 'OK: texts and sends are owner-only, per company';
+end $$;
+reset role;
+
 reset role;
 \echo ALL RULE TESTS PASSED

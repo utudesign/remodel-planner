@@ -4,6 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { PhotoCapture } from "@/components/photos/photo-capture";
 import { VisitForm } from "@/components/visits/visit-form";
 import { requireOwner } from "@/lib/auth/require-role";
+import { addressForMaps } from "@/lib/address";
 import { cn } from "@/lib/utils";
 import { maybe } from "@/server/action-utils";
 import { getChecklist, getDealByNumber, getDealFiles } from "@/server/queries/deals";
@@ -47,7 +48,7 @@ export default async function SiteVisitPage({ params }: { params: Promise<{ numb
           <ChevronLeft className="size-5" /> #{deal.deal_number} {deal.contact?.name ?? ""}
         </Link>
         <h1 className="text-[28px] leading-tight font-bold tracking-tight">Site visit</h1>
-        <p className="text-sm text-muted-foreground">{[deal.contact?.address, deal.contact?.city].filter(Boolean).join(", ")}</p>
+        <p className="text-sm text-muted-foreground">{addressForMaps(deal.contact?.address, deal.contact?.city, deal.contact?.zip)}</p>
       </div>
 
       <section className="flex flex-col gap-3 rounded-2xl bg-card p-4 ring-1 ring-border">

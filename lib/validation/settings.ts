@@ -59,3 +59,17 @@ export function slugify(label: string): string {
       .slice(0, 40) || "item"
   );
 }
+
+/** Settings → Texts: one template. Key is fixed once created; new ones get a key from the label. */
+export const textTemplateSchema = z.object({
+  key: z.string().regex(/^[a-z0-9_]{2,40}$/).optional().or(z.literal("")),
+  label: z.string().trim().min(1, "is required").max(60),
+  body: z.string().trim().min(1, "is required").max(640, "keep it under 640 characters"),
+  stage_key: z.string().trim().max(60).optional().default(""),
+  after_days: z.preprocess(
+    (v) => (v === "" || v === undefined || v === null ? null : Number(v)),
+    z.number().int().min(0).max(365).nullable(),
+  ),
+  sort_order: z.coerce.number().int().min(0).max(10000).default(500),
+  active: z.preprocess((v) => v === "on" || v === "true", z.boolean()),
+});

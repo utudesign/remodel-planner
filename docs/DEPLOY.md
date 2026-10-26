@@ -35,7 +35,7 @@ pnpm install
 cp .env.example .env.local                     # fill in as you go
 echo "CLERK_FRONTEND_API_DOMAIN=<your-app>.clerk.accounts.dev" > supabase/.env
 pnpm db:start                                  # prints API URL + anon + service_role keys → .env.local
-pnpm db:reset                                  # migrations 0001–0009 + demo data + TimberPeak list
+pnpm db:reset                                  # migrations 0001–0011 + demo data + TimberPeak list
 pnpm dev                                       # http://localhost:3000
 ```
 
@@ -80,7 +80,7 @@ PGHOST=/tmp PGPORT=5432 scripts/test-db.sh       # SQL tests on a plain Postgres
    ```bash
    pnpm supabase login
    pnpm supabase link --project-ref <ref>
-   pnpm supabase db push           # 0001–0009; creates the private deal-files bucket too
+   pnpm supabase db push           # 0001–0011; creates the private deal-files bucket too
    ```
 4. Project Settings → API → URL, `anon` key, `service_role` key.
 
@@ -114,6 +114,7 @@ npx web-push generate-vapid-keys   # prints a public and a private key
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | VAPID public key |
 | `VAPID_PRIVATE_KEY` | VAPID private key |
 | `VAPID_SUBJECT` | `mailto:you@example.com` |
+| `GOOGLE_MAPS_API_KEY` *or* `GEOAPIFY_API_KEY` | optional: better address suggestions (see `.env.example`) |
 
 4. Deploy → Settings → Domains → add yours.
 5. Crons come from `vercel.json` (19:30 and 20:30 UTC, Mon–Fri; one of them is 3:30 PM in New York).

@@ -38,8 +38,17 @@ export const newDealSchema = z
     scope: optEnum(SCOPE_KEYS),
     notes: optText(4000),
     estimated_value: optMoney,
+    /** Where the deal starts (a pipeline_stages key). Most deals start after the first chat. */
+    stage: z.string().trim().min(1).max(60).optional().default("new"),
+    /** Required when the visit is already booked. */
+    visit_at: z
+      .string()
+      .optional()
+      .transform((s) => (s ? s : null))
+      .refine((s) => s === null || /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s), "pick a date and time"),
   })
-  .refine((v) => v.name || v.phone, { message: "Add a name or a phone number", path: ["name"] });
+  .refine((v) => v.name || v.phone, { message: "Add a name or a phone number", path: ["name"] })
+  .refine((v) => v.stage !== "visit_booked" || v.visit_at, { message: "When is the visit?", path: ["visit_at"] });
 
 export const qualifySchema = z
   .object({

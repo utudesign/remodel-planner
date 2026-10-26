@@ -166,3 +166,15 @@ payments schedule, close/margin lock screens) was removed; it's in git history b
 | Mileage = miles typed in, or odometer start/end; "Log the drive" from a deal pre-fills it | PLAN Q8: no paid maps API |
 | Year tab uses `rep_year_summary(year, 72.5)`; CSV export lists commissions received, expenses and mileage for the tax preparer | 1099 contractor; set-aside % is a savings target, not tax advice |
 | Earned-and-unpaid > 14 days: red on Today and counted in the 3:30 PM digest | SALES-REP-MODE §6 |
+
+### After launch (2026-10-26): address type-ahead, texts, new-deal fields
+
+| Decision | Why |
+| --- | --- |
+| Address boxes (New deal, Customer) are one line with type-ahead: pick a real address, the server splits it into street / town / ZIP (`lib/address.ts`). Typing your own text still works | Tugu asked for FedEx-style address entry; one box is faster on a phone than street + town + ZIP |
+| Provider by env: `GOOGLE_MAPS_API_KEY` (Places Autocomplete New, best house numbers; free tier ~5–10k calls/mo, **needs a billing account**) → `GEOAPIFY_API_KEY` (free 3,000/day, no card) → Photon/OpenStreetMap (no key, weak on NoVA house numbers). Calls go through `/api/address` (owner only) so keys stay server-side | Google needs a card, so it's not turned on without asking (CLAUDE.md: paid services). Works today without any key |
+| `contacts` has no state column: Virginia towns are stored as the town ("Fairfax"); other states keep it ("Bethesda, MD") | Avoids altering an applied table; display and Maps links add ", VA" back |
+| Ready-made texts live in `text_templates` (Settings → My texts), with `{first} {me} {brand} {partner_contact} {when} {link} {booking}`. Sends are logged in `text_sends` by template **key** + an activity | Config in the DB; logic on stable keys, not labels. New tables only (0011) |
+| Sequence: On my way (visit) → Thanks for today → Here's the estimate → day 2 Any questions? → day 5 Want changes? → day 14 Still planning? → day 30 Close the file? → hand-off: Next, the contract → Ask for a referral. Running late / Confirm the visit are pick-only | Research: one ask per text, under ~160 characters, 3–5 follow-ups then a low-pressure "close the file" text; ETA texts before in-home visits |
+| Sending a text points the follow-up at the next text's day (9 AM); booking a visit sets the follow-up to 45 min before it ("On my way") | The Today queue matches the text sequence |
+| New deal: Town removed (comes from the picked address); added **Where it stands** (default *Visit booked* + required date/time; pasted messages and missed calls start as *New lead*) | Deals usually start after the first chat with a visit already set; the visit time drives the "On my way" reminder |

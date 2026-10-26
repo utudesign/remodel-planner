@@ -4,14 +4,18 @@ import { useState } from "react";
 import { ClipboardPaste, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { NewDealForm, type NewDealDefaults } from "@/components/deals/new-deal-form";
+import { NewDealForm, type NewDealDefaults, type StartStage } from "@/components/deals/new-deal-form";
 import { parseLeadMessage } from "@/lib/leads/parse-message";
 
-/** New deal: type it, paste a Facebook message (we read name/phone/what/town), or log a missed call. */
-export function NewDealEntry({ mode }: { mode: "manual" | "paste" | "call" }) {
+/** New deal: type it, paste a Facebook message (we read name/phone/what/town; town is kept until you pick an address), or log a missed call. */
+export function NewDealEntry({ mode, stages }: { mode: "manual" | "paste" | "call"; stages: StartStage[] }) {
   const [text, setText] = useState("");
   const [defaults, setDefaults] = useState<NewDealDefaults>(
-    mode === "call" ? { source: "call", notes: "Missed call — call back" } : {},
+    mode === "call"
+      ? { source: "call", notes: "Missed call — call back", stage: "new" }
+      : mode === "paste"
+        ? { stage: "new" }
+        : {},
   );
   const [version, setVersion] = useState(0);
   const [found, setFound] = useState<string | null>(null);
@@ -25,6 +29,7 @@ export function NewDealEntry({ mode }: { mode: "manual" | "paste" | "call" }) {
       scope: p.scope ?? undefined,
       source: p.source ?? "marketplace",
       notes: p.notes,
+      stage: "new",
     });
     setVersion((v) => v + 1);
     const bits = [p.name && "name", p.phone && "phone", p.scope && "what they want", p.city && "town"].filter(Boolean);
@@ -68,7 +73,7 @@ export function NewDealEntry({ mode }: { mode: "manual" | "paste" | "call" }) {
           {found ? <p className="text-sm text-muted-foreground">{found}</p> : null}
         </section>
       ) : null}
-      <NewDealForm key={version} defaults={defaults} />
+      <NewDealForm key={version} defaults={defaults} stages={stages} />
     </div>
   );
 }

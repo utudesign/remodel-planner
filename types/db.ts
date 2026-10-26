@@ -3313,6 +3313,74 @@ export type Database = {
           },
         ]
       }
+      text_sends: {
+        Row: {
+          company_id: string
+          created_by: string | null
+          deal_id: string
+          id: string
+          sent_at: string
+          template_key: string
+        }
+        ComputedFields: never
+        Insert: {
+          company_id: string
+          created_by?: string | null
+          deal_id: string
+          id?: string
+          sent_at?: string
+          template_key: string
+        }
+        Update: {
+          company_id?: string
+          created_by?: string | null
+          deal_id?: string
+          id?: string
+          sent_at?: string
+          template_key?: string
+        }
+        Relationships: []
+      }
+      text_templates: {
+        Row: {
+          active: boolean
+          after_days: number | null
+          body: string
+          company_id: string
+          created_at: string
+          id: string
+          key: string
+          label: string
+          sort_order: number
+          stage_key: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          active?: boolean
+          after_days?: number | null
+          body: string
+          company_id: string
+          created_at?: string
+          id?: string
+          key: string
+          label: string
+          sort_order?: number
+          stage_key?: string | null
+        }
+        Update: {
+          active?: boolean
+          after_days?: number | null
+          body?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          key?: string
+          label?: string
+          sort_order?: number
+          stage_key?: string | null
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           active: boolean
@@ -4033,6 +4101,7 @@ export type Database = {
         Returns: undefined
       }
       seed_sales_defaults: { Args: { p_company: string }; Returns: undefined }
+      seed_text_templates: { Args: { p_company: string }; Returns: undefined }
       set_quote_collection: {
         Args: { p_collection_id: string; p_quote_id: string }
         Returns: {

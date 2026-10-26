@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Search } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import {
-  AddItemButton,
   ChoiceRow,
   CustomLineForm,
   LineRow,
@@ -17,26 +16,17 @@ import type { TakeoffInputs } from "@/lib/estimating/takeoff";
 import { formatCents, formatCentsWhole } from "@/lib/money";
 import { formFromTakeoff } from "@/lib/quick-estimate";
 import { getDealByNumber, getPartnersWithPlans } from "@/server/queries/deals";
-import { getQuote, searchCatalog } from "@/server/queries/estimates";
+import { getQuote } from "@/server/queries/estimates";
+import { ItemSearch } from "@/components/estimates/item-search";
 
 export const metadata = { title: "Quick estimate" };
 
-const SOURCE_LABEL: Record<string, string> = {
-  vendor_list: "TimberPeak",
-  home_depot: "Home Depot",
-  market: "Market",
-  supplier_quote: "Quote",
-  sample: "Sample price",
-};
-
 export default async function QuoteBuilder({
   params,
-  searchParams,
 }: {
   params: Promise<{ number: string; quoteId: string }>;
-  searchParams: Promise<{ q?: string }>;
 }) {
-  const [{ number, quoteId }, { q = "" }] = await Promise.all([params, searchParams]);
+  const { number, quoteId } = await params;
   const s = await requireOwner();
   const [deal, data, partners] = await Promise.all([getDealByNumber(s, number), getQuote(s, quoteId), getPartnersWithPlans(s)]);
   if (!deal || !data || data.quote.deal_id !== deal.id) notFound();
@@ -45,7 +35,6 @@ export default async function QuoteBuilder({
   const plans = partners.flatMap((p) => (p.plans as PlanRow[]).filter((x) => x.active));
   const plan = plans.find((p) => p.id === deal.commission_plan_id) ?? defaultPlanFor(plans, deal.scope);
   const pays = previewFor(plan, totals.total_price_cents);
-  const results = q ? await searchCatalog(s, q, quote.collection_id) : [];
   const currentQuartz = lines.find((l) => l.code.startsWith("QZ"))?.catalog_item_id ?? null;
   const clientUrl = `${await appUrl()}/q/${quote.client_token}`;
   const margin = Number(totals.gross_margin);
@@ -115,41 +104,7 @@ export default async function QuoteBuilder({
           <CardTitle>4. Items</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {!locked ? (
-            <form className="flex gap-2" role="search">
-              <label className="relative flex-1">
-                <span className="sr-only">Search the price list</span>
-                <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  name="q"
-                  defaultValue={q}
-                  placeholder="B30, sink, faucet, LED…"
-                  className="h-11 w-full rounded-xl bg-secondary pr-3 pl-9 text-base outline-none focus:ring-2 focus:ring-ring"
-                  enterKeyHint="search"
-                />
-              </label>
-            </form>
-          ) : null}
-          {q ? (
-            <ul className="flex flex-col rounded-xl ring-1 ring-border">
-              {results.length === 0 ? <li className="p-3 text-sm text-muted-foreground">Nothing matches “{q}”.</li> : null}
-              {results.map((r) => (
-                <li key={r.id} className="flex items-center gap-2 border-b border-border/60 px-3 py-2 last:border-0">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[14px] font-medium">
-                      {r.code ? <span className="mr-1 font-bold text-muted-foreground">{r.code}</span> : null}
-                      {r.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {SOURCE_LABEL[r.price_source] ?? r.price_source} ·{" "}
-                      {r.pricing_mode === "fixed" ? `sells ${formatCents(r.unit_price_cents)}` : `cost ${formatCents(r.unit_cost_cents)}`} / {r.unit}
-                    </p>
-                  </div>
-                  <AddItemButton quoteId={quote.id} itemId={r.id} label={r.code || r.name} />
-                </li>
-              ))}
-            </ul>
-          ) : null}
+          {!locked ? <ItemSearch quoteId={quote.id} /> : null}
 
           {sections.map((sec) => {
             const items = lines.filter((l) => l.section_id === sec.id);

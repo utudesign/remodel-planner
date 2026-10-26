@@ -89,19 +89,3 @@ export async function getQuote(s: Session, quoteId: string) {
     settings,
   };
 }
-
-export async function searchCatalog(s: Session, q: string, collectionId: string | null) {
-  const term = q.trim().replace(/[%,()]/g, " ").trim();
-  if (term.length < 2) return [];
-  let query = s.db
-    .from("catalog_items")
-    .select("id, code, name, unit, unit_cost_cents, unit_price_cents, pricing_mode, price_source, collection_id, category:catalog_categories(name)")
-    .eq("company_id", s.companyId)
-    .eq("active", true)
-    .or(`code.ilike.${term}%,name.ilike.%${term}%`)
-    .order("code")
-    .limit(40);
-  if (collectionId) query = query.or(`collection_id.is.null,collection_id.eq.${collectionId}`);
-  else query = query.is("collection_id", null);
-  return must(await query);
-}

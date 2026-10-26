@@ -190,3 +190,10 @@ payments schedule, close/margin lock screens) was removed; it's in git history b
 | Town → ZIP code on the public form | Service-area check; the full address comes at booking |
 | Answers are validated against fixed option lists (`lib/intake.ts`, Zod), saved in `deal_intake` (0012), and turned into short lines in the deal's notes (so they reach the hand-off packet) + deal timeline / budget / owns-home | One source for form, validation and summary; structured data kept for later (quick-estimate prefill) |
 | Full kitchens get a rough range from the cabinet count (bottom boxes × 2 ft + 5 ft for range/DW, island boxes off the walls) through the same ballpark as the site visit; shown only on my deal screen, never to the client or in notes | Helps me qualify before driving out; the count is the client's guess, so it's labeled as rough |
+
+### Quick estimate: add by code (2026-10-26)
+
+| Decision | Why |
+| --- | --- |
+| The item box lists nothing until you type. Codes match from the start: "B36" shows B36 first, then B36FH… (never SB36). Enter or + adds the top one and clears the box for the next code. "2 B36" / "B36 x2" adds two. Words (sink, faucet) search names only when no code matches | Tugu adds cabinets by the codes on the TimberPeak list; a long list on a phone is slow |
+| The same code in the estimate's collection beats the generic (no-collection) item; without a collection only generic items show (as before) | Each TimberPeak collection repeats the same 279 codes at its own price |

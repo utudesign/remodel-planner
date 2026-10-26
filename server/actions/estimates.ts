@@ -13,6 +13,7 @@ import {
   takeoffFromForm,
   takeoffSettings,
 } from "@/lib/quick-estimate";
+import { likeEscape, parseItemQuery, rankByCode, type FoundItem } from "@/lib/item-search";
 import { formToObject, must, maybe, ok, run, type ActionState } from "@/server/action-utils";
 import type { Json } from "@/types/db";
 
@@ -322,4 +323,51 @@ export async function duplicateQuote(input: { quote_id: string }): Promise<Actio
   });
   if (res?.ok && target) redirect(target);
   return res;
+}
+
+/**
+ * Live add-by-code search for the quick estimate (components/estimates/item-search.tsx).
+ * Code prefix first ("B36" → B36, B36FH); names only when no code starts with the term.
+ * Limited to the estimate's collection + generic items, like the old search.
+ */
+export async function findCatalogItems(input: { quote_id: string; q: string }): Promise<FoundItem[]> {
+  const v = z.object({ quote_id: z.uuid(), q: z.string().max(80) }).parse(input);
+  const { term } = parseItemQuery(v.q);
+  if (term.length < 1) return [];
+  const s = await requireRole("owner");
+  const quote = must(
+    await s.db.from("quotes").select("collection_id").eq("id", v.quote_id).eq("company_id", s.companyId).single(),
+  );
+  const cid = quote.collection_id;
+  const scoped = <T extends { or: (f: string) => T; is: (c: string, v: null) => T }>(qb: T) =>
+    cid ? qb.or(`collection_id.is.null,collection_id.eq.${cid}`) : qb.is("collection_id", null);
+  const cols = "id, code, name, unit, collection_id, unit_cost_cents, unit_price_cents, pricing_mode";
+  type Row = { id: string; code: string; name: string; unit: string; collection_id: string | null; unit_cost_cents: number; unit_price_cents: number | null; pricing_mode: string };
+  const toFound = (r: Row): FoundItem => ({
+    id: r.id,
+    code: r.code,
+    name: r.name,
+    unit: r.unit,
+    collection_id: r.collection_id,
+    fixed: r.pricing_mode === "fixed",
+    price_cents: Number(r.pricing_mode === "fixed" ? (r.unit_price_cents ?? 0) : r.unit_cost_cents),
+  });
+  const pattern = likeEscape(term);
+  const codeRows = must(
+    await scoped(
+      s.db.from("catalog_items").select(cols).eq("company_id", s.companyId).eq("active", true).ilike("code", `${pattern}%`),
+    )
+      .order("code")
+      .limit(60),
+  ) as Row[];
+  const ranked = rankByCode(codeRows.map(toFound), term, cid);
+  if (ranked.length || term.length < 2) return ranked;
+  const nameRows = must(
+    await scoped(
+      s.db.from("catalog_items").select(cols).eq("company_id", s.companyId).eq("active", true).ilike("name", `%${pattern}%`),
+    )
+      .order("code")
+      .limit(6),
+  ) as Row[];
+  return nameRows.map(toFound);
 }

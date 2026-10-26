@@ -9,7 +9,6 @@ import { Field, FormMessage, SubmitButton } from "@/components/shared/form";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import {
-  addCatalogItem,
   addCustomLine,
   duplicateQuote,
   newQuickEstimate,
@@ -200,24 +199,6 @@ export function LineRow({
         </div>
       ) : null}
     </li>
-  );
-}
-
-export function AddItemButton({ quoteId, itemId, label }: { quoteId: string; itemId: string; label: string }) {
-  const { pending, msg, go } = useAct();
-  return (
-    <button
-      type="button"
-      aria-label={`Add ${label}`}
-      disabled={pending}
-      onClick={() => go(() => addCatalogItem({ quote_id: quoteId, catalog_item_id: itemId }))}
-      className={cn(
-        "flex size-11 shrink-0 items-center justify-center rounded-xl text-lg font-semibold",
-        msg?.ok ? "bg-primary text-primary-foreground" : "bg-accent text-accent-foreground",
-      )}
-    >
-      {pending ? <Loader2 className="size-4 animate-spin" /> : msg?.ok ? "✓" : <Plus className="size-5" />}
-    </button>
   );
 }
 

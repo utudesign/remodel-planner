@@ -4,13 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole, type Session } from "@/lib/auth/require-role";
 import { dealStoragePath } from "@/lib/deals/dealNumber";
-import { ballpark, type BallparkLine, type RoughInputs } from "@/lib/estimating/ballpark";
-import type { TakeoffInputs } from "@/lib/estimating/takeoff";
-import { assumptions, formFromTakeoff, measureFromWalls, takeoffFromForm, takeoffSettings } from "@/lib/quick-estimate";
 import { BUCKET } from "@/lib/storage";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { formatCentsWhole } from "@/lib/money";
 import { must, maybe, ok, type ActionState } from "@/server/action-utils";
+import { kitchenRange } from "@/server/ballpark";
 import type { Json } from "@/types/db";
 
 const wall = z.object({ name: z.string().max(20), ft: z.number().min(0).max(80) });
@@ -31,63 +29,6 @@ const visitSchema = z.object({
 });
 
 export type VisitInput = z.input<typeof visitSchema>;
-
-/** Rough price range from the first template, resized by the walls measured (ballpark.ts). */
-async function rangeFor(s: Session, walls: { ft: number }[]) {
-  const tpl = maybe(
-    await s.db
-      .from("quote_templates")
-      .select("id, default_takeoff")
-      .eq("company_id", s.companyId)
-      .eq("active", true)
-      .order("created_at")
-      .limit(1)
-      .maybeSingle(),
-  );
-  if (!tpl || !walls.some((w) => w.ft > 0)) return null;
-  const [items, settings] = await Promise.all([
-    s.db
-      .from("quote_template_items")
-      .select("qty, item:catalog_items(unit_cost_cents, uses_labor_rate, taxable, pricing_mode, unit_price_cents, qty_source, category:catalog_categories(name))")
-      .eq("template_id", tpl.id)
-      .then(must),
-    s.db.from("estimating_settings").select("*").eq("company_id", s.companyId).maybeSingle().then(maybe),
-  ]);
-  const lines: BallparkLine[] = items
-    .filter((i) => i.item)
-    .map((i) => ({
-      qty: Number(i.qty),
-      unitCostCents: Number(i.item!.unit_cost_cents),
-      usesLaborRate: i.item!.uses_labor_rate,
-      marginOverride: null,
-      taxable: i.item!.taxable,
-      pricingMode: i.item!.pricing_mode as "margin" | "fixed",
-      unitPriceCents: i.item!.unit_price_cents,
-      qtySource: i.item!.qty_source,
-      scalesWithCabinets: i.item!.category?.name === "Cabinets",
-    }));
-  const base = (tpl.default_takeoff ?? {}) as Partial<TakeoffInputs>;
-  const templateTakeoff = takeoffFromForm(formFromTakeoff(base), base) as RoughInputs;
-  const rough = takeoffFromForm(measureFromWalls(walls, formFromTakeoff(base)), base) as RoughInputs;
-  const r = ballpark(
-    lines,
-    templateTakeoff,
-    rough,
-    assumptions({
-      target_margin: Number(settings?.target_margin ?? 0.35),
-      contingency_rate: Number(settings?.contingency_rate ?? 0.07),
-      tax_rate: Number(settings?.tax_rate ?? 0.06),
-      labor_rate_cents: Number(settings?.labor_rate_cents ?? 5500),
-    }),
-    takeoffSettings(settings),
-    {
-      lowPct: Number(settings?.ballpark_low_pct ?? 0.05),
-      highPct: Number(settings?.ballpark_high_pct ?? 0.15),
-      roundToCents: Number(settings?.ballpark_round_cents ?? 50000),
-    },
-  );
-  return r;
-}
 
 /** Text files that satisfy the hand-off checklist (measurements, appliance list). */
 async function fileText(
@@ -147,7 +88,7 @@ export async function saveSiteVisit(input: VisitInput): Promise<ActionState & { 
         .single(),
     );
     const walls = v.walls.filter((w) => w.ft > 0);
-    const range = await rangeFor(s, walls);
+    const range = await kitchenRange(s.db, s.companyId, walls);
     const existing = maybe(
       await s.db
         .from("site_visits")

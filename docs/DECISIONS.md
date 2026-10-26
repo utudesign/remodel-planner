@@ -178,3 +178,15 @@ payments schedule, close/margin lock screens) was removed; it's in git history b
 | Sequence: On my way (visit) → Thanks for today → Here's the estimate → day 2 Any questions? → day 5 Want changes? → day 14 Still planning? → day 30 Close the file? → hand-off: Next, the contract → Ask for a referral. Running late / Confirm the visit are pick-only | Research: one ask per text, under ~160 characters, 3–5 follow-ups then a low-pressure "close the file" text; ETA texts before in-home visits |
 | Sending a text points the follow-up at the next text's day (9 AM); booking a visit sets the follow-up to 45 min before it ("On my way") | The Today queue matches the text sequence |
 | New deal: Town removed (comes from the picked address); added **Where it stands** (default *Visit booked* + required date/time; pasted messages and missed calls start as *New lead*) | Deals usually start after the first chat with a visit already set; the visit time drives the "On my way" reminder |
+
+### Free-estimate form → smart questionnaire (2026-10-26)
+
+| Decision | Why |
+| --- | --- |
+| `/l/<slug>` is now 4–5 short steps: project (multi-pick) → kitchen now / kitchen plans, or countertops, and/or bathroom → timing + budget + own the home → name, phone, ZIP. Tap-first; only name + phone are required; progress bar "Step 2 of 5" | Multi-step forms with easy questions first and contact last convert better than one long form; 2–4 questions per step on phones |
+| Kitchen/cabinets: layout, island, **current cabinet count** (bottom / wall / tall), ceiling height, keep layout?, appliances (keeping / some / all new + checklist with the usual four pre-checked + extras), door style, color. Full kitchen adds countertop size + material and "also include" (backsplash, sink, floor, lighting, moving plumbing) | Tugu's ask + what drives a kitchen price: amount of cabinets, ceiling (upper height), appliances the boxes must fit, layout changes, counters |
+| Countertops: size bands (S < 30, M 30–50, L 50–80, XL 80+ sq ft) or exact sq ft, current and wanted material | Most clients can't measure sq ft; bands are enough to qualify, exact numbers come at the visit |
+| Bathroom: which bath, tub/shower now → wanted (tub→shower conversion), job size, vanity width, room size | The main price drivers for a bath; half baths skip tub/shower |
+| Town → ZIP code on the public form | Service-area check; the full address comes at booking |
+| Answers are validated against fixed option lists (`lib/intake.ts`, Zod), saved in `deal_intake` (0012), and turned into short lines in the deal's notes (so they reach the hand-off packet) + deal timeline / budget / owns-home | One source for form, validation and summary; structured data kept for later (quick-estimate prefill) |
+| Full kitchens get a rough range from the cabinet count (bottom boxes × 2 ft + 5 ft for range/DW, island boxes off the walls) through the same ballpark as the site visit; shown only on my deal screen, never to the client or in notes | Helps me qualify before driving out; the count is the client's guess, so it's labeled as rough |

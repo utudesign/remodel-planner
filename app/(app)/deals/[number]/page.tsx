@@ -44,6 +44,7 @@ import {
   getCommissions,
   getDealByNumber,
   getDealFiles,
+  getIntake,
   getLostReasons,
   getMeetings,
   getPartnersWithPlans,
@@ -87,7 +88,7 @@ export default async function DealJacket({
   if (!deal) notFound();
   const tab: Tab = TABS.find((t) => t.key === tabParam)?.key ?? "overview";
 
-  const [stages, reasons, files, checklist, commissions, partners, templates, sends, meetings, quoteToken] = await Promise.all([
+  const [stages, reasons, files, checklist, commissions, partners, templates, sends, meetings, quoteToken, intake] = await Promise.all([
     getStages(s),
     getLostReasons(s),
     getDealFiles(s, deal.id),
@@ -98,6 +99,7 @@ export default async function DealJacket({
     getTextSends(s, deal.id, deal.stage_entered_at),
     getMeetings(s, deal.id),
     getSharedQuoteToken(s, deal.id),
+    getIntake(s, deal.id),
   ]);
   const stage = stages.find((x) => x.key === deal.stage);
   const commission = commissions.get(deal.id);
@@ -302,6 +304,31 @@ export default async function DealJacket({
             </Card>
 
             <Visits dealId={deal.id} number={deal.deal_number} tz={s.timezone} minutes={s.settings.booking.minutes} bookingLink={bookingLink} />
+
+            {intake ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>From their form</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-2">
+                  <ul className="flex flex-col gap-1.5 text-sm">
+                    {intake.summary.split("\n").filter(Boolean).map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                  {intake.ballpark_low_cents !== null && intake.ballpark_high_cents !== null ? (
+                    <p className="rounded-xl bg-secondary p-3 text-sm">
+                      <span className="font-semibold">
+                        Rough range: {formatCentsWhole(intake.ballpark_low_cents)}–{formatCentsWhole(intake.ballpark_high_cents)}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        Your eyes only. From their cabinet count and your first template; measure at the visit.
+                      </span>
+                    </p>
+                  ) : null}
+                </CardContent>
+              </Card>
+            ) : null}
 
             <Card>
               <CardHeader>

@@ -257,3 +257,13 @@ export async function getSharedQuoteToken(s: Session, dealId: string): Promise<s
     .maybeSingle();
   return data?.client_token ?? null;
 }
+
+/** The client's answers from the free-estimate form, if the deal came from it. */
+export async function getIntake(s: Session, dealId: string) {
+  const { data } = await s.db
+    .from("deal_intake")
+    .select("summary, ballpark_low_cents, ballpark_high_cents, created_at")
+    .eq("deal_id", dealId)
+    .maybeSingle();
+  return data;
+}

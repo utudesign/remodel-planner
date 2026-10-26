@@ -289,5 +289,31 @@ do $$ begin
 end $$;
 reset role;
 
+
+-- 0012 intake ------------------------------------------------------------------------
+reset role;
+insert into public.deal_intake (deal_id, company_id, summary) values
+  ('00000000-0000-0000-0000-0000000000d2', '00000000-0000-0000-0000-0000000000c1', 'Kitchen: L-shape'),
+  ('00000000-0000-0000-0000-0000000000d8', '00000000-0000-0000-0000-0000000000c1', 'Kitchen: U-shape');
+set role authenticated;
+select pg_temp.act_as('seed_tugu');
+do $$ begin
+  if (select count(*) from public.deal_intake) <> 2 then raise exception 'owner sees both intakes'; end if;
+end $$;
+select pg_temp.act_as('seed_crystal');
+do $$ begin
+  if (select count(*) from public.deal_intake) <> 1
+     or not exists (select 1 from public.deal_intake where deal_id = '00000000-0000-0000-0000-0000000000d2') then
+    raise exception 'partner sees only intakes of deals handed to her'; end if;
+  update public.deal_intake set summary = 'x';
+  if exists (select 1 from public.deal_intake where summary = 'x') then raise exception 'partner cannot edit intake'; end if;
+end $$;
+select pg_temp.act_as('user_other_rep');
+do $$ begin
+  if (select count(*) from public.deal_intake) <> 0 then raise exception 'other company sees no intakes'; end if;
+  raise notice 'OK: form answers: owner sees all, partner only handed-off deals (read-only), other companies none';
+end $$;
+reset role;
+
 reset role;
 \echo ALL RULE TESTS PASSED

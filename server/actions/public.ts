@@ -7,10 +7,13 @@ import { availableSlots } from "@/lib/booking";
 import { readSettings } from "@/lib/auth/require-role";
 import { formatDateTime } from "@/lib/dates";
 import { SCOPE_KEYS } from "@/lib/deals/display";
+import { budgetRange, intakeSchema, primaryScope, roughRunFt, summarizeIntake, wallsFromRun, type Intake } from "@/lib/intake";
 import { formatPhone } from "@/lib/leads/parse-message";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { formToObject, type ActionState } from "@/server/action-utils";
+import { kitchenRange } from "@/server/ballpark";
 import { notifyOwners } from "@/server/notify";
+import type { Json } from "@/types/db";
 
 /**
  * Public pages (share-link lead form, client booking). No login: the server validates the
@@ -39,11 +42,43 @@ const leadForm = z.object({
   slug: z.string().regex(/^[a-z0-9-]{3,40}$/),
   name: z.string().trim().min(1, "Please add your name").max(120),
   phone: z.string().trim().min(7, "Please add a phone number").max(40),
-  city: z.string().trim().max(80).optional().default(""),
-  scope: z.preprocess((v) => (v === "" ? null : v), z.enum(SCOPE_KEYS).nullable()),
+  zip: z
+    .string()
+    .trim()
+    .optional()
+    .default("")
+    .refine((v) => v === "" || /^\d{5}$/.test(v), "ZIP code is 5 digits"),
+  city: z.string().trim().max(80).optional().default(""), // old form
+  scope: z.preprocess((v) => (v === "" ? null : v), z.enum(SCOPE_KEYS).nullable().optional().default(null)), // old form
+  answers: z
+    .string()
+    .max(8000)
+    .optional()
+    .default("{}")
+    .transform((raw, ctx) => {
+      try {
+        return intakeSchema.parse(JSON.parse(raw || "{}"));
+      } catch {
+        ctx.addIssue({ code: "custom", message: "Please check your answers" });
+        return z.NEVER;
+      }
+    }),
   message: z.string().trim().max(2000).optional().default(""),
   website: z.string().max(0, "spam").optional().default(""), // honeypot: real people never fill it
 });
+
+/** Rough range for a full kitchen from the cabinet count (my eyes only). Never blocks the lead. */
+async function intakeRange(companyId: string, a: Intake) {
+  if (!a.projects.includes("kitchen")) return null;
+  const run = roughRunFt(a.kitchen);
+  if (!run) return null;
+  try {
+    const r = await kitchenRange(createAdminSupabase(), companyId, wallsFromRun(run, a.kitchen?.layout));
+    return r ? { low: r.lowCents, high: r.highCents } : null;
+  } catch {
+    return null;
+  }
+}
 
 export async function submitLeadForm(_: ActionState, fd: FormData): Promise<ActionState> {
   const parsed = leadForm.safeParse(formToObject(fd));
@@ -53,6 +88,7 @@ export async function submitLeadForm(_: ActionState, fd: FormData): Promise<Acti
     return { ok: false, error: issue?.message ?? "Please check the form" };
   }
   const v = parsed.data;
+  const a = v.answers;
   const db = createAdminSupabase();
   const hash = await ipHash();
   if (await tooMany("lead", hash, 5)) return { ok: false, error: "Too many requests. Please text me instead." };
@@ -66,10 +102,21 @@ export async function submitLeadForm(_: ActionState, fd: FormData): Promise<Acti
 
   const { data: contact, error: cErr } = await db
     .from("contacts")
-    .insert({ company_id: link.company_id, name: v.name, phone: formatPhone(v.phone) ?? v.phone, city: v.city || null })
+    .insert({
+      company_id: link.company_id,
+      name: v.name,
+      phone: formatPhone(v.phone) ?? v.phone,
+      city: v.city || null,
+      zip: v.zip || null,
+    })
     .select("id")
     .single();
   if (cErr || !contact) return { ok: false, error: "Something went wrong. Please text me instead." };
+
+  const scope = primaryScope(a.projects) ?? v.scope;
+  const summary = summarizeIntake(a);
+  const range = await intakeRange(link.company_id, a);
+  const budget = budgetRange(a.budget);
   const { data: deal, error: dErr } = await db
     .from("deals")
     .insert({
@@ -77,22 +124,34 @@ export async function submitLeadForm(_: ActionState, fd: FormData): Promise<Acti
       contact_id: contact.id,
       source: link.source,
       stage: "new",
-      scope: v.scope,
-      notes: v.message || null,
-      title: `${v.name.split(/\s+/).pop()} ${v.scope === "cabinets_only" ? "cabinets" : (v.scope ?? "kitchen")}`,
+      scope,
+      timeline: a.when,
+      budget_min_cents: budget.min,
+      budget_max_cents: budget.max,
+      owns_home: a.owns_home,
+      notes: [summary.join("\n"), v.message ? `Their note: ${v.message}` : null].filter(Boolean).join("\n\n") || null,
+      title: `${v.name.split(/\s+/).pop()} ${scope === "cabinets_only" ? "cabinets" : (scope ?? "kitchen")}`,
     })
     .select("id, deal_number")
     .single();
   if (dErr || !deal) return { ok: false, error: "Something went wrong. Please text me instead." };
+  await db.from("deal_intake").insert({
+    deal_id: deal.id,
+    company_id: link.company_id,
+    answers: a as unknown as Json,
+    summary: summary.join("\n"),
+    ballpark_low_cents: range?.low ?? null,
+    ballpark_high_cents: range?.high ?? null,
+  });
   await db.from("form_submissions").insert({ kind: "lead", company_id: link.company_id, ip_hash: hash, deal_id: deal.id });
   await notifyOwners(link.company_id, {
     kind: "new_lead",
     title: `New lead #${deal.deal_number}: ${v.name}`,
-    body: [v.city, v.message].filter(Boolean).join(" · ").slice(0, 140) || "From your share link",
+    body: (summary[0] ?? [v.zip, v.message].filter(Boolean).join(" · ")).slice(0, 140) || "From your share link",
     url: `/deals/${deal.deal_number}`,
     dealId: deal.id,
   });
-  return { ok: true, message: "Thanks! I'll text you shortly with a few quick questions." };
+  return { ok: true, message: "Thanks! I'll text you shortly to set up a time to come by." };
 }
 
 const bookingForm = z.object({ token: z.uuid(), start: z.iso.datetime() });

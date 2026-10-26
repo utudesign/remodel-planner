@@ -1289,6 +1289,37 @@ export type Database = {
           },
         ]
       }
+      deal_intake: {
+        Row: {
+          answers: Json
+          ballpark_high_cents: number | null
+          ballpark_low_cents: number | null
+          company_id: string
+          created_at: string
+          deal_id: string
+          summary: string
+        }
+        ComputedFields: never
+        Insert: {
+          answers?: Json
+          ballpark_high_cents?: number | null
+          ballpark_low_cents?: number | null
+          company_id: string
+          created_at?: string
+          deal_id: string
+          summary?: string
+        }
+        Update: {
+          answers?: Json
+          ballpark_high_cents?: number | null
+          ballpark_low_cents?: number | null
+          company_id?: string
+          created_at?: string
+          deal_id?: string
+          summary?: string
+        }
+        Relationships: []
+      }
       deals: {
         Row: {
           booking_token: string

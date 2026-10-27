@@ -3,9 +3,9 @@ import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Kitchen Sales", template: "%s · Kitchen Sales" },
+  title: { default: "RenoDesign", template: "%s · RenoDesign" },
   description: "RenoDesign's kitchen deals and jobs, from the first message to paid in full.",
-  appleWebApp: { capable: true, title: "Kitchen Sales", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "RenoDesign", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

@@ -16,7 +16,7 @@ export default async function PipelineSettingsPage() {
         <Card className="h-fit">
           <CardHeader>
             <CardTitle>My stages</CardTitle>
-            <CardDescription>Rename or reorder. Built-in stages (Lead, Visit booked/done, Ready, Handed off, Lost) can&apos;t be hidden.</CardDescription>
+            <CardDescription>Rename or reorder. Built-in stages (Lead, Visit booked/done, Contract + deposit, Sold, Lost) can&apos;t be hidden.</CardDescription>
           </CardHeader>
           <CardContent>
             <LookupEditor

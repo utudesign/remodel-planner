@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 /** "Add to Home Screen" on iPhone/Android opens the app full-screen on Today. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Kitchen Sales",
-    short_name: "Kitchen Sales",
+    name: "RenoDesign",
+    short_name: "RenoDesign",
     description: "RenoDesign's kitchen deals and jobs, from the first message to paid in full.",
     start_url: "/today",
     display: "standalone",

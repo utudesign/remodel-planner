@@ -11,7 +11,7 @@ describe("job milestones → deal", () => {
     expect(advanceJobStatus("in_progress", "signed")).toBe("in_progress");
     expect(advanceJobStatus("cancelled", "completed")).toBe("cancelled");
   });
-  it("deposit sets the deposit date (which starts the commission) once", () => {
+  it("deposit sets the deposit date once", () => {
     expect(milestoneDealPatch("deposit", fresh, AT)).toEqual({ job_status: "signed", deposit_received_at: AT });
     expect(milestoneDealPatch("deposit", { ...fresh, job_status: "ordered", deposit_received_at: "x" }, AT)).toEqual({});
   });
@@ -25,17 +25,17 @@ describe("job milestones → deal", () => {
 });
 
 describe("job money + KPIs", () => {
-  it("profit = sold + change orders − costs − commission", () => {
-    const m = jobMoney({ soldCents: 3_850_000, changeOrdersCents: 150_000, costs: [1_800_000, 600_000, null], commissionCents: 200_000 });
-    expect(m).toEqual({ revenueCents: 4_000_000, costCents: 2_400_000, commissionCents: 200_000, profitCents: 1_400_000, margin: 0.35 });
+  it("profit = sold + change orders − job costs (no commission)", () => {
+    const m = jobMoney({ soldCents: 3_850_000, changeOrdersCents: 150_000, costs: [1_800_000, 600_000, null] });
+    expect(m).toEqual({ revenueCents: 4_000_000, costCents: 2_400_000, profitCents: 1_600_000, margin: 0.4 });
   });
-  it("RenoDesign's own deals carry no commission; cancelled isn't won", () => {
-    const base = { created_at: "2026-10-01", change_orders_cents: 0, estimated_value_cents: null, costCents: [500_000], commissionExpectedCents: 99_999 };
-    const own = kpiForDeal({ ...base, id: "a", origin: "partner", sold_price_cents: 2_000_000, cancelled_at: null, latestQuoteCents: 2_100_000 });
-    expect(own).toMatchObject({ won: true, wonCents: 2_000_000, commissionCents: 0, profitCents: 1_500_000, estimatedCents: 2_100_000 });
-    const lost = kpiForDeal({ ...base, id: "b", origin: "rep", sold_price_cents: 3_000_000, cancelled_at: "2026-10-05", latestQuoteCents: null });
-    expect(lost).toMatchObject({ won: false, wonCents: 0, commissionCents: 0, profitCents: -500_000 });
-    const open = kpiForDeal({ ...base, id: "c", origin: "rep", sold_price_cents: null, cancelled_at: null, latestQuoteCents: null, costCents: [], estimated_value_cents: 1_000_000 });
+  it("won deals count their profit; cancelled isn't won", () => {
+    const base = { created_at: "2026-10-01", change_orders_cents: 0, estimated_value_cents: null, costCents: [500_000] };
+    const own = kpiForDeal({ ...base, id: "a", sold_price_cents: 2_000_000, cancelled_at: null, latestQuoteCents: 2_100_000 });
+    expect(own).toMatchObject({ won: true, wonCents: 2_000_000, profitCents: 1_500_000, estimatedCents: 2_100_000 });
+    const lost = kpiForDeal({ ...base, id: "b", sold_price_cents: 3_000_000, cancelled_at: "2026-10-05", latestQuoteCents: null });
+    expect(lost).toMatchObject({ won: false, wonCents: 0, profitCents: -500_000 });
+    const open = kpiForDeal({ ...base, id: "c", sold_price_cents: null, cancelled_at: null, latestQuoteCents: null, costCents: [], estimated_value_cents: 1_000_000 });
     const t = kpiTotals([own, lost, open]);
     expect(t).toMatchObject({ deals: 3, estimated: 2, won: 1, wonCents: 2_000_000, costCents: 1_000_000, avgWonCents: 2_000_000 });
     expect(t.winRate).toBe(0.5);

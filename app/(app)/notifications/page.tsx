@@ -23,7 +23,7 @@ export default async function NotificationsPage() {
     <>
       <PageHeader title="Notifications" actions={unread ? <MarkAllRead /> : null} />
       {items.length === 0 ? (
-        <EmptyState title="No notifications" description="New leads, booked visits and partner updates show up here." />
+        <EmptyState title="No notifications" description="New leads, booked visits and job updates show up here." />
       ) : (
         <ul className="flex flex-col divide-y rounded-2xl bg-card ring-1 ring-border">
           {items.map((n) => (

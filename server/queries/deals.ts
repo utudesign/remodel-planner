@@ -4,7 +4,7 @@ import { must, maybe } from "@/server/action-utils";
 export const DEAL_LIST_SELECT =
   "id, deal_number, deal_year, title, stage, scope, source, created_at, opened_on, first_response_at, " +
   "next_follow_up_at, last_touch_at, estimated_value_cents, sold_price_cents, change_orders_cents, " +
-  "handed_off_at, job_status, deposit_received_at, paid_in_full_at, cancelled_at, partner_updated_at, " +
+  "handed_off_at, sold_at, job_status, deposit_received_at, paid_in_full_at, cancelled_at, partner_updated_at, " +
   "lost_reason, partner_id, commission_plan_id, owner_id, origin, contact:contacts(name, phone, address, city)";
 
 export type Stage = { key: string; label: string; kind: "open" | "handed_off" | "lost"; sort_order: number; active: boolean };
@@ -26,6 +26,8 @@ export type DealRow = {
   sold_price_cents: number | null;
   change_orders_cents: number;
   handed_off_at: string | null;
+  /** set by Mark sold (0015) */
+  sold_at: string | null;
   job_status: string;
   deposit_received_at: string | null;
   paid_in_full_at: string | null;
@@ -35,7 +37,7 @@ export type DealRow = {
   partner_id: string | null;
   commission_plan_id: string | null;
   owner_id: string | null;
-  /** "rep" = mine; "partner" = RenoDesign's own deal, created by Crystal (0013) */
+  /** legacy (0013): "partner" = created by a partner login; every deal is the company's since 0015 */
   origin: string;
   contact: { name: string | null; phone: string | null; address: string | null; city: string | null } | null;
 };

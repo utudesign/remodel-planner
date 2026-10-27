@@ -11,11 +11,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireStaff } from "@/lib/auth/require-role";
 import { appUrl } from "@/lib/app-url";
-import { defaultPlanFor, previewFor, type PlanRow } from "@/lib/deals/plans";
 import type { TakeoffInputs } from "@/lib/estimating/takeoff";
 import { formatCents, formatCentsWhole } from "@/lib/money";
 import { formFromTakeoff } from "@/lib/quick-estimate";
-import { getDealByNumber, getPartnersWithPlans } from "@/server/queries/deals";
+import { getDealByNumber } from "@/server/queries/deals";
 import { getQuote } from "@/server/queries/estimates";
 import { ItemSearch } from "@/components/estimates/item-search";
 
@@ -28,16 +27,14 @@ export default async function QuoteBuilder({
 }) {
   const { number, quoteId } = await params;
   const s = await requireStaff();
-  const [deal, data, partners] = await Promise.all([getDealByNumber(s, number), getQuote(s, quoteId), getPartnersWithPlans(s)]);
+  const [deal, data] = await Promise.all([getDealByNumber(s, number), getQuote(s, quoteId)]);
   if (!deal || !data || data.quote.deal_id !== deal.id) notFound();
   const { quote, lines, sections, totals, sectionTotals, comparison, collections, quartz } = data;
   const locked = ["approved", "superseded"].includes(quote.status);
-  const plans = partners.flatMap((p) => (p.plans as PlanRow[]).filter((x) => x.active));
-  const plan = plans.find((p) => p.id === deal.commission_plan_id) ?? defaultPlanFor(plans, deal.scope);
-  const pays = previewFor(plan, totals.total_price_cents);
   const currentQuartz = lines.find((l) => l.code.startsWith("QZ"))?.catalog_item_id ?? null;
   const clientUrl = `${await appUrl()}/q/${quote.client_token}`;
   const margin = Number(totals.gross_margin);
+  const profit = Math.round(Number(totals.total_price_cents) * margin);
 
   return (
     <div className="flex flex-col gap-4 pb-48">
@@ -157,8 +154,8 @@ export default async function QuoteBuilder({
               <p className="text-[28px] leading-tight font-bold tabular-nums">{formatCents(totals.total_price_cents)}</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-background/70">This pays you</p>
-              <p className="text-xl font-bold text-[#8fd3b0] tabular-nums">{pays !== null ? formatCents(pays) : "—"}</p>
+              <p className="text-xs text-background/70">Gross profit</p>
+              <p className="text-xl font-bold text-[#8fd3b0] tabular-nums">{formatCents(profit)}</p>
             </div>
           </div>
           <ShareBar quoteId={quote.id} clientUrl={clientUrl} docNumber={quote.doc_number} locked={locked} />

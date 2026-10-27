@@ -15,7 +15,7 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   kpis: BarChart3,
 };
 
-const MORE_PATHS = ["/more", "/settings", "/notifications", "/partners", "/feedback"];
+const MORE_PATHS = ["/more", "/settings", "/notifications", "/team", "/feedback"];
 
 function isActive(pathname: string, href: string) {
   if (href === "/more")

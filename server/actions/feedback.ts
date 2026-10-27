@@ -18,7 +18,7 @@ export async function saveFeedback(_: ActionState, fd: FormData): Promise<Action
       })
       .parse(Object.fromEntries(fd));
     if (v.rating === null && !v.works && !v.change) throw new Error("Pick a rating or write a comment");
-    const s = await requireRole("owner", "partner");
+    const s = await requireRole("owner", "team", "partner");
     ok(
       await s.db.from("app_feedback").upsert(
         {

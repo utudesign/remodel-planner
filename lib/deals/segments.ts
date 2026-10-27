@@ -1,29 +1,21 @@
 /**
- * Where a deal sits in my lifecycle (SALES-REP-MODE §2) and what to do next.
+ * Where a deal sits in the lifecycle and what to do next (0015: one company, no hand-off).
  * Pure functions: the Deals list, Today and tests share them.
+ * Stage kind "handed_off" is the internal key of the Sold stage (labels live in Settings).
  */
 export type StageKind = "open" | "handed_off" | "lost";
-export type Segment = "selling" | "partner" | "closed";
+export type Segment = "selling" | "sold" | "closed";
 
 export type SegmentInput = {
   stageKind: StageKind | undefined;
   cancelled_at: string | null;
   paid_in_full_at: string | null;
-  commissionStatus?: string | null;
-  owedCents?: number | null;
 };
 
-/**
- * selling = I'm working it; partner = handed off, job or commission still open;
- * closed  = lost, cancelled, or the job is paid in full and my commission is fully paid.
- */
+/** selling = still being sold; sold = a job in progress; closed = lost, cancelled or paid in full. */
 export function segmentOf(d: SegmentInput): Segment {
   if (d.stageKind === "lost") return "closed";
-  if (d.stageKind === "handed_off") {
-    if (d.cancelled_at && (d.owedCents ?? 0) <= 0) return "closed";
-    if (d.paid_in_full_at && d.commissionStatus === "paid") return "closed";
-    return "partner";
-  }
+  if (d.stageKind === "handed_off") return d.cancelled_at || d.paid_in_full_at ? "closed" : "sold";
   return "selling";
 }
 
@@ -34,9 +26,8 @@ export type NextStepInput = {
   first_response_at: string | null;
   next_follow_up_at: string | null;
   job_status: string;
-  partner_updated_at: string | null;
-  handed_off_at: string | null;
-  owedCents?: number | null;
+  paid_in_full_at?: string | null;
+  cancelled_at?: string | null;
 };
 
 export type NextStep = { label: string; urgent: boolean };
@@ -55,12 +46,16 @@ export function nextStep(d: NextStepInput, now: Date): NextStep {
     return { label: `Reply · waiting ${ago(d.created_at, now)}`, urgent: true };
   }
   if (d.stageKind === "handed_off") {
-    if ((d.owedCents ?? 0) > 0) return { label: "Commission owed", urgent: true };
-    const last = d.partner_updated_at ?? d.handed_off_at;
-    if (last && now.getTime() - new Date(last).getTime() > 7 * 86400_000) {
-      return { label: `Ask partner · no update ${ago(last, now)}`, urgent: true };
-    }
-    return { label: "With partner", urgent: false };
+    if (d.cancelled_at) return { label: "Cancelled", urgent: false };
+    if (d.paid_in_full_at) return { label: "Paid in full", urgent: false };
+    const job: Record<string, string> = {
+      not_started: "Start the job",
+      signed: "Job · measure + design",
+      ordered: "Job · cabinets ordered",
+      in_progress: "Job · installing",
+      completed: "Job · collect the balance",
+    };
+    return { label: job[d.job_status] ?? "Job", urgent: false };
   }
   if (d.next_follow_up_at && new Date(d.next_follow_up_at) < now) {
     return { label: `Follow up · ${ago(d.next_follow_up_at, now)} late`, urgent: true };
@@ -71,7 +66,7 @@ export function nextStep(d: NextStepInput, now: Date): NextStep {
     visit_booked: "Visit",
     visit_done: "Make the estimate",
     estimate: "Follow up on estimate",
-    ready: "Hand off",
+    ready: "Mark sold",
   };
   return { label: by[d.stage] ?? "Follow up", urgent: false };
 }

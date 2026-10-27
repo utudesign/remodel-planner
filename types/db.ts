@@ -1399,6 +1399,7 @@ export type Database = {
           permit_required: boolean
           scope: string | null
           sold_in_home: boolean
+          sold_at: string | null
           sold_price_cents: number | null
           source: string | null
           stage: string
@@ -1453,6 +1454,7 @@ export type Database = {
           permit_required?: boolean
           scope?: string | null
           sold_in_home?: boolean
+          sold_at?: string | null
           sold_price_cents?: number | null
           source?: string | null
           stage?: string
@@ -1506,6 +1508,7 @@ export type Database = {
           permit_required?: boolean
           scope?: string | null
           sold_in_home?: boolean
+          sold_at?: string | null
           sold_price_cents?: number | null
           source?: string | null
           stage?: string
@@ -3482,6 +3485,52 @@ export type Database = {
           },
         ]
       }
+      team_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          company_id: string
+          email: string
+          id: string
+          invited_at: string
+          name: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          company_id: string
+          email: string
+          id?: string
+          invited_at?: string
+          name?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          company_id?: string
+          email?: string
+          id?: string
+          invited_at?: string
+          name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_invites_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_invites_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       text_sends: {
         Row: {
           company_id: string
@@ -4106,6 +4155,14 @@ export type Database = {
       }
       accept_partner_invite: {
         Args: { p_clerk_user_id: string; p_email: string; p_name: string }
+        Returns: string
+      }
+      accept_team_invite: {
+        Args: { p_clerk_user_id: string; p_email: string; p_name: string }
+        Returns: string
+      }
+      mark_sold: {
+        Args: { p_deal: string; p_price_cents: number; p_signed_on?: string; p_deposit_on?: string }
         Returns: string
       }
       approve_quote: {

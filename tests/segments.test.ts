@@ -7,17 +7,12 @@ describe("segmentOf", () => {
   it("open stages are selling", () => {
     expect(segmentOf({ stageKind: "open", cancelled_at: null, paid_in_full_at: null })).toBe("selling");
   });
-  it("handed off stays with the partner until the commission is paid", () => {
-    expect(
-      segmentOf({ stageKind: "handed_off", cancelled_at: null, paid_in_full_at: "2026-10-01", commissionStatus: "owed", owedCents: 100 }),
-    ).toBe("partner");
-    expect(
-      segmentOf({ stageKind: "handed_off", cancelled_at: null, paid_in_full_at: "2026-10-01", commissionStatus: "paid", owedCents: 0 }),
-    ).toBe("closed");
+  it("sold stays sold until paid in full", () => {
+    expect(segmentOf({ stageKind: "handed_off", cancelled_at: null, paid_in_full_at: null })).toBe("sold");
+    expect(segmentOf({ stageKind: "handed_off", cancelled_at: null, paid_in_full_at: "2026-10-01" })).toBe("closed");
   });
-  it("cancelled with nothing owed is closed; lost is closed", () => {
-    expect(segmentOf({ stageKind: "handed_off", cancelled_at: "x", paid_in_full_at: null, owedCents: 0 })).toBe("closed");
-    expect(segmentOf({ stageKind: "handed_off", cancelled_at: "x", paid_in_full_at: null, owedCents: 500 })).toBe("partner");
+  it("cancelled is closed; lost is closed", () => {
+    expect(segmentOf({ stageKind: "handed_off", cancelled_at: "x", paid_in_full_at: null })).toBe("closed");
     expect(segmentOf({ stageKind: "lost", cancelled_at: null, paid_in_full_at: null })).toBe("closed");
   });
 });
@@ -30,8 +25,6 @@ describe("nextStep", () => {
     first_response_at: null,
     next_follow_up_at: null,
     job_status: "not_started",
-    partner_updated_at: null,
-    handed_off_at: null,
   };
   it("unanswered lead is urgent with the wait time", () => {
     expect(nextStep(base, now)).toEqual({ label: "Reply · waiting 2 h", urgent: true });
@@ -40,14 +33,11 @@ describe("nextStep", () => {
     const s = nextStep({ ...base, stage: "qualified", first_response_at: "x", next_follow_up_at: "2026-10-23T17:30:00Z" }, now);
     expect(s).toEqual({ label: "Follow up · 30 min late", urgent: true });
   });
-  it("handed off: owed commission first, then a stale partner", () => {
+  it("contract + deposit says Mark sold; sold deals show the job step", () => {
+    expect(nextStep({ ...base, stage: "ready", first_response_at: "x" }, now).label).toBe("Mark sold");
     const h = { ...base, stage: "handed_off", stageKind: "handed_off" as const, first_response_at: "x" };
-    expect(nextStep({ ...h, owedCents: 96250 }, now).label).toBe("Commission owed");
-    expect(nextStep({ ...h, handed_off_at: "2026-10-14T18:00:00Z" }, now)).toEqual({
-      label: "Ask partner · no update 9 days",
-      urgent: true,
-    });
-    expect(nextStep({ ...h, handed_off_at: "2026-10-20T18:00:00Z" }, now).urgent).toBe(false);
+    expect(nextStep({ ...h, job_status: "signed" }, now)).toEqual({ label: "Job · measure + design", urgent: false });
+    expect(nextStep({ ...h, job_status: "completed", paid_in_full_at: "2026-10-20T18:00:00Z" }, now).label).toBe("Paid in full");
   });
 });
 

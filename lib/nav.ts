@@ -2,16 +2,8 @@ export type NavIcon = "today" | "deals" | "money" | "more" | "jobs" | "kpis";
 
 export type NavItem = { href: string; label: string; icon: NavIcon };
 
-/** Phone bottom bar and desktop sidebar for me: Today · Deals · Money · More. */
+/** One company (0015): everyone gets Today · Deals · Jobs · KPIs · More. */
 export const TAB_ITEMS: NavItem[] = [
-  { href: "/today", label: "Today", icon: "today" },
-  { href: "/deals", label: "Deals", icon: "deals" },
-  { href: "/money", label: "Money", icon: "money" },
-  { href: "/more", label: "More", icon: "more" },
-];
-
-/** Crystal (partner, 0013): no Money; Jobs and KPIs instead. */
-export const PARTNER_TAB_ITEMS: NavItem[] = [
   { href: "/today", label: "Today", icon: "today" },
   { href: "/deals", label: "Deals", icon: "deals" },
   { href: "/jobs", label: "Jobs", icon: "jobs" },
@@ -19,4 +11,4 @@ export const PARTNER_TAB_ITEMS: NavItem[] = [
   { href: "/more", label: "More", icon: "more" },
 ];
 
-export const tabsFor = (role: string) => (role === "partner" ? PARTNER_TAB_ITEMS : TAB_ITEMS);
+export const tabsFor = (): NavItem[] => TAB_ITEMS;

@@ -1,7 +1,9 @@
 /**
- * owner   = the rep (Tugu): everything.
- * partner = a contractor's login (Crystal): only deals handed to her company, only job fields (0006).
- * team / crew exist in the SQL for the optional contractor module; no screens use them now.
+ * One company (RenoDesign, 0015):
+ * owner   = Tugu: everything, plus Settings and the Team page (invites).
+ * team    = everyone else (Crystal, Ahn, …): every deal, estimate, visit, job and KPI.
+ * partner = legacy contractor login (0006/0013); 0015 turned existing ones into team.
+ * crew    = unused.
  */
 export const ROLES = ["owner", "partner", "team", "crew"] as const;
 export type Role = (typeof ROLES)[number];

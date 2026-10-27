@@ -31,7 +31,7 @@ export type UploadTicket = { ok: true; path: string; url: string } | { ok: false
 export async function createUploadTicket(input: z.input<typeof ticketSchema>): Promise<UploadTicket> {
   try {
     const v = ticketSchema.parse(input);
-    const s = await requireRole("owner", "partner");
+    const s = await requireRole("owner", "team", "partner");
     const deal = must(
       await s.db
         .from("deals")
@@ -67,7 +67,7 @@ const confirmSchema = z.object({
 export async function confirmUpload(input: z.input<typeof confirmSchema>): Promise<{ ok: boolean; error?: string }> {
   try {
     const v = confirmSchema.parse(input);
-    const s = await requireRole("owner", "partner");
+    const s = await requireRole("owner", "team", "partner");
     // Already confirmed on an earlier try (the phone lost signal before hearing back)?
     const existing = maybe(await s.db.from("deal_files").select("id").eq("storage_path", v.path).maybeSingle());
     if (!existing) {

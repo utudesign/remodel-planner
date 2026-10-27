@@ -37,11 +37,11 @@ export default async function JobsPage() {
 
   return (
     <>
-      <PageHeader title="Jobs" description="Every job after the hand-off or the signed contract. Red = a step is late." />
+      <PageHeader title="Jobs" description="Every sold deal and where its job stands. Red = a step is late." />
       {jobs.length === 0 ? (
         <EmptyState
           title="No jobs yet"
-          description="A job starts from a deal's Job tab once it's handed off (or, for RenoDesign's own deals, once the contract is signed)."
+          description="A job starts when you tap Mark sold on a deal's Job tab."
         />
       ) : null}
 
@@ -102,7 +102,6 @@ export default async function JobsPage() {
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-semibold">
                       #{j.number} {j.name}
-                      {j.origin === "partner" ? <span className="ml-1.5 rounded-full bg-secondary px-1.5 text-[11px] font-bold">RenoDesign</span> : null}
                     </span>
                     <span className="block text-xs text-muted-foreground">
                       {j.done}/{j.total} steps · {j.value ? formatCentsWhole(j.value) : "no price yet"}

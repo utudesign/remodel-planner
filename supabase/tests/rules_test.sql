@@ -121,7 +121,7 @@ select pg_temp.act_as('seed_tugu');
 select pg_temp.expect_error($$update public.deals set commission_plan_id = (select id from public.commission_plans limit 1),
                               partner_id = (select partner_id from public.commission_plans limit 1),
                               handed_off_at = now() where title = 'Reno own'$$, '%no commission%');
-select pg_temp.expect_error($$select public.start_job('00000000-0000-0000-0000-0000000000d8')$$, 'A job starts after%');
+select pg_temp.expect_error($$select public.start_job('00000000-0000-0000-0000-0000000000d8')$$, 'Mark the deal sold first%');
 do $$ begin
   if public.start_job('00000000-0000-0000-0000-0000000000d2') is null then raise exception 'job for a handed-off deal'; end if;
   raise notice 'OK: I can''t hand off her deal; jobs start only after hand-off/signing';
@@ -185,8 +185,8 @@ begin
    where d2.id = '00000000-0000-0000-0000-0000000000d4' and cp.company_id = d2.company_id and cp.name like 'Kitchens%'
   returning d2.* into d;
   if d.stage <> 'handed_off' then raise exception 'hand-off should move stage, got %', d.stage; end if;
-  if d.next_follow_up_at::date <> (now() + interval '7 days')::date then raise exception 'ask-partner nudge in 7 days'; end if;
-  raise notice 'OK: hand-off moves Lee to "Handed off" with a 7-day partner nudge';
+  if d.next_follow_up_at is not null then raise exception 'sold/handed-off deals leave the sales follow-up queue (0015)'; end if;
+  raise notice 'OK: hand-off moves Lee to the Sold stage; no sales follow-up after (0015)';
 end $$;
 reset role;
 do $$ begin
@@ -387,6 +387,76 @@ do $$ begin
   raise notice 'OK: feedback: each writes own, owner reads all, no one writes as someone else';
 end $$;
 reset role;
+
+
+-- 0015 one company ------------------------------------------------------------------
+-- A team login (Ahn) and an invite; partner logins already converted by the migration.
+insert into public.users (id, company_id, clerk_id, name, email, role)
+values ('00000000-0000-0000-0000-0000000000a5', '00000000-0000-0000-0000-0000000000c1', 'seed_ahn', 'Ahn', 'ahn@example.com', 'team');
+do $$ begin
+  if (select name from public.companies where id = '00000000-0000-0000-0000-0000000000c1') <> 'RenoDesign' then
+    raise exception 'company should be RenoDesign'; end if;
+  if (select settings_json->>'license_class' from public.companies where id = '00000000-0000-0000-0000-0000000000c1') is not null
+     and false then raise exception 'unreachable'; end if;
+  if (select label from public.pipeline_stages where company_id = '00000000-0000-0000-0000-0000000000c1' and key = 'handed_off') <> 'Sold' then
+    raise exception 'Handed off should read Sold'; end if;
+  if (select label from public.pipeline_stages where company_id = '00000000-0000-0000-0000-0000000000c1' and key = 'ready') <> 'Contract + deposit' then
+    raise exception 'Ready to hand off should read Contract + deposit'; end if;
+  if exists (select 1 from public.text_templates where key = 'handoff_intro' and body like '%from our office%') then
+    raise exception 'hand-off text should be the welcome text'; end if;
+  raise notice 'OK: one company: RenoDesign, stages Contract + deposit → Sold, welcome text';
+end $$;
+set role authenticated;
+select pg_temp.act_as('seed_tugu');
+insert into public.team_invites (company_id, email, name) values (public.current_company_id(), 'kim@example.com', 'Kim');
+select pg_temp.act_as('seed_ahn');
+do $$ begin
+  if (select count(*) from public.team_invites) <> 0 then raise exception 'team sees invites'; end if;
+  if (select count(*) from public.deals) < 8 then raise exception 'team sees every deal'; end if;
+end $$;
+select pg_temp.expect_error($$insert into public.team_invites (company_id, email) values ('00000000-0000-0000-0000-0000000000c1', 'x@example.com')$$,
+                            '%row-level security%');
+-- Mark sold: refused until the job-ready checklist is complete and a price is set; no skipping it via the stage.
+select pg_temp.expect_error($$update public.deals set stage = 'handed_off' where id = '00000000-0000-0000-0000-0000000000d5'$$, 'Use Mark sold%');
+select pg_temp.expect_error($$select public.mark_sold('00000000-0000-0000-0000-0000000000d5', 900000)$$, 'Job-ready checklist is missing:%');
+select pg_temp.expect_error($$select public.start_job('00000000-0000-0000-0000-0000000000d5')$$, 'Mark the deal sold first%');
+insert into public.deal_files (deal_id, folder, storage_path, mime_type, size_bytes, requirement_id, title)
+select d.id, r.folder, d.company_id || '/' || d.deal_year || '/' || d.deal_number || '/' || r.folder || '/' || gen_random_uuid() || '.jpg',
+       'image/jpeg', 1000, r.id, r.label
+  from public.deals d
+  join public.document_requirements r on r.company_id = d.company_id and r.gate = 'before_handoff' and r.required
+ where d.id = '00000000-0000-0000-0000-0000000000d5';
+select pg_temp.expect_error($$select public.mark_sold('00000000-0000-0000-0000-0000000000d5', 0)$$, 'Enter the sold price%');
+do $$
+declare d public.deals; v_project uuid;
+begin
+  v_project := public.mark_sold('00000000-0000-0000-0000-0000000000d5', 875000, current_date - 1, current_date);
+  select * into d from public.deals where id = '00000000-0000-0000-0000-0000000000d5';
+  if d.stage <> 'handed_off' or d.sold_at is null or d.sold_price_cents <> 875000 or d.job_status <> 'signed' then
+    raise exception 'mark_sold should move to Sold with the price (%, %, %)', d.stage, d.sold_price_cents, d.job_status; end if;
+  if d.deposit_received_at is null then raise exception 'deposit date recorded'; end if;
+  if d.next_follow_up_at is not null then raise exception 'sold deal has no sales follow-up'; end if;
+  if d.handed_off_at is not null or d.commission_plan_id is not null then raise exception 'no hand-off, no commission'; end if;
+  if (select count(*) from public.job_milestones where project_id = v_project) <> 13 then raise exception 'job timeline created'; end if;
+  if (select done_on from public.job_milestones where project_id = v_project and key = 'contract_signed') <> current_date - 1 then
+    raise exception 'contract signed ticked on the signing day'; end if;
+  if (select done_on from public.job_milestones where project_id = v_project and key = 'deposit') <> current_date then
+    raise exception 'deposit ticked'; end if;
+  if public.mark_sold('00000000-0000-0000-0000-0000000000d5', 875000) <> v_project then raise exception 'mark_sold is idempotent'; end if;
+  raise notice 'OK: team member marks a deal sold (checklist + price), job starts with contract + deposit ticked';
+end $$;
+select pg_temp.act_as('user_other_rep');
+select pg_temp.expect_error($$select public.mark_sold('00000000-0000-0000-0000-0000000000d4', 100)$$, 'Deal not found%');
+reset role;
+do $$
+declare v uuid;
+begin
+  v := public.accept_team_invite('user_kim', 'KIM@example.com', '');
+  if v is null or (select role from public.users where id = v) <> 'team'
+     or (select name from public.users where id = v) <> 'Kim' then raise exception 'team invite not accepted'; end if;
+  if public.accept_team_invite('user_nobody2', 'nobody2@example.com', '') is not null then raise exception 'uninvited accepted'; end if;
+  raise notice 'OK: invited email gets a team login; uninvited does not; other companies cannot mark sold';
+end $$;
 
 reset role;
 \echo ALL RULE TESTS PASSED

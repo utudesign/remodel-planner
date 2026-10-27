@@ -217,3 +217,22 @@ payments schedule, close/margin lock screens) was removed; it's in git history b
 | --- | --- |
 | /feedback (More → Feedback): each person rates the handbook's 9 areas 1–5 with "what works" / "what to change"; answers come back prefilled to update; I see everyone's, grouped by area with the average (`app_feedback`, 0014) | Crystal and Ahn already log into the app; a separate feedback page would need Claude accounts |
 | Ahn (RenoDesign admin assistant) joins the same way as Crystal: a partner invite → same RenoDesign access | No new role needed |
+
+### One company: RenoDesign's own tool (2026-10-27, Tugu)
+
+**Spec change.** Tugu: "lets forget about the handoff, my commission etc, lets consider this everything as a one company
+tool … from the first contact to the end of the project. no handoff to renodesign. it is a renodesign inside tool."
+Supersedes the hand-off/commission parts of SALES-REP-MODE, 0006, 0010 and 0013 (tables kept, nothing deleted).
+
+| Decision | Why |
+| --- | --- |
+| Everyone signs in as `team` (0015 converts partner logins); the owner keeps Settings and the new **Team** page (invite by email → `team_invites` → `accept_team_invite()` at first sign-in; turn a login off/on) | One company, one set of people |
+| Pipeline labels: Ready to hand off → **Contract + deposit**, Handed off → **Sold** (keys `ready` / `handed_off` unchanged, so logic and history keep working) | Stages are config; keys are the stable part |
+| **Mark sold** (Job tab) replaces the hand-off: `mark_sold()` needs the **job-ready checklist** (same `before_handoff` items: photos, measurements + sketch, appliance list) and a sold price; it moves the deal to Sold, starts the job, ticks Contract signed (+ Deposit). A trigger refuses moving into Sold any other way | Production needs the same papers RenoDesign needed at hand-off; the gate stays in the database |
+| Sold deals get no sales follow-up (`next_follow_up` returns null for the Sold kind); job steps due show on everyone's Today | Sales cadence ends at the sale; the timeline drives the job |
+| Removed: Money tab (commission, expenses, mileage), Partners page, commission everywhere ("Could pay", "This pays you", KPI line), RenoDesign badges. Tabs for all: Today · Deals · Jobs · KPIs · More | Tugu: no commission |
+| Deals segments: Selling / **Sold** / Closed (closed = lost, cancelled or paid in full). Deal cards show who's working the deal | Team view |
+| KPIs: profit = won − job costs; filter by salesperson (Everyone / each person) | No commission; team KPIs |
+| Company name = RenoDesign (from the RenoDesign partner record); license moves to Settings → company (printed on client estimates, which now say "Payments are made to RenoDesign") | The estimate is from the company itself |
+| Texts: "Next: the contract" (hand-off) → **Welcome aboard** ("Your kitchen is on our schedule…"); `{brand}` = company name | No hand-off call from "our office" |
+| Estimate bottom bar shows gross profit instead of "This pays you" | Same reason |

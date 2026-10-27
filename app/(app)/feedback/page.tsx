@@ -31,7 +31,7 @@ export default async function FeedbackPage() {
     <>
       <PageHeader
         title="Feedback"
-        description="Tell Tugu what works and what to change. Rate each part 1–5; you can come back and update it anytime."
+        description="Tell us what works and what to change. Rate each part 1–5; you can come back and update it anytime."
       />
 
       {owner ? (

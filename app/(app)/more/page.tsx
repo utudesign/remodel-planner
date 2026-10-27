@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, Bell, MessageCircleHeart, ChevronRight, GanttChart, Handshake, MessageSquare, Settings, SlidersHorizontal } from "lucide-react";
+import { Bell, MessageCircleHeart, ChevronRight, MessageSquare, Settings, SlidersHorizontal, Users } from "lucide-react";
 import { SignOutButton } from "@clerk/nextjs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/states";
@@ -22,18 +22,12 @@ export default async function MorePage() {
   const shareUrl = link ? `${await appUrl()}/l/${link.slug}` : null;
   const owner = s.role === "owner";
   const links = [
-    ...(owner
-      ? [
-          { href: "/jobs", label: "Jobs", icon: GanttChart, hint: "Timeline of every job after hand-off" },
-          { href: "/kpis", label: "KPIs", icon: BarChart3, hint: "Estimated, won, expenses, profit by deal" },
-        ]
-      : []),
-    { href: "/partners", label: "Partners + commission plans", icon: Handshake, hint: "RenoDesign, plans, Crystal's login" },
-    { href: "/feedback", label: "Feedback", icon: MessageCircleHeart, hint: "Tell Tugu what works and what to change" },
+    { href: "/team", label: "Team", icon: Users, hint: "Who can sign in · invite Crystal, Ahn and others" },
+    { href: "/feedback", label: "Feedback", icon: MessageCircleHeart, hint: "Tell us what works and what to change" },
     { href: "/notifications", label: "Notifications", icon: Bell, hint: "Everything that happened" },
-    { href: "/settings", label: "Settings", icon: Settings, hint: "Hours, booking slots, tax, mileage, auto-reply" },
-    { href: "/settings/texts", label: "My texts", icon: MessageSquare, hint: "On my way, thanks, estimate follow-ups" },
-    { href: "/settings/pipeline", label: "Stages + follow-ups", icon: SlidersHorizontal, hint: "My pipeline and cadence" },
+    { href: "/settings", label: "Settings", icon: Settings, hint: "Company, license, hours, booking slots, auto-reply" },
+    { href: "/settings/texts", label: "Texts", icon: MessageSquare, hint: "On my way, thanks, estimate follow-ups, welcome" },
+    { href: "/settings/pipeline", label: "Stages + follow-ups", icon: SlidersHorizontal, hint: "The pipeline and its cadence" },
   ].filter((l) => owner || l.href === "/notifications" || l.href === "/feedback");
   return (
     <>
@@ -55,7 +49,7 @@ export default async function MorePage() {
       {owner && shareUrl ? (
         <Card className="mb-5">
           <CardHeader>
-            <CardTitle>My share link</CardTitle>
+            <CardTitle>Free-estimate link</CardTitle>
             <CardDescription>
               Post it in Facebook groups. People fill a short form and land on Today as a new lead.
             </CardDescription>

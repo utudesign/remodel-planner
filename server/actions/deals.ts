@@ -70,7 +70,7 @@ export async function logTextSent(input: { deal_id: string; key: string; via: "t
     const v = z
       .object({ deal_id: z.uuid(), key: z.string().regex(/^[a-z0-9_]{2,40}$/), via: z.enum(["text", "fb_msg"]) })
       .parse(input);
-    const s = await requireRole("owner", "partner");
+    const s = await requireRole("owner", "team", "partner");
     const d = await dealRef(s, v.deal_id);
     const t = must(
       await s.db.from("text_templates").select("key, label").eq("company_id", s.companyId).eq("key", v.key).single(),
@@ -122,7 +122,7 @@ export async function createDeal(_: ActionState, fd: FormData): Promise<ActionSt
   let number = "";
   const res = await run(async () => {
     const v = newDealSchema.parse(formToObject(fd));
-    const s = await requireRole("owner", "partner");
+    const s = await requireRole("owner", "team", "partner");
     const where = parseAddressLine(v.address);
     const contact = must(
       await s.db
@@ -169,7 +169,7 @@ export async function createDeal(_: ActionState, fd: FormData): Promise<ActionSt
 export async function updateQualify(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = qualifySchema.parse(formToObject(fd));
-    const s = await requireRole("owner", "partner");
+    const s = await requireRole("owner", "team", "partner");
     const d = await dealRef(s, v.deal_id);
     ok(
       await s.db
@@ -196,7 +196,7 @@ export async function updateQualify(_: ActionState, fd: FormData): Promise<Actio
 export async function updateContact(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = contactSchema.parse(formToObject(fd));
-    const s = await requireRole("owner", "partner");
+    const s = await requireRole("owner", "team", "partner");
     const d = await dealRef(s, v.deal_id);
     const where = parseAddressLine(v.address);
     const patch = { name: v.name, phone: v.phone, email: v.email ?? null, address: where.street, city: where.city, zip: where.zip };
@@ -215,9 +215,9 @@ export async function updateContact(_: ActionState, fd: FormData): Promise<Actio
 export async function moveStage(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = stageSchema.parse(formToObject(fd));
-    const s = await requireRole("owner", "partner");
+    const s = await requireRole("owner", "team", "partner");
     const d = await dealRef(s, v.deal_id);
-    if (v.stage === "handed_off") throw new Error("Use the Hand off button: it checks the hand-off checklist first.");
+    if (v.stage === "handed_off") throw new Error("Use Mark sold on the Job tab: it checks the job-ready checklist first.");
     ok(await s.db.from("deals").update({ stage: v.stage, lost_reason: v.lost_reason }).eq("id", d.id));
     revalidateDeal(d.deal_number);
     return { ok: true, message: "Stage updated" };
@@ -228,7 +228,7 @@ export async function moveStage(_: ActionState, fd: FormData): Promise<ActionSta
 export async function logActivity(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = logActivitySchema.parse(formToObject(fd));
-    const s = await requireRole("owner", "partner");
+    const s = await requireRole("owner", "team", "partner");
     const d = await dealRef(s, v.deal_id);
     ok(
       await s.db.from("activities").insert({
@@ -249,7 +249,7 @@ export async function logActivity(_: ActionState, fd: FormData): Promise<ActionS
 export async function markReplied(input: { deal_id: string; via: "text" | "fb_msg" }): Promise<ActionState> {
   return run(async () => {
     const v = z.object({ deal_id: z.uuid(), via: z.enum(["text", "fb_msg"]) }).parse(input);
-    const s = await requireRole("owner", "partner");
+    const s = await requireRole("owner", "team", "partner");
     const d = await dealRef(s, v.deal_id);
     ok(
       await s.db.from("activities").insert({
@@ -268,7 +268,7 @@ export async function markReplied(input: { deal_id: string; via: "text" | "fb_ms
 export async function setFollowUp(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = followUpSchema.parse(formToObject(fd));
-    const s = await requireRole("owner", "partner");
+    const s = await requireRole("owner", "team", "partner");
     const d = await dealRef(s, v.deal_id);
     const at = datetimeLocalToUtc(v.at, s.timezone);
     ok(await s.db.from("deals").update({ next_follow_up_at: at.toISOString() }).eq("id", d.id));
@@ -280,7 +280,7 @@ export async function setFollowUp(_: ActionState, fd: FormData): Promise<ActionS
 export async function bookVisit(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = bookVisitSchema.parse(formToObject(fd));
-    const s = await requireRole("owner", "partner");
+    const s = await requireRole("owner", "team", "partner");
     const d = await dealRef(s, v.deal_id);
     await addVisit(s, d.id, datetimeLocalToUtc(v.starts_at, s.timezone), v.minutes, v.notes);
     revalidateDeal(d.deal_number);
@@ -291,7 +291,7 @@ export async function bookVisit(_: ActionState, fd: FormData): Promise<ActionSta
 export async function setMeetingStatus(input: { meeting_id: string; status: "done" | "canceled" }): Promise<ActionState> {
   return run(async () => {
     const v = z.object({ meeting_id: z.uuid(), status: z.enum(["done", "canceled"]) }).parse(input);
-    const s = await requireRole("owner", "partner");
+    const s = await requireRole("owner", "team", "partner");
     const m = must(
       await s.db.from("meetings").update({ status: v.status }).eq("id", v.meeting_id).select("deal_id").single(),
     );
@@ -322,7 +322,7 @@ export async function archiveDeal(input: { deal_id: string }): Promise<ActionSta
   let done = false;
   const res = await run(async () => {
     const v = z.object({ deal_id: z.uuid() }).parse(input);
-    const s = await requireRole("owner", "partner");
+    const s = await requireRole("owner", "team", "partner");
     const d = await dealRef(s, v.deal_id);
     ok(await s.db.from("deals").update({ deleted_at: new Date().toISOString() }).eq("id", d.id));
     revalidateDeal(d.deal_number);
@@ -336,7 +336,7 @@ export async function archiveDeal(input: { deal_id: string }): Promise<ActionSta
 export async function addDealFiles(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = dealFileSchema.parse(formToObject(fd));
-    const s = await requireRole("owner", "partner");
+    const s = await requireRole("owner", "team", "partner");
     const files = fd.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
     if (!files.length) throw new Error("Pick a file or take a photo first");
     const d = await dealRef(s, v.deal_id);
@@ -355,7 +355,7 @@ export async function addDealFiles(_: ActionState, fd: FormData): Promise<Action
 export async function removeDealFile(input: { file_id: string }): Promise<ActionState> {
   return run(async () => {
     const v = z.object({ file_id: z.uuid() }).parse(input);
-    const s = await requireRole("owner", "partner");
+    const s = await requireRole("owner", "team", "partner");
     ok(await s.db.from("deal_files").update({ deleted_at: new Date().toISOString() }).eq("id", v.file_id));
     revalidatePath("/deals", "layout");
   });

@@ -63,17 +63,15 @@ export function milestoneDealPatch(key: string, d: DealJob, at: string): DealJob
 export type JobMoney = {
   revenueCents: number;
   costCents: number;
-  commissionCents: number;
   profitCents: number;
   /** profit ÷ revenue, null without revenue */
   margin: number | null;
 };
 
-/** RenoDesign's side: revenue = sold + change orders; profit = revenue − job costs − Tugu's commission. */
-export function jobMoney(v: { soldCents: number | null; changeOrdersCents: number; costs: (number | null)[]; commissionCents: number | null }): JobMoney {
+/** Revenue = sold + change orders; gross profit = revenue − job costs (0015: no commission). */
+export function jobMoney(v: { soldCents: number | null; changeOrdersCents: number; costs: (number | null)[] }): JobMoney {
   const revenueCents = (v.soldCents ?? 0) + (v.changeOrdersCents ?? 0);
   const costCents = v.costs.reduce<number>((n, c) => n + (c ?? 0), 0);
-  const commissionCents = v.commissionCents ?? 0;
-  const profitCents = revenueCents - costCents - commissionCents;
-  return { revenueCents, costCents, commissionCents, profitCents, margin: revenueCents > 0 ? profitCents / revenueCents : null };
+  const profitCents = revenueCents - costCents;
+  return { revenueCents, costCents, profitCents, margin: revenueCents > 0 ? profitCents / revenueCents : null };
 }

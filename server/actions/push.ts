@@ -14,7 +14,7 @@ const subSchema = z.object({
 export async function savePushSubscription(input: z.input<typeof subSchema>): Promise<ActionState> {
   return run(async () => {
     const v = subSchema.parse(input);
-    const s = await requireRole("owner", "partner");
+    const s = await requireRole("owner", "team", "partner");
     ok(
       await s.db.from("push_subscriptions").upsert(
         {
@@ -33,14 +33,14 @@ export async function savePushSubscription(input: z.input<typeof subSchema>): Pr
 
 export async function removePushSubscription(input: { endpoint: string }): Promise<ActionState> {
   return run(async () => {
-    const s = await requireRole("owner", "partner");
+    const s = await requireRole("owner", "team", "partner");
     ok(await s.db.from("push_subscriptions").delete().eq("endpoint", input.endpoint));
   });
 }
 
 export async function markNotificationsRead(): Promise<ActionState> {
   return run(async () => {
-    const s = await requireRole("owner", "partner");
+    const s = await requireRole("owner", "team", "partner");
     ok(
       await s.db
         .from("notifications")

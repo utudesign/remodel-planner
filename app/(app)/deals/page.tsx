@@ -5,16 +5,16 @@ import { EmptyState, PageHeader } from "@/components/shared/states";
 import { requireStaff } from "@/lib/auth/require-role";
 import { todayIn } from "@/lib/dates";
 import { parseDealNumber } from "@/lib/deals/dealNumber";
-import { defaultPlanFor, previewFor, type PlanRow } from "@/lib/deals/plans";
 import { segmentOf, type Segment } from "@/lib/deals/segments";
 import { cn } from "@/lib/utils";
-import { getCommissions, getPartnersWithPlans, getStages, listDeals, type DealRow } from "@/server/queries/deals";
+import { must } from "@/server/action-utils";
+import { getStages, listDeals, type DealRow } from "@/server/queries/deals";
 
 export const metadata = { title: "Deals" };
 
 const SEGMENTS: { key: Segment; label: string }[] = [
   { key: "selling", label: "Selling" },
-  { key: "partner", label: "With partner" },
+  { key: "sold", label: "Sold" },
   { key: "closed", label: "Closed" },
 ];
 
@@ -39,27 +39,23 @@ function matcher(q: string, currentYear: number) {
 export default async function DealsPage({ searchParams }: { searchParams: Promise<{ seg?: string; q?: string }> }) {
   const { seg: segParam, q = "" } = await searchParams;
   const s = await requireStaff();
-  const [stages, deals, commissions, partners] = await Promise.all([
+  const [stages, deals, people] = await Promise.all([
     getStages(s),
     listDeals(s),
-    getCommissions(s),
-    getPartnersWithPlans(s),
+    s.db.from("users").select("id, name").eq("company_id", s.companyId).then(must),
   ]);
+  const firstName = new Map(people.map((p) => [p.id, (p.name ?? "").split(" ")[0] || null]));
   const now = new Date();
   const year = Number(todayIn(s.timezone).slice(0, 4));
   const kind = new Map(stages.map((x) => [x.key, x.kind]));
-  const plans = partners.flatMap((p) => (p.active ? (p.plans as PlanRow[]) : []));
   const match = matcher(q, year);
 
-  const bySeg: Record<Segment, DealRow[]> = { selling: [], partner: [], closed: [] };
+  const bySeg: Record<Segment, DealRow[]> = { selling: [], sold: [], closed: [] };
   for (const d of deals) {
-    const c = commissions.get(d.id);
     const seg = segmentOf({
       stageKind: kind.get(d.stage),
       cancelled_at: d.cancelled_at,
       paid_in_full_at: d.paid_in_full_at,
-      commissionStatus: c?.commission_status,
-      owedCents: c?.owed_cents,
     });
     bySeg[seg].push(d);
   }
@@ -74,8 +70,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
       key={d.id}
       deal={d}
       stageKind={kind.get(d.stage)}
-      commission={commissions.get(d.id)}
-      previewCents={previewFor(defaultPlanFor(plans, d.scope), d.estimated_value_cents)}
+      ownerName={d.owner_id ? firstName.get(d.owner_id) : null}
       now={now}
     />
   );
@@ -137,7 +132,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
 
       {shown.length === 0 ? (
         <EmptyState
-          title={q ? "No deal matches" : seg === "selling" ? "No open deals" : seg === "partner" ? "Nothing with a partner" : "Nothing closed yet"}
+          title={q ? "No deal matches" : seg === "selling" ? "No open deals" : seg === "sold" ? "No jobs in progress" : "Nothing closed yet"}
           description={seg === "selling" && !q ? "Tap + → New deal, or paste a Facebook message." : undefined}
         />
       ) : seg === "selling" && !q ? (

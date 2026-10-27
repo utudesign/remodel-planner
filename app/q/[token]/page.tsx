@@ -7,7 +7,7 @@ export const metadata = { title: "Your kitchen estimate" };
 
 /**
  * Client view of an estimate: section totals only (never line prices, costs or a tax line).
- * Labeled as an estimate; the final price and contract come from the licensed partner.
+ * Labeled as an estimate; the final price is in the contract. The company's license is printed (Settings).
  */
 export default async function ClientEstimate({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -15,27 +15,24 @@ export default async function ClientEstimate({ params }: { params: Promise<{ tok
   const db = createAdminSupabase();
   const { data: q } = await db
     .from("quotes")
-    .select("id, company_id, doc_number, sent_at, status, deal:deals(partner_id, scope, contact:contacts(name, address, city))")
+    .select("id, company_id, doc_number, sent_at, status, deal:deals(owner_id, scope, contact:contacts(name, address, city))")
     .eq("client_token", token)
     .maybeSingle();
   if (!q || !q.doc_number || q.status === "superseded") notFound();
-  const [{ data: sections }, { data: totals }, { data: owner }, { data: partners }] = await Promise.all([
+  const [{ data: sections }, { data: totals }, { data: people }, { data: company }] = await Promise.all([
     db
       .from("quote_section_totals")
       .select("section_id, name, client_description, sort_order, price_cents")
       .eq("quote_id", q.id)
       .order("sort_order"),
     db.from("quote_totals").select("total_price_cents").eq("quote_id", q.id).single(),
-    db
-      .from("users")
-      .select("name, phone, email")
-      .eq("company_id", q.company_id)
-      .eq("role", "owner")
-      .eq("is_default_owner", true)
-      .maybeSingle(),
-    db.from("partners").select("id, name, license_number, license_class, phone").eq("company_id", q.company_id).eq("active", true).order("created_at"),
+    db.from("users").select("id, name, phone, email, is_default_owner").eq("company_id", q.company_id).eq("active", true),
+    db.from("companies").select("name, settings_json").eq("id", q.company_id).single(),
   ]);
-  const partner = partners?.find((p) => p.id === q.deal?.partner_id) ?? partners?.[0] ?? null;
+  // Questions go to the person working the deal (else the owner).
+  const owner = people?.find((p) => p.id === q.deal?.owner_id) ?? people?.find((p) => p.is_default_owner) ?? null;
+  const settings = (company?.settings_json ?? {}) as { license_number?: string; license_class?: string };
+  const brand = company?.name || "our company";
   const date = q.sent_at ? new Date(q.sent_at) : new Date();
   const valid = new Date(date.getTime() + 30 * 86400_000);
   const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "America/New_York" });
@@ -72,12 +69,12 @@ export default async function ClientEstimate({ params }: { params: Promise<{ tok
       </section>
 
       <section className="rounded-2xl bg-accent p-4 text-sm text-accent-foreground print:bg-transparent print:p-0">
-        <p className="font-semibold">Estimate. Final price and contract from {partner?.name ?? "the contractor"}.</p>
+        <p className="font-semibold">Estimate from {brand}. The final price is in your contract.</p>
         <p className="mt-1">
-          {partner?.license_number
-            ? `Licensed Virginia contractor, license ${partner.license_number}${partner.license_class ? ` (Class ${partner.license_class})` : ""}.`
+          {settings.license_number
+            ? `Licensed Virginia contractor, license ${settings.license_number}${settings.license_class ? ` (Class ${settings.license_class})` : ""}.`
             : "Contractor license number provided with the contract."}{" "}
-          Payments are made to {partner?.name ?? "the contractor"} only, after the contract is signed. Includes materials, delivery,
+          Payments are made to {brand} only, after the contract is signed. Includes materials, delivery,
           installation and clean-up as listed; taxes on materials are included in the prices above.
         </p>
       </section>

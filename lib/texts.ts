@@ -26,8 +26,8 @@ export type TextVars = {
 export const TEXT_VARS: { key: keyof TextVars; hint: string }[] = [
   { key: "first", hint: "client's first name" },
   { key: "me", hint: "your first name" },
-  { key: "brand", hint: "partner company (RenoDesign)" },
-  { key: "partner_contact", hint: "partner's contact (Crystal)" },
+  { key: "brand", hint: "company name (RenoDesign)" },
+  { key: "partner_contact", hint: "your name (same as {me})" },
   { key: "when", hint: "next visit, e.g. tomorrow at 6:30 PM" },
   { key: "link", hint: "client estimate link (after you share one)" },
   { key: "booking", hint: "the client's booking link" },

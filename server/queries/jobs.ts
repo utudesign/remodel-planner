@@ -20,7 +20,7 @@ export async function getJob(s: Session, dealId: string) {
     s.db.from("tasks").select("id, title, status, due_date, assignee_id, created_at").eq("project_id", project.id).order("created_at").then(must),
     s.db.from("costs").select("id, category, vendor, actual_amount, paid_at").eq("project_id", project.id).then(must),
     s.db.from("job_cost_categories").select("key, label").eq("company_id", s.companyId).eq("active", true).order("sort_order").then(must),
-    s.db.from("users").select("id, name, role").eq("company_id", s.companyId).eq("active", true).in("role", ["owner", "partner"]).then(must),
+    s.db.from("users").select("id, name, role").eq("company_id", s.companyId).eq("active", true).in("role", ["owner", "team", "partner"]).then(must),
   ]);
   return { project, milestones, tasks, costs, categories, people };
 }

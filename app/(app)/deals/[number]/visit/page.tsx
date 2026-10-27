@@ -11,7 +11,7 @@ import { getChecklist, getDealByNumber, getDealFiles } from "@/server/queries/de
 
 export const metadata = { title: "Site visit" };
 
-/** What the partner needs from the visit (SALES-REP-MODE §4): ticks itself from photo tags. */
+/** What production needs from the visit: ticks itself from photo tags. */
 const REQUIRED = [
   { tag: "before", label: "Every wall, ceiling and floor", min: 4 },
   { tag: "panel", label: "Electrical panel", min: 1 },
@@ -52,7 +52,7 @@ export default async function SiteVisitPage({ params }: { params: Promise<{ numb
       </div>
 
       <section className="flex flex-col gap-3 rounded-2xl bg-card p-4 ring-1 ring-border">
-        <h2 className="font-semibold">Photos the partner needs</h2>
+        <h2 className="font-semibold">Photos production needs</h2>
         <ul className="flex flex-col gap-3">
           {REQUIRED.map((r) => {
             const n = count(r.tag);

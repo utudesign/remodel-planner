@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, FormMessage, SubmitButton } from "@/components/shared/form";
 import type { CompanySettings } from "@/lib/auth/require-role";
@@ -11,7 +12,7 @@ export function CompanyForm({ name, settings: st }: { name: string; settings: Co
   const [state, action] = useActionState(saveCompany, null);
   return (
     <form action={action} className="flex flex-col gap-5">
-      <Field label="Business name" htmlFor="name">
+      <Field label="Company name" htmlFor="name" hint="Shown in the app header, texts ({brand}) and client estimates">
         <Input id="name" name="name" defaultValue={name} required />
       </Field>
 
@@ -45,12 +46,17 @@ export function CompanyForm({ name, settings: st }: { name: string; settings: Co
       </fieldset>
 
       <fieldset className="grid grid-cols-2 gap-3">
-        <legend className="mb-2 text-sm font-semibold">My money</legend>
-        <Field label="Tax set-aside %" htmlFor="tax" hint="Income tax + ~15.3% self-employment">
-          <Input id="tax" name="tax_set_aside_pct" inputMode="decimal" defaultValue={st.taxSetAsidePct} />
+        <legend className="mb-2 text-sm font-semibold">Contractor license (printed on client estimates)</legend>
+        <Field label="License number" htmlFor="lic">
+          <Input id="lic" name="license_number" defaultValue={typeof st.raw.license_number === "string" ? st.raw.license_number : ""} />
         </Field>
-        <Field label="Mileage rate (¢/mile)" htmlFor="mile" hint="IRS 2026: 72.5¢. Check each January.">
-          <Input id="mile" name="mileage_rate_cents" inputMode="decimal" defaultValue={st.mileageRateCents} />
+        <Field label="Class" htmlFor="lic_class">
+          <NativeSelect id="lic_class" name="license_class" defaultValue={typeof st.raw.license_class === "string" ? st.raw.license_class : ""}>
+            <option value="">—</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+          </NativeSelect>
         </Field>
       </fieldset>
 

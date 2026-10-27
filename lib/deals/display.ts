@@ -50,7 +50,7 @@ export const KNOWLEDGE = [
   { value: 3, label: "Knows exactly what they want" },
 ] as const;
 
-/** Job progress the partner reports (0006 deals.job_status). */
+/** Job status of a sold deal (0006 deals.job_status). */
 export const JOB_STATUSES = [
   { key: "not_started", label: "Not signed yet" },
   { key: "signed", label: "Contract signed" },

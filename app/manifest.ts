@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Kitchen Sales",
     short_name: "Kitchen Sales",
-    description: "My kitchen and cabinet deals, from first message to commission paid.",
+    description: "RenoDesign's kitchen deals and jobs, from the first message to paid in full.",
     start_url: "/today",
     display: "standalone",
     background_color: "#f5f3ee",

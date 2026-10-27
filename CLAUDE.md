@@ -1,13 +1,16 @@
-# CLAUDE.md — Kitchen Sales Tool (Tugu's personal sales app)
+# CLAUDE.md — RenoDesign Kitchen Sales Tool (one company, first contact → paid in full)
 
-Read first, in this order (earlier wins on conflict): `docs/SALES-REP-MODE.md`, `docs/DEALS.md`,
+**Since 0015 (2026-10-27) this is RenoDesign's own tool: no hand-off, no commission.** The newest
+`docs/DECISIONS.md` entry ("One company") wins over older docs, including SALES-REP-MODE's hand-off/commission parts.
+
+Read first, in this order (earlier wins on conflict): `docs/DECISIONS.md` (0015 entry), `docs/SALES-REP-MODE.md`, `docs/DEALS.md`,
 `docs/QUICK-ESTIMATE.md` + `docs/ESTIMATING.md`, `docs/COMPLIANCE-AND-OPS.md` §0, `docs/CONTEXT.md`
 (its team/admin/crew parts are an optional contractor module: no screens now), `docs/research/`.
 The approved build plan is `docs/PLAN.md`; decisions go in `docs/DECISIONS.md`.
 If a request conflicts with the spec, flag it and propose a spec update. Never diverge silently.
 
-Roles: `owner` (Tugu, the rep), `partner` (Crystal at RenoDesign: a team member since 0013 — sees every deal,
-creates RenoDesign's own deals, estimates, jobs, KPIs; no Money/Settings/plans), `team`/`crew` unused.
+Roles: `owner` (Tugu: everything + Settings + Team invites), `team` (Crystal, Ahn, …: every deal, estimate,
+visit, job, KPI; invited from More → Team), `partner` (legacy; 0015 turned existing ones into `team`), `crew` unused.
 
 **Tested handoff code — use it, don't rewrite it:** `supabase/migrations/0002`–`0006`,
 `lib/estimating/*`, `lib/deals/dealNumber.ts`, `lib/commission/commission.ts`, `supabase/seed/*`,
@@ -40,8 +43,8 @@ Ask before adding any dependency not listed here.
 - **Migrations:** new file per change in `/supabase/migrations`, RLS policies in the same file.
   Never edit an applied migration. Ask before altering a table whose migration is applied.
 - **RLS:** every table is scoped by `company_id` via `public.current_company_id()` (Clerk `sub` →
-  `users`). Owner sees everything in the company; a partner only what 0006 grants (deals handed to
-  her company, job fields, hand-off files).
+  `users`). Owner and team see everything in the company (`is_team()`); Settings, invites and config
+  writes are owner-only (`is_owner()`).
 - **UI:** iPhone first at 375 px, 44 px tap targets, one hand. Every list has empty, loading, error and
   overdue states (overdue = red). A database refusal becomes a checklist with **Add** buttons, never a raw error.
 - **Photos are never lost:** offline queue (IndexedDB) until the `deal_files` row exists.
@@ -51,18 +54,18 @@ Ask before adding any dependency not listed here.
 
 1. Every open deal has `next_follow_up_at` (new lead = +1 h; each stage/touch resets it from the rules).
 2. Lost requires a lost reason. Deals are never hard-deleted; numbers (`26-1047`) are never reused.
-3. Hand-off requires a partner, one of that partner's plans and the `before_handoff` checklist (0006).
-4. On the rep's deals a partner updates only job progress and price (0006/0013); her own deals (`origin = 'partner'`)
-   are RenoDesign's: no commission, no hand-off. Only the owner records commission payments.
-5. No client money in this app except as reported by the partner.
-6. Commission = plan rate × (sold price + change orders), floor per plan; first payout at deposit,
-   rest at paid in full (`deal_commissions`, `lib/commission`).
+3. A deal becomes Sold only through `mark_sold()` (0015): the job-ready checklist (`before_handoff` gate key)
+   complete + a sold price. It moves the deal to the Sold stage (kind `handed_off`), starts the job timeline and
+   ticks Contract signed (+ Deposit). Sold deals have no sales follow-up; job steps take over.
+4. Revenue = sold price + change orders. Gross profit = revenue − job costs. No commission (0015).
+5. Client payments are recorded as dates on the deal (deposit, paid in full); no card processing in the app.
+6. Legacy: partner/commission tables (0006) stay for history; the app no longer reads or writes them.
 
 ## Folder structure
 
 ```
-app/(app)/today  deals  deals/new  deals/[number] (jacket)  money  more  partners  settings  pick
-app/p/…                       partner login screens
+app/(app)/today  deals  deals/new  deals/[number] (jacket)  jobs  kpis  more  team  feedback  settings  pick
+app/p/…  money  partners      old routes, redirect only
 app/api/cron  app/api/webhooks/clerk
 components/deals  components/settings  components/shared  components/ui
 lib/auth  lib/deals  lib/estimating  lib/commission  lib/validation  money.ts dates.ts workday.ts storage.ts

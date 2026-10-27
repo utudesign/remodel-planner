@@ -7,19 +7,13 @@ import { kpiForDeal, kpiTotals } from "@/lib/kpis";
 import { formatCentsWhole } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { must } from "@/server/action-utils";
-import { getCommissions, listDeals } from "@/server/queries/deals";
+import { listDeals } from "@/server/queries/deals";
 
 export const metadata = { title: "KPIs" };
 
-const WHO = [
-  { key: "all", label: "All deals" },
-  { key: "tugu", label: "From Tugu" },
-  { key: "reno", label: "RenoDesign's own" },
-] as const;
-
 /**
- * KPIs (Crystal's tab, also in my More): estimated, won, job costs, commission, profit — totals
- * and by deal. Won = has a sold price and isn't cancelled. Profit = won − job costs − my commission.
+ * KPIs: estimated, won, job costs, profit — totals and by deal, for everyone or one salesperson.
+ * Won = has a sold price and isn't cancelled. Profit = won − job costs (0015).
  */
 export default async function KpisPage({ searchParams }: { searchParams: Promise<{ who?: string; year?: string }> }) {
   const { who = "all", year: yearParam } = await searchParams;
@@ -27,13 +21,14 @@ export default async function KpisPage({ searchParams }: { searchParams: Promise
   const thisYear = Number(new Date().toISOString().slice(0, 4));
   const year = yearParam === "all" ? null : Number(yearParam) || thisYear;
 
-  const [deals, commissions, quotesRes, totalsRes, projectsRes] = await Promise.all([
+  const [deals, peopleRes, quotesRes, totalsRes, projectsRes] = await Promise.all([
     listDeals(s),
-    getCommissions(s),
+    s.db.from("users").select("id, name").eq("company_id", s.companyId).eq("active", true).in("role", ["owner", "team", "partner"]).order("created_at"),
     s.db.from("quotes").select("id, deal_id, version").eq("company_id", s.companyId),
     s.db.from("quote_totals").select("quote_id, total_price_cents").eq("company_id", s.companyId),
     s.db.from("projects").select("deal_id, costs(actual_amount)").eq("company_id", s.companyId),
   ]);
+  const people = must(peopleRes);
   const totalOf = new Map(must(totalsRes).map((t) => [t.quote_id, Number(t.total_price_cents)]));
   const latest = new Map<string, { version: number; cents: number }>();
   for (const q of must(quotesRes)) {
@@ -44,13 +39,12 @@ export default async function KpisPage({ searchParams }: { searchParams: Promise
   const costsOf = new Map(must(projectsRes).map((p) => [p.deal_id, (p.costs ?? []).map((c) => c.actual_amount)]));
 
   const scoped = deals
-    .filter((d) => (who === "tugu" ? d.origin !== "partner" : who === "reno" ? d.origin === "partner" : true))
+    .filter((d) => who === "all" || d.owner_id === who)
     .filter((d) => !year || (d.created_at ?? "").startsWith(String(year)));
   const rows = scoped.map((d) => ({
     d,
     k: kpiForDeal({
       id: d.id,
-      origin: d.origin,
       created_at: d.created_at,
       sold_price_cents: d.sold_price_cents,
       change_orders_cents: d.change_orders_cents,
@@ -58,7 +52,6 @@ export default async function KpisPage({ searchParams }: { searchParams: Promise
       cancelled_at: d.cancelled_at,
       latestQuoteCents: latest.get(d.id)?.cents ?? null,
       costCents: costsOf.get(d.id) ?? [],
-      commissionExpectedCents: commissions.get(d.id)?.expected_cents ?? null,
     }),
   }));
   const tot = kpiTotals(rows.map((r) => r.k));
@@ -76,9 +69,12 @@ export default async function KpisPage({ searchParams }: { searchParams: Promise
       <PageHeader title="KPIs" description="Estimated, won, job costs and profit. Won = sold price set, not cancelled." />
 
       <div className="mb-4 flex flex-wrap gap-1.5">
-        {WHO.map((w) => (
-          <Link key={w.key} href={q({ who: w.key })} className={chip(who === w.key)}>
-            {w.label}
+        <Link href={q({ who: "all" })} className={chip(who === "all")}>
+          Everyone
+        </Link>
+        {people.map((p) => (
+          <Link key={p.id} href={q({ who: p.id })} className={chip(who === p.id)}>
+            {p.name || "No name"}
           </Link>
         ))}
         <span className="mx-1 w-px self-stretch bg-border" />
@@ -96,7 +92,6 @@ export default async function KpisPage({ searchParams }: { searchParams: Promise
         <Tile label="Estimated" value={formatCentsWhole(tot.estimatedCents)} hint={`${tot.estimated} estimates`} />
         <Tile label="Won" value={formatCentsWhole(tot.wonCents)} hint={`${tot.won} deals · win rate ${pct(tot.winRate)}`} />
         <Tile label="Job costs" value={formatCentsWhole(tot.costCents)} />
-        <Tile label="Commission (Tugu)" value={formatCentsWhole(tot.commissionCents)} />
         <Tile label="Profit" value={formatCentsWhole(tot.profitCents)} hint={`${pct(tot.margin)} margin`} dark />
         <Tile label="Avg won deal" value={tot.avgWonCents ? formatCentsWhole(tot.avgWonCents) : "—"} />
       </div>
@@ -114,7 +109,6 @@ export default async function KpisPage({ searchParams }: { searchParams: Promise
                     #{d.deal_number} {d.contact?.name || d.title || "No name"}
                   </span>
                   <ScopeBadge scope={d.scope} />
-                  {d.origin === "partner" ? <span className="rounded-full bg-secondary px-1.5 text-[11px] font-bold">RenoDesign</span> : null}
                   <span className="ml-auto shrink-0 text-xs text-muted-foreground">{k.won ? jobStatusLabel(d.job_status) : "Not won yet"}</span>
                 </span>
                 <span className="grid grid-cols-4 gap-2 text-xs">

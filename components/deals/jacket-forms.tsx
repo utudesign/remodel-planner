@@ -154,7 +154,7 @@ export function QualifyForm({ dealId, v }: { dealId: string; v: QualifyValues })
             <option value="no">Renter</option>
           </NativeSelect>
         </Field>
-        <Field label="Year built" htmlFor="q_year" hint="Before 1978 = lead-safe rules for the partner">
+        <Field label="Year built" htmlFor="q_year" hint="Before 1978 = lead-safe (RRP) work rules">
           <Input id="q_year" name="year_built" inputMode="numeric" defaultValue={v.year_built ?? ""} placeholder="1994" />
         </Field>
         <Field label="How much do they know?" htmlFor="q_know">

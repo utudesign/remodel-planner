@@ -100,7 +100,7 @@ export function VisitForm({
           </label>
         </div>
         {yb && yb < 1978 ? (
-          <p className="rounded-xl bg-warning/15 p-3 text-sm font-medium">Built before 1978: tell the partner (lead-safe work rules).</p>
+          <p className="rounded-xl bg-warning/15 p-3 text-sm font-medium">Built before 1978: lead-safe (RRP) work rules apply. Tell the install crew.</p>
         ) : null}
       </section>
 

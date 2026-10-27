@@ -9,9 +9,9 @@ import { maybe } from "@/server/action-utils";
 import { getDealByNumber, getDealFiles } from "@/server/queries/deals";
 import { listQuotes } from "@/server/queries/estimates";
 
-export const metadata = { title: "Hand-off packet" };
+export const metadata = { title: "Job packet" };
 
-/** The hand-off packet as one printable page: customer, scope, budget, notes, measurements, estimate, photos. */
+/** The job packet as one printable page: customer, scope, budget, notes, measurements, estimate, photos. */
 export default async function Packet({ params }: { params: Promise<{ number: string }> }) {
   const { number } = await params;
   const s = await requireStaff();
@@ -43,7 +43,7 @@ export default async function Packet({ params }: { params: Promise<{ number: str
     <main className="mx-auto flex max-w-3xl flex-col gap-6 p-6 text-[13px] leading-relaxed print:p-0">
       <header className="flex items-start justify-between border-b pb-3">
         <div>
-          <p className="text-xs font-semibold tracking-wide uppercase">Hand-off packet</p>
+          <p className="text-xs font-semibold tracking-wide uppercase">Job packet</p>
           <h1 className="text-2xl font-bold">
             #{deal.deal_number} {c?.name ?? ""} · {scopeInfo(deal.scope)?.label ?? "Kitchen"}
           </h1>

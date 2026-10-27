@@ -3,7 +3,7 @@ import { formatCentsWhole } from "@/lib/money";
 import { scopeInfo, sourceLabel, jobStatusLabel } from "@/lib/deals/display";
 import { nextStep, type StageKind } from "@/lib/deals/segments";
 import { cn } from "@/lib/utils";
-import type { CommissionRow, DealRow } from "@/server/queries/deals";
+import type { DealRow } from "@/server/queries/deals";
 
 export function ScopeBadge({ scope, className }: { scope: string | null; className?: string }) {
   const info = scopeInfo(scope);
@@ -13,24 +13,21 @@ export function ScopeBadge({ scope, className }: { scope: string | null; classNa
   );
 }
 
-/** One deal on the list: #26-1047, name, scope badge, value, next step, commission when known. */
+/** One deal on the list: #26-1047, name, scope badge, value, next step, who's on it. */
 export function DealCard({
   deal: d,
   stageKind,
-  commission,
-  previewCents,
+  ownerName,
   now,
 }: {
   deal: DealRow;
   stageKind: StageKind | undefined;
-  commission?: CommissionRow;
-  /** "pays you $X" before a plan is attached (from the matching default plan). */
-  previewCents?: number | null;
+  /** First name of the person working the deal. */
+  ownerName?: string | null;
   now: Date;
 }) {
-  const step = nextStep({ ...d, stageKind, owedCents: commission?.owed_cents }, now);
+  const step = nextStep({ ...d, stageKind }, now);
   const value = d.sold_price_cents ? d.sold_price_cents + d.change_orders_cents : d.estimated_value_cents;
-  const pays = d.origin === "partner" ? null : commission ? commission.expected_cents : (previewCents ?? null);
   const name = d.contact?.name || d.title || "No name yet";
   return (
     <Link
@@ -47,7 +44,6 @@ export function DealCard({
       <p className="mt-0.5 truncate text-base font-semibold">{name}</p>
       <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted-foreground">
         <ScopeBadge scope={d.scope} />
-        {d.origin === "partner" ? <span className="rounded-full bg-secondary px-1.5 text-[11px] font-bold text-foreground">RenoDesign</span> : null}
         {stageKind === "handed_off" ? (
           <span>{jobStatusLabel(d.job_status)}</span>
         ) : (
@@ -61,11 +57,7 @@ export function DealCard({
         <span className={cn("font-semibold", step.urgent ? "text-destructive" : "text-muted-foreground")}>
           {step.label}
         </span>
-        {pays ? (
-          <span className="font-semibold text-primary tabular-nums">
-            {commission ? "Pays you" : "Could pay"} {formatCentsWhole(pays)}
-          </span>
-        ) : null}
+        {ownerName ? <span className="shrink-0 text-muted-foreground">{ownerName}</span> : null}
       </div>
     </Link>
   );

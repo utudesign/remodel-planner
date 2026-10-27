@@ -5,16 +5,19 @@ import { todayIn } from "@/lib/dates";
 import { jobMoney } from "@/lib/jobs";
 import { formatCentsWhole } from "@/lib/money";
 import { cn } from "@/lib/utils";
-import { getCommissions } from "@/server/queries/deals";
+import { SaleForm } from "@/components/jobs/sale-forms";
 import { getJob } from "@/server/queries/jobs";
 
-/** Deal → Job tab: timeline (milestones), tasks, costs and the job's profit. */
+/** Deal → Job tab once sold: money, sale + payments, timeline (milestones), tasks, costs. */
 export async function JobTab({ dealId }: { dealId: string; number: string }) {
   const s = await requireStaff();
-  const [job, commissions, dealRes] = await Promise.all([
+  const [job, dealRes] = await Promise.all([
     getJob(s, dealId),
-    getCommissions(s),
-    s.db.from("deals").select("sold_price_cents, change_orders_cents, origin").eq("id", dealId).single(),
+    s.db
+      .from("deals")
+      .select("job_status, sold_price_cents, change_orders_cents, deposit_received_at, paid_in_full_at, job_completed_at, partner_note")
+      .eq("id", dealId)
+      .single(),
   ]);
   const deal = dealRes.data;
   if (!job) {
@@ -34,24 +37,21 @@ export async function JobTab({ dealId }: { dealId: string; number: string }) {
     );
   }
   const today = todayIn(s.timezone);
-  const c = commissions.get(dealId);
   const money = jobMoney({
     soldCents: deal?.sold_price_cents ?? null,
     changeOrdersCents: deal?.change_orders_cents ?? 0,
     costs: job.costs.map((x) => x.actual_amount),
-    commissionCents: deal?.origin === "partner" ? 0 : (c?.expected_cents ?? 0),
   });
   const done = job.milestones.filter((m) => m.done_on).length;
   const total = job.milestones.length;
-  const people = job.people.map((p) => ({ id: p.id, name: p.name ?? (p.role === "owner" ? "Tugu" : "Partner") }));
+  const people = job.people.map((p) => ({ id: p.id, name: p.name ?? "No name" }));
   const nameOf = new Map(people.map((p) => [p.id, p.name]));
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-3 rounded-2xl bg-card p-4 ring-1 ring-border sm:grid-cols-4">
-        <Money label="Contract" value={money.revenueCents} hint={money.revenueCents ? "sold + change orders" : "set it on the Partner tab"} />
+      <div className="grid grid-cols-3 gap-3 rounded-2xl bg-card p-4 ring-1 ring-border">
+        <Money label="Contract" value={money.revenueCents} hint={money.revenueCents ? "sold + change orders" : "set it below"} />
         <Money label="Job costs" value={money.costCents} />
-        <Money label={deal?.origin === "partner" ? "Commission" : "Tugu's commission"} value={money.commissionCents} />
         <Money
           label="Profit"
           value={money.profitCents}
@@ -76,11 +76,23 @@ export async function JobTab({ dealId }: { dealId: string; number: string }) {
             today={today}
           />
           <p className="text-xs text-muted-foreground">
-            Ticking Contract signed, Deposit, Cabinets ordered, Install, Walkthrough or Paid in full also updates the deal (and
-            the commission).
+            Ticking Contract signed, Deposit, Cabinets ordered, Demo, Install, Walkthrough or Paid in full also updates the
+            sale below, the Deals list and the KPIs.
           </p>
         </CardContent>
       </Card>
+
+      {deal ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Sale + payments</CardTitle>
+            <CardDescription>What the client signed, change orders, and when the money came in.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SaleForm dealId={dealId} v={deal} tz={s.timezone} />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>

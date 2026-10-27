@@ -88,14 +88,14 @@ export const getSession = cache(async (): Promise<Session> => {
   let member = await loadMember(db, clerkUserId);
   if (!member) {
     const u = await currentUser();
-    const { acceptPartnerInvite, bootstrapOwner } = await import("@/server/onboarding");
+    const { acceptTeamInvite, bootstrapOwner } = await import("@/server/onboarding");
     const who = {
       clerkUserId,
       name: [u?.firstName, u?.lastName].filter(Boolean).join(" ") || u?.username || "",
       email: u?.primaryEmailAddress?.emailAddress ?? "",
     };
-    // An invited partner (Crystal) gets her partner login; anyone else may open a rep account.
-    if (!(await acceptPartnerInvite(who))) {
+    // An invited teammate (Crystal, Ahn) gets a team login; anyone else may open an account.
+    if (!(await acceptTeamInvite(who))) {
       const r = await bootstrapOwner(who);
       if (!r.ok) redirect(`/no-access?reason=${encodeURIComponent(r.reason)}`);
     }
@@ -127,19 +127,20 @@ export async function requireRole(...roles: Role[]): Promise<Session> {
   return session;
 }
 
-/** The rep's own pages (money, settings, partners/plans): Crystal goes to Today. */
+/** Owner-only pages (Settings, Team): everyone else goes to Today. */
 export async function requireOwner(): Promise<Session> {
   const session = await getSession();
-  if (session.role === "partner") redirect("/today");
+  if (session.role === "team" || session.role === "partner") redirect("/today");
   if (session.role !== "owner") redirect("/no-access");
   return session;
 }
 
-/** Shared work pages (Today, deals, estimates, visits, jobs, KPIs): the rep and the partner (0013). */
+/** Work pages (Today, deals, estimates, visits, jobs, KPIs): the whole team (0015). */
 export async function requireStaff(): Promise<Session> {
   const session = await getSession();
-  if (session.role !== "owner" && session.role !== "partner") redirect("/no-access");
+  if (!isStaff(session.role)) redirect("/no-access");
   return session;
 }
 
-export const isPartner = (s: Pick<Session, "role">) => s.role === "partner";
+export const STAFF_ROLES = ["owner", "team", "partner"] as const;
+export const isStaff = (role: Role) => (STAFF_ROLES as readonly string[]).includes(role);

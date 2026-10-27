@@ -3,8 +3,8 @@ import { TAB_ITEMS } from "@/lib/nav";
 import { defaultPlanFor, previewFor, type PlanRow } from "@/lib/deals/plans";
 
 describe("nav", () => {
-  it("phone tabs: Today · Deals · Money · More", () => {
-    expect(TAB_ITEMS.map((i) => i.label)).toEqual(["Today", "Deals", "Money", "More"]);
+  it("phone tabs: Today · Deals · Jobs · KPIs · More", () => {
+    expect(TAB_ITEMS.map((i) => i.label)).toEqual(["Today", "Deals", "Jobs", "KPIs", "More"]);
   });
 });
 

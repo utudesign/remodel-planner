@@ -5,7 +5,7 @@ import { BottomNav, SidebarNav } from "@/components/shared/nav";
 import { Fab } from "@/components/shared/fab";
 import { PhotoQueueRunner } from "@/components/photos/photo-queue-runner";
 import { tabsFor } from "@/lib/nav";
-import { getSession } from "@/lib/auth/require-role";
+import { getSession, isStaff } from "@/lib/auth/require-role";
 
 function BellLink({ count }: { count: number }) {
   return (
@@ -24,7 +24,7 @@ function BellLink({ count }: { count: number }) {
   );
 }
 
-/** App shell for me and for Crystal (partner): her tabs swap Money for Jobs + KPIs. */
+/** App shell: the same five tabs for the whole RenoDesign team (0015). */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const s = await getSession();
   const { count } = await s.db
@@ -38,11 +38,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <aside className="sticky top-0 hidden h-dvh flex-col gap-6 border-r bg-card px-3 py-5 lg:flex">
         <div className="flex items-center justify-between px-3">
           <Link href="/today" className="truncate text-base font-semibold tracking-tight">
-            {s.role === "partner" ? "RenoDesign" : "Kitchen Sales"}
+            {s.companyName || "RenoDesign"}
           </Link>
           <BellLink count={unread} />
         </div>
-        <SidebarNav items={tabsFor(s.role)} />
+        <SidebarNav items={tabsFor()} />
         <div className="mt-auto flex items-center gap-2 px-3 text-sm">
           <UserButton />
           <p className="truncate font-medium">{s.name || "You"}</p>
@@ -51,7 +51,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex min-w-0 flex-col">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b bg-card/95 px-4 backdrop-blur lg:hidden">
           <Link href="/today" className="truncate font-semibold tracking-tight">
-            Kitchen Sales
+            {s.companyName || "RenoDesign"}
           </Link>
           <div className="flex items-center gap-1">
             <BellLink count={unread} />
@@ -60,9 +60,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </header>
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-5 pb-40 lg:px-8 lg:pt-8 lg:pb-12">{children}</main>
       </div>
-      {s.role === "owner" || s.role === "partner" ? <Fab partner={s.role === "partner"} /> : null}
-      {s.role === "owner" || s.role === "partner" ? <PhotoQueueRunner /> : null}
-      <BottomNav items={tabsFor(s.role)} />
+      {isStaff(s.role) ? <Fab /> : null}
+      {isStaff(s.role) ? <PhotoQueueRunner /> : null}
+      <BottomNav items={tabsFor()} />
     </div>
   );
 }

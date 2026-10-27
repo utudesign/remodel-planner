@@ -6,7 +6,7 @@ import { requireRole } from "@/lib/auth/require-role";
 import { companySchema, followUpRulesSchema, lookupRowsSchema, slugify, textTemplateSchema } from "@/lib/validation/settings";
 import { formToObject, must, ok, run, type ActionState } from "@/server/action-utils";
 
-/** Stages the app's logic relies on (new lead, booking, visit done, hand-off, lost). */
+/** Stages the app's logic relies on (new lead, booking, visit done, contract + deposit, sold, lost). */
 const SYSTEM_STAGES = ["new", "visit_booked", "visit_done", "ready", "handed_off", "lost"];
 
 function done(path: string, message = "Saved"): ActionState {
@@ -70,8 +70,8 @@ export async function saveCompany(_: ActionState, fd: FormData): Promise<ActionS
     const s = await requireRole("owner");
     const settings = {
       ...s.settings.raw,
-      tax_set_aside_pct: v.tax_set_aside_pct,
-      mileage_rate_cents: v.mileage_rate_cents,
+      license_number: v.license_number || null,
+      license_class: v.license_class || null,
       workday: { ...s.settings.workday, start: v.workday_start, end: v.workday_end },
       digest_time: v.workday_end,
       booking: {

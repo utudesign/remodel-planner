@@ -8,7 +8,7 @@ export const metadata = { title: "New deal" };
 export default async function NewDealPage({ searchParams }: { searchParams: Promise<{ paste?: string; call?: string }> }) {
   const { paste, call } = await searchParams;
   const s = await requireStaff();
-  // Where a deal can start: open stages up to the estimate (hand-off has its own checklist).
+  // Where a deal can start: open stages up to the estimate (Sold comes from Mark sold).
   const stages = (await getStages(s))
     .filter((x) => x.kind === "open" && x.active && x.key !== "ready")
     .map((x) => ({ key: x.key, label: x.label }));

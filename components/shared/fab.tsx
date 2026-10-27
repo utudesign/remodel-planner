@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Calculator, Camera, Car, ClipboardPaste, PhoneCall, PhoneMissed, Plus, Receipt, UserPlus, X } from "lucide-react";
+import { Calculator, Camera, ClipboardPaste, PhoneCall, PhoneMissed, Plus, UserPlus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** Floating + : New deal · Paste a message · Quick estimate · Take photos · Log call · Add expense · Log trip. */
+/** Floating + : New deal · Paste a message · Missed call · Quick estimate · Take photos · Log call. */
 const ACTIONS = [
   { href: "/deals/new", label: "New deal", icon: UserPlus },
   { href: "/deals/new?paste=1", label: "Paste a message", icon: ClipboardPaste },
@@ -14,11 +14,9 @@ const ACTIONS = [
   { href: "/pick?for=estimate", label: "Quick estimate", icon: Calculator },
   { href: "/pick?for=photos", label: "Take photos", icon: Camera },
   { href: "/pick?for=log", label: "Log call", icon: PhoneCall },
-  { href: "/money/expenses/new", label: "Add expense", icon: Receipt },
-  { href: "/money/mileage/new", label: "Log trip", icon: Car },
 ] as const;
 
-export function Fab({ partner = false }: { partner?: boolean }) {
+export function Fab() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   if (pathname.includes("/estimate/") || pathname.includes("/visit")) return null; // those screens have their own bottom bar
@@ -28,7 +26,7 @@ export function Fab({ partner = false }: { partner?: boolean }) {
         <>
           <button aria-label="Close" className="fixed inset-0 -z-10 bg-black/30" onClick={() => setOpen(false)} />
           <ul className="mb-3 flex flex-col items-end gap-2">
-            {ACTIONS.filter((a) => !partner || !a.href.startsWith("/money")).map((a) => (
+            {ACTIONS.map((a) => (
               <li key={a.href}>
                 <Link
                   href={a.href}

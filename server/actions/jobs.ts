@@ -9,7 +9,7 @@ import { localToUtc, todayIn } from "@/lib/dates";
 import { must, ok, run, type ActionState } from "@/server/action-utils";
 
 /** Jobs (0013): the rep and Crystal both work them. */
-const staff = () => requireRole("owner", "partner");
+const staff = () => requireRole("owner", "team", "partner");
 const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "pick a date");
 
 async function dealOfProject(s: Session, projectId: string) {
@@ -45,7 +45,7 @@ export async function startJob(input: { deal_id: string }): Promise<ActionState>
 /**
  * Plan or tick a milestone. Ticking the ones that mean something to the deal (signed, deposit,
  * ordered, installing, walkthrough, paid in full) also updates the deal's job fields, which
- * drive the commission (0006).
+ * drive its status, Today and the KPIs.
  */
 export async function setMilestone(input: { id: string; planned_on?: string | null; done?: boolean }): Promise<ActionState> {
   return run(async () => {

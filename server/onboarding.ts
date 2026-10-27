@@ -52,10 +52,10 @@ export async function importTimberPeak(companyId: string) {
   if (error) throw new Error(`Price list import failed: ${error.message}`);
 }
 
-/** Invited partner signing in for the first time: creates her partner login. */
-export async function acceptPartnerInvite(input: { clerkUserId: string; name: string; email: string }): Promise<boolean> {
+/** Invited teammate (More → Team) signing in for the first time: creates their team login (0015). */
+export async function acceptTeamInvite(input: { clerkUserId: string; name: string; email: string }): Promise<boolean> {
   if (!input.email) return false;
-  const { data, error } = await createAdminSupabase().rpc("accept_partner_invite", {
+  const { data, error } = await createAdminSupabase().rpc("accept_team_invite", {
     p_clerk_user_id: input.clerkUserId,
     p_email: input.email,
     p_name: input.name,

@@ -17,10 +17,7 @@ import { PhotoCapture } from "@/components/photos/photo-capture";
 import { AutoReplyCard } from "@/components/deals/auto-reply-card";
 import { QuickTexts } from "@/components/deals/quick-texts";
 import { JobTab } from "@/components/jobs/job-tab";
-import { HandoffForm, JobForm, PacketButtons } from "@/components/handoff/handoff-panel";
-import { dealFileName } from "@/lib/deals/dealNumber";
-import { lastName, scopeInfo } from "@/lib/deals/display";
-import type { CommissionRow, DealDetail } from "@/server/queries/deals";
+import { MarkSoldForm } from "@/components/jobs/sale-forms";
 import { NewEstimateForm } from "@/components/estimates/builder";
 import { getTemplates, listQuotes } from "@/server/queries/estimates";
 import { CopyButton } from "@/components/shared/copy-button";
@@ -37,24 +34,21 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/states";
 import { requireStaff } from "@/lib/auth/require-role";
-import { formatDateTime, utcToDatetimeLocal } from "@/lib/dates";
+import { formatDateTime, todayIn, utcToDatetimeLocal } from "@/lib/dates";
 import { DEAL_FOLDERS, type DealFolder } from "@/lib/deals/dealNumber";
 import { FOLDER_LABELS, PHOTO_TAGS, sourceLabel, timelineLabel } from "@/lib/deals/display";
-import { defaultPlanFor, previewFor, type PlanRow } from "@/lib/deals/plans";
 import { leadScore, nextStep } from "@/lib/deals/segments";
-import { formatBudget, formatCents, formatCentsWhole } from "@/lib/money";
+import { formatBudget, formatCentsWhole } from "@/lib/money";
 import { signedUrls } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import {
   getActivities,
   getChecklist,
-  getCommissions,
   getDealByNumber,
   getDealFiles,
   getIntake,
   getLostReasons,
   getMeetings,
-  getPartnersWithPlans,
   getSharedQuoteToken,
   getStages,
   getTextSends,
@@ -67,7 +61,6 @@ const TABS = [
   { key: "estimate", label: "Estimate" },
   { key: "photos", label: "Photos" },
   { key: "files", label: "Files" },
-  { key: "partner", label: "Partner" },
   { key: "job", label: "Job" },
   { key: "activity", label: "Activity" },
 ] as const;
@@ -94,11 +87,9 @@ export default async function DealJacket({
   const s = await requireStaff();
   const deal = await getDealByNumber(s, decodeURIComponent(number).replace(/^#/, ""));
   if (!deal) notFound();
-  // A job exists after the hand-off, or once RenoDesign's own deal is signed (0013).
-  const jobPossible = !!deal.handed_off_at || (deal.origin === "partner" && deal.job_status !== "not_started");
-  const tabs = TABS.filter((t) => t.key !== "job" || jobPossible).map((t) =>
-    t.key === "partner" && s.role === "partner" ? { ...t, label: deal.origin === "partner" ? "Sale" : "Hand-off" } : t,
-  );
+  // Sold = marked sold (0015), or an older hand-off / signed partner deal.
+  const sold = !!deal.sold_at || !!deal.handed_off_at || (deal.origin === "partner" && deal.job_status !== "not_started");
+  const tabs = [...TABS];
   const tab: Tab = tabs.find((t) => t.key === tabParam)?.key ?? "overview";
 
   const [
@@ -106,8 +97,7 @@ export default async function DealJacket({
     reasons,
     files,
     checklist,
-    commissions,
-    partners,
+    ownerRes,
     templates,
     sends,
     meetings,
@@ -118,8 +108,9 @@ export default async function DealJacket({
     getLostReasons(s),
     getDealFiles(s, deal.id),
     getChecklist(s, deal.id, "before_handoff"),
-    getCommissions(s),
-    getPartnersWithPlans(s),
+    deal.owner_id
+      ? s.db.from("users").select("name").eq("id", deal.owner_id).maybeSingle()
+      : Promise.resolve({ data: null }),
     getTextTemplates(s),
     getTextSends(s, deal.id, deal.stage_entered_at),
     getMeetings(s, deal.id),
@@ -127,19 +118,12 @@ export default async function DealJacket({
     getIntake(s, deal.id),
   ]);
   const stage = stages.find((x) => x.key === deal.stage);
-  const commission = commissions.get(deal.id);
   const now = new Date();
-  const step = nextStep(
-    { ...deal, stageKind: stage?.kind, owedCents: commission?.owed_cents },
-    now,
-  );
-  const plans = partners.flatMap((p) => (p.active ? (p.plans as PlanRow[]) : []));
+  const step = nextStep({ ...deal, stageKind: stage?.kind }, now);
+  const ownerName = ownerRes.data?.name ?? null;
   const value = deal.sold_price_cents
     ? deal.sold_price_cents + deal.change_orders_cents
     : deal.estimated_value_cents;
-  const pays =
-    commission?.expected_cents ??
-    previewFor(defaultPlanFor(plans, deal.scope), deal.estimated_value_cents);
   const c = deal.contact;
   const phone = telHref(c?.phone);
   const address = addressForMaps(c?.address, c?.city, c?.zip);
@@ -150,8 +134,6 @@ export default async function DealJacket({
   const needsReply = deal.stage === "new" && !deal.first_response_at;
 
   // Ready-made texts (Settings → Texts): the next unsent one for this stage first.
-  const partner =
-    partners.find((p) => p.id === deal.partner_id) ?? partners.find((p) => p.active) ?? null;
   const nextVisit = meetings
     .filter(
       (m) =>
@@ -162,8 +144,8 @@ export default async function DealJacket({
   const vars = buildTextVars({
     customerName: c?.name,
     myName: s.name,
-    partnerName: partner?.name,
-    partnerContact: partner?.contact_name,
+    partnerName: s.companyName,
+    partnerContact: s.name,
     nextVisitAt: nextVisit?.starts_at,
     estimateLink: quoteToken ? `${appBase}/q/${quoteToken}` : null,
     bookingLink,
@@ -225,9 +207,6 @@ export default async function DealJacket({
             {c?.name || deal.title || "No name yet"}
           </h1>
           <ScopeBadge scope={deal.scope} />
-          {deal.origin === "partner" ? (
-            <span className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-bold">RenoDesign</span>
-          ) : null}
         </div>
         {address ? <p className="truncate text-sm text-muted-foreground">{address}</p> : null}
 
@@ -316,15 +295,7 @@ export default async function DealJacket({
                 label={deal.sold_price_cents ? "Sold price" : "Value"}
                 value={value ? formatCentsWhole(value) : "—"}
               />
-              {deal.origin === "partner" ? (
-                <Stat label="Deal" value="RenoDesign" tone="text-primary" small hint="no commission" />
-              ) : (
-                <Stat
-                  label={s.role === "partner" ? "Tugu's commission" : commission ? "Pays you" : "Could pay you"}
-                  value={pays ? formatCents(pays) : "—"}
-                  tone="text-primary"
-                />
-              )}
+              <Stat label="Working it" value={ownerName ?? "—"} small hint={sourceLabel(deal.source)} />
               <Stat
                 label="Next step"
                 value={step.label}
@@ -339,8 +310,8 @@ export default async function DealJacket({
               />
             </div>
 
-            {stage?.kind !== "lost" && stage?.kind !== "handed_off" && deal.origin !== "partner" && s.role === "owner" ? (
-              <HandoffCard
+            {stage?.kind !== "lost" && !sold ? (
+              <JobReadyCard
                 number={deal.deal_number}
                 items={checklist}
                 left={requiredLeft}
@@ -468,28 +439,16 @@ export default async function DealJacket({
           <FilesTab dealId={deal.id} files={files} checklist={checklist} companyId={s.companyId} />
         ) : null}
 
-        {tab === "partner" ? (
-          <PartnerTab
-            deal={deal}
+        {tab === "job" && sold ? <JobTab dealId={deal.id} number={deal.deal_number} /> : null}
+        {tab === "job" && !sold ? (
+          <MarkSoldTab
+            dealId={deal.id}
+            number={deal.deal_number}
             checklist={checklist}
-            commission={commission ?? null}
-            partners={partners.map((p) => ({
-              id: p.id,
-              name: p.name,
-              phone: p.phone,
-              active: p.active,
-              plans: (p.plans as PlanRow[])
-                .filter((pl) => pl.active)
-                .map((pl) => ({ id: pl.id, name: pl.name, preview: previewFor(pl, value) })),
-            }))}
-            defaultPlanId={defaultPlanFor(plans, deal.scope)?.id ?? null}
-            tz={s.timezone}
-            photos={photos}
-            companyId={s.companyId}
+            lost={stage?.kind === "lost"}
+            today={todayIn(s.timezone)}
           />
         ) : null}
-
-        {tab === "job" ? <JobTab dealId={deal.id} number={deal.deal_number} /> : null}
 
         {tab === "activity" ? <ActivityTab dealId={deal.id} tz={s.timezone} /> : null}
       </div>
@@ -521,7 +480,9 @@ function Stat({
   );
 }
 
-function HandoffCard({
+/** Overview: the job-ready checklist (what production needs before Mark sold). */
+function JobReadyCard({
+  number,
   items,
   left,
   total,
@@ -536,17 +497,84 @@ function HandoffCard({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Hand-off checklist</CardTitle>
+        <CardTitle>Job-ready checklist</CardTitle>
         <span
           className={cn("text-sm font-semibold", left ? "text-muted-foreground" : "text-primary")}
         >
           {total - left} of {total}
         </span>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-col gap-3">
         <Checklist items={items} dealId={dealId} />
+        {!left ? (
+          <Link
+            href={`/deals/${number}?tab=job`}
+            className="flex h-11 items-center justify-center rounded-xl bg-accent text-sm font-semibold text-accent-foreground"
+          >
+            Ready: Mark sold on the Job tab
+          </Link>
+        ) : null}
       </CardContent>
     </Card>
+  );
+}
+
+/** Job tab before the sale: the checklist + Mark sold (price, contract date, deposit). */
+async function MarkSoldTab({
+  dealId,
+  number,
+  checklist,
+  lost,
+  today,
+}: {
+  dealId: string;
+  number: string;
+  checklist: ChecklistItem[];
+  lost: boolean;
+  today: string;
+}) {
+  const s = await requireStaff();
+  const [quote] = await listQuotes(s, dealId);
+  const left = checklist.filter((i) => i.required && !i.satisfied).length;
+  if (lost) {
+    return (
+      <EmptyState
+        title="This deal is lost"
+        description="Move it back to an open stage on the Overview tab to sell it again."
+      />
+    );
+  }
+  return (
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Job-ready checklist</CardTitle>
+          <span className={cn("text-sm font-semibold", left ? "text-destructive" : "text-primary")}>
+            {left ? `${left} missing` : "Ready"}
+          </span>
+        </CardHeader>
+        <CardContent>
+          <Checklist items={checklist} dealId={dealId} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Mark sold</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <MarkSoldForm
+            dealId={dealId}
+            defaultPriceCents={quote?.totals?.total_price_cents ?? null}
+            today={today}
+            ready={!left}
+          />
+        </CardContent>
+      </Card>
+      <p className="px-1 text-xs text-muted-foreground">
+        Mark sold once the contract is signed. It moves #{number} to Sold, starts the job timeline and ticks Contract
+        signed (and Deposit received if you enter a date).
+      </p>
+    </>
   );
 }
 
@@ -645,12 +673,6 @@ async function Visits({
           className="flex h-12 items-center justify-center rounded-xl bg-primary font-semibold text-primary-foreground"
         >
           Open the site visit form
-        </Link>
-        <Link
-          href={`/money/mileage/new?deal=${number}`}
-          className="flex h-11 items-center justify-center rounded-xl bg-secondary text-sm font-semibold"
-        >
-          Log the drive (mileage)
         </Link>
         <div className="flex items-center justify-between gap-2 rounded-xl bg-secondary p-3">
           <p className="min-w-0 text-sm">
@@ -755,7 +777,7 @@ async function FilesTab({
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Hand-off checklist</CardTitle>
+          <CardTitle>Job-ready checklist</CardTitle>
         </CardHeader>
         <CardContent>
           <Checklist items={checklist} dealId={dealId} />
@@ -893,221 +915,6 @@ async function EstimateTab({ dealId, number }: { dealId: string; number: string 
         </CardHeader>
         <CardContent>
           <NewEstimateForm dealId={dealId} templates={templates} />
-        </CardContent>
-      </Card>
-    </>
-  );
-}
-
-async function PartnerTab({
-  deal,
-  checklist,
-  commission,
-  partners,
-  defaultPlanId,
-  tz,
-  photos,
-  companyId,
-}: {
-  deal: DealDetail;
-  checklist: ChecklistItem[];
-  commission: CommissionRow | null;
-  partners: {
-    id: string;
-    name: string;
-    phone: string | null;
-    active: boolean;
-    plans: { id: string; name: string; preview: number | null }[];
-  }[];
-  defaultPlanId: string | null;
-  tz: string;
-  photos: Awaited<ReturnType<typeof getDealFiles>>;
-  companyId: string;
-}) {
-  const s = await requireStaff();
-  const partner =
-    partners.find((p) => p.id === deal.partner_id) ?? partners.find((p) => p.active) ?? null;
-  const base = await appUrl();
-  const c = deal.contact;
-  const [quote] = await listQuotes(s, deal.id);
-  const urls = await signedUrls(
-    photos.map((f) => f.storage_path),
-    companyId,
-  );
-  const summary = [
-    `#${deal.deal_number} ${c?.name ?? ""} — ${scopeInfo(deal.scope)?.label ?? "Kitchen"}`,
-    [c?.phone, [c?.address, c?.city].filter(Boolean).join(", ")].filter(Boolean).join(" · "),
-    deal.budget_min_cents || deal.budget_max_cents
-      ? `Budget ${formatBudget(deal.budget_min_cents, deal.budget_max_cents)}`
-      : "",
-    quote?.totals
-      ? `My estimate ${quote.doc_number ?? ""} ${formatCentsWhole(quote.totals.total_price_cents)}`
-      : "",
-    deal.year_built ? `Built ${deal.year_built}${deal.year_built < 1978 ? " (pre-1978)" : ""}` : "",
-    deal.notes ? `Notes: ${deal.notes.slice(0, 300)}` : "",
-    `Photos + measurements: ${base}/p/${deal.deal_number}`,
-  ]
-    .filter(Boolean)
-    .join("\n");
-  const timeline = (await getActivities(s, deal.id)).filter((a) =>
-    /^(Handed off|Job update)/.test(a.summary),
-  );
-
-  const isPartnerUser = s.role === "partner";
-  if (deal.origin === "partner") {
-    return (
-      <>
-        <p className="rounded-2xl bg-secondary p-4 text-sm">
-          <span className="font-semibold">RenoDesign&apos;s own deal.</span> No hand-off and no
-          commission. Mark the contract signed below and it becomes a job (Job tab).
-        </p>
-        <Card>
-          <CardHeader>
-            <CardTitle>Job progress</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <JobForm dealId={deal.id} v={deal} tz={tz} />
-          </CardContent>
-        </Card>
-      </>
-    );
-  }
-
-  if (!deal.handed_off_at && isPartnerUser) {
-    const left = checklist.filter((i) => i.required && !i.satisfied).length;
-    return (
-      <>
-        <p className="rounded-2xl bg-secondary p-4 text-sm">
-          Tugu hands this deal off to RenoDesign when it&apos;s ready.{" "}
-          {left
-            ? `${left} item${left === 1 ? "" : "s"} still missing on the checklist.`
-            : "The checklist is complete."}
-        </p>
-        <Card>
-          <CardHeader>
-            <CardTitle>Hand-off checklist</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Checklist items={checklist} dealId={deal.id} />
-          </CardContent>
-        </Card>
-      </>
-    );
-  }
-
-  if (!deal.handed_off_at) {
-    const left = checklist.filter((i) => i.required && !i.satisfied).length;
-    return (
-      <>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Hand-off checklist</CardTitle>
-            <span
-              className={cn("text-sm font-semibold", left ? "text-destructive" : "text-primary")}
-            >
-              {left ? `${left} missing` : "Ready"}
-            </span>
-          </CardHeader>
-          <CardContent>
-            <Checklist items={checklist} dealId={deal.id} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Hand off</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <HandoffForm
-              dealId={deal.id}
-              partners={partners.filter((p) => p.active && p.plans.length)}
-              defaultPlanId={defaultPlanId}
-            />
-          </CardContent>
-        </Card>
-        <p className="px-1 text-xs text-muted-foreground">
-          Reminder: you never take money yourself. Checks and deposits are made out to the partner,
-          after their contract (with license number and the 3-day cancellation notice) is signed.
-        </p>
-      </>
-    );
-  }
-
-  return (
-    <>
-      {!isPartnerUser ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Send the packet to {partner?.name ?? "the partner"}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PacketButtons
-              number={deal.deal_number}
-              phone={partner?.phone ?? null}
-              summary={summary}
-              photos={photos
-                .filter((f) => urls[f.storage_path])
-                .map((f) => ({ url: urls[f.storage_path], name: f.title ?? "photo.jpg" }))}
-              zipName={dealFileName(
-                deal.deal_number,
-                lastName(c?.name),
-                `${scopeInfo(deal.scope)?.label ?? "kitchen"} photos`,
-              )}
-            />
-          </CardContent>
-        </Card>
-      ) : null}
-      <div className="grid grid-cols-2 gap-3 rounded-2xl bg-card p-4 ring-1 ring-border">
-        {isPartnerUser ? (
-          <p className="col-span-2 text-sm font-semibold">Tugu&apos;s commission on this deal</p>
-        ) : null}
-        <Stat
-          label="Expected"
-          value={commission ? formatCents(commission.expected_cents) : "—"}
-          tone="text-primary"
-        />
-        <Stat
-          label="Owed now"
-          value={commission ? formatCents(commission.owed_cents) : "—"}
-          tone={commission && commission.owed_cents > 0 ? "text-destructive" : undefined}
-        />
-        <Stat
-          label="Earned"
-          value={commission ? formatCents(commission.earned_cents) : "—"}
-          small
-        />
-        <Stat
-          label={isPartnerUser ? "Paid to Tugu" : "Paid to me"}
-          value={commission ? formatCents(commission.paid_cents) : "—"}
-          small
-          hint={commission?.plan_name}
-        />
-        {!isPartnerUser && commission && commission.earned_cents > 0 ? (
-          <Link
-            href={`/money/record?deal=${deal.deal_number}`}
-            className="col-span-2 flex h-11 items-center justify-center rounded-xl bg-accent text-sm font-semibold text-accent-foreground"
-          >
-            Record a payment I received
-          </Link>
-        ) : null}
-      </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Job progress</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          {timeline.length ? (
-            <ol className="flex flex-col gap-1.5 border-l-2 border-border pl-3">
-              {timeline.map((a) => (
-                <li key={a.id} className="text-sm">
-                  <span className="text-xs text-muted-foreground">
-                    {formatDateTime(a.occurred_at, tz)}
-                  </span>
-                  <p>{a.summary}</p>
-                </li>
-              ))}
-            </ol>
-          ) : null}
-          <JobForm dealId={deal.id} v={deal} tz={tz} />
         </CardContent>
       </Card>
     </>

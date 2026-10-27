@@ -36,8 +36,8 @@ const hm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "use HH:MM");
 export const companySchema = z
   .object({
     name: reqText(120),
-    tax_set_aside_pct: z.coerce.number().min(0).max(60),
-    mileage_rate_cents: z.coerce.number().min(0).max(500),
+    license_number: z.string().trim().max(40).optional().default(""),
+    license_class: z.enum(["", "A", "B", "C"]).optional().default(""),
     workday_start: hm,
     workday_end: hm,
     booking_weekday_start: hm,

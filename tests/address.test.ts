@@ -44,3 +44,12 @@ describe("parseAddressLine", () => {
     expect(addressForMaps(null, "Burke", null)).toBe("Burke, VA");
   });
 });
+
+describe("navigate", () => {
+  it("opens Google Maps driving directions", async () => {
+    const { directionsUrl } = await import("@/lib/address");
+    expect(directionsUrl("4100 Chain Bridge Rd, Fairfax, VA 22030")).toBe(
+      "https://www.google.com/maps/dir/?api=1&destination=4100%20Chain%20Bridge%20Rd%2C%20Fairfax%2C%20VA%2022030&travelmode=driving",
+    );
+  });
+});

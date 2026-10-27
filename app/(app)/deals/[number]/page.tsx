@@ -26,7 +26,7 @@ import { getTemplates, listQuotes } from "@/server/queries/estimates";
 import { CopyButton } from "@/components/shared/copy-button";
 import { appUrl } from "@/lib/app-url";
 import { fillAutoReply } from "@/lib/leads/auto-reply";
-import { addressForMaps } from "@/lib/address";
+import { addressForMaps, directionsUrl } from "@/lib/address";
 import {
   buildTextVars,
   fillText,
@@ -236,7 +236,7 @@ export default async function DealJacket({
             { href: phone ? `tel:${phone}` : null, label: "Call", Icon: Phone },
             { href: phone ? `sms:${phone}` : null, label: "Text", Icon: MessageSquare },
             {
-              href: address ? `https://maps.apple.com/?daddr=${encodeURIComponent(address)}` : null,
+              href: address ? directionsUrl(address) : null,
               label: "Navigate",
               Icon: Navigation,
             },

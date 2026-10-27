@@ -77,3 +77,11 @@ export type AddressSuggestion = {
 };
 
 export type AddressProvider = "google" | "geoapify" | "photon";
+
+/**
+ * Navigate button: Google Maps driving directions. On an iPhone with the Google Maps app this
+ * universal link opens the app; otherwise Google Maps in Safari.
+ */
+export function directionsUrl(address: string): string {
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}&travelmode=driving`;
+}

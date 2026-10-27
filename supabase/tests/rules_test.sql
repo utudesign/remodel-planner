@@ -365,5 +365,28 @@ do $$ begin
 end $$;
 reset role;
 
+
+-- 0014 feedback ---------------------------------------------------------------------
+set role authenticated;
+select pg_temp.act_as('seed_crystal');
+do $$ begin
+  insert into public.app_feedback (company_id, user_id, area, rating, change)
+  values (public.current_company_id(), public.current_user_id(), 'jobs', 4, 'Add a permit step');
+  if (select count(*) from public.app_feedback) <> 1 then raise exception 'partner sees her feedback'; end if;
+end $$;
+select pg_temp.expect_error($$insert into public.app_feedback (company_id, user_id, area, rating)
+                              values ('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000a1', 'kpis', 1)$$,
+                            '%row-level security%');
+select pg_temp.act_as('seed_tugu');
+do $$ begin
+  if (select count(*) from public.app_feedback where area = 'jobs') <> 1 then raise exception 'owner reads the team''s feedback'; end if;
+end $$;
+select pg_temp.act_as('user_other_rep');
+do $$ begin
+  if (select count(*) from public.app_feedback) <> 0 then raise exception 'other company sees no feedback'; end if;
+  raise notice 'OK: feedback: each writes own, owner reads all, no one writes as someone else';
+end $$;
+reset role;
+
 reset role;
 \echo ALL RULE TESTS PASSED

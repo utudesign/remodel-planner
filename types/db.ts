@@ -9,6 +9,40 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      app_feedback: {
+        Row: {
+          area: string
+          change: string
+          company_id: string
+          id: string
+          rating: number | null
+          updated_at: string
+          user_id: string
+          works: string
+        }
+        ComputedFields: never
+        Insert: {
+          area: string
+          change?: string
+          company_id: string
+          id?: string
+          rating?: number | null
+          updated_at?: string
+          user_id: string
+          works?: string
+        }
+        Update: {
+          area?: string
+          change?: string
+          company_id?: string
+          id?: string
+          rating?: number | null
+          updated_at?: string
+          user_id?: string
+          works?: string
+        }
+        Relationships: []
+      }
       activities: {
         Row: {
           company_id: string

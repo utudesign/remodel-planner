@@ -210,3 +210,10 @@ payments schedule, close/margin lock screens) was removed; it's in git history b
 | /jobs: one bar per job (start → last planned step, filled = steps done, red = late, line = today) + lists. Her tabs: Today · Deals · Jobs · KPIs · More; mine keep Money, with Jobs + KPIs under More | Timeline view without a heavy Gantt library |
 | /kpis: estimated (latest estimate, else estimated value), won (sold + change orders, not cancelled), job costs, my commission, profit = won − costs − commission, win rate, average deal; filters: all / from Tugu / RenoDesign's own, this year / last / all | Tugu's list: total estimated, won final amount, expenses, profit, by deal |
 | Old partner screens (/p) redirect into the main app (packet links keep working) | One app for both |
+
+### Handbook feedback in the app (2026-10-26)
+
+| Decision | Why |
+| --- | --- |
+| /feedback (More → Feedback): each person rates the handbook's 9 areas 1–5 with "what works" / "what to change"; answers come back prefilled to update; I see everyone's, grouped by area with the average (`app_feedback`, 0014) | Crystal and Ahn already log into the app; a separate feedback page would need Claude accounts |
+| Ahn (RenoDesign admin assistant) joins the same way as Crystal: a partner invite → same RenoDesign access | No new role needed |

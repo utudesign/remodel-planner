@@ -23,7 +23,7 @@ export default async function KpisPage({ searchParams }: { searchParams: Promise
 
   const [deals, peopleRes, quotesRes, totalsRes, projectsRes] = await Promise.all([
     listDeals(s),
-    s.db.from("users").select("id, name").eq("company_id", s.companyId).eq("active", true).in("role", ["owner", "team", "partner"]).order("created_at"),
+    s.db.from("users").select("id, name").eq("company_id", s.companyId).eq("workspace_id", s.workspaceId).eq("active", true).in("role", ["owner", "team", "partner"]).order("created_at"),
     s.db.from("quotes").select("id, deal_id, version").eq("company_id", s.companyId),
     s.db.from("quote_totals").select("quote_id, total_price_cents").eq("company_id", s.companyId),
     s.db.from("projects").select("deal_id, costs(actual_amount)").eq("company_id", s.companyId),
@@ -38,8 +38,10 @@ export default async function KpisPage({ searchParams }: { searchParams: Promise
   }
   const costsOf = new Map(must(projectsRes).map((p) => [p.deal_id, (p.costs ?? []).map((c) => c.actual_amount)]));
 
-  const scoped = deals
-    .filter((d) => who === "all" || d.owner_id === who)
+  // 0016: my workspace's deals; deals shared with me only under "Shared with me".
+  const sharedIn = deals.filter((d) => d.workspace_id !== s.workspaceId);
+  const scoped = (who === "shared" ? sharedIn : deals.filter((d) => d.workspace_id === s.workspaceId))
+    .filter((d) => who === "all" || who === "shared" || d.owner_id === who)
     .filter((d) => !year || (d.created_at ?? "").startsWith(String(year)));
   const rows = scoped.map((d) => ({
     d,
@@ -77,6 +79,11 @@ export default async function KpisPage({ searchParams }: { searchParams: Promise
             {p.name || "No name"}
           </Link>
         ))}
+        {sharedIn.length ? (
+          <Link href={q({ who: "shared" })} className={chip(who === "shared")}>
+            Shared with me
+          </Link>
+        ) : null}
         <span className="mx-1 w-px self-stretch bg-border" />
         {[thisYear, thisYear - 1].map((y) => (
           <Link key={y} href={q({ year: String(y) })} className={chip(year === y)}>

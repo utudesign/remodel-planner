@@ -458,5 +458,117 @@ begin
   raise notice 'OK: invited email gets a team login; uninvited does not; other companies cannot mark sold';
 end $$;
 
+-- 0016 workspaces + sharing -------------------------------------------------------------
+do $$
+declare c uuid := '00000000-0000-0000-0000-0000000000c1';
+begin
+  if (select count(*) from public.workspaces where company_id = c) <> 1 then raise exception 'one workspace per company'; end if;
+  if exists (select 1 from public.deals where company_id = c and workspace_id is distinct from private.first_workspace(c)) then
+    raise exception 'existing deals stay in the first workspace'; end if;
+  if not (select workspace_admin from public.users where clerk_id = 'seed_tugu') then raise exception 'owner admins the workspace'; end if;
+  raise notice 'OK: workspaces backfilled: one per company, all deals in it, owner is its admin';
+end $$;
+set role authenticated;
+-- A teammate can't make workspaces; the owner gives Ahn her own.
+select pg_temp.act_as('user_kim');
+select pg_temp.expect_error($$select public.create_workspace_for('00000000-0000-0000-0000-0000000000a5', 'Ahn Studio')$$, 'Only the owner%');
+select pg_temp.act_as('seed_tugu');
+select public.create_workspace_for('00000000-0000-0000-0000-0000000000a5', 'Ahn Studio') as ahn_ws \gset
+select pg_temp.act_as('seed_ahn');
+do $$
+declare v_contact uuid; v_deal uuid;
+begin
+  if not public.is_ws_admin() then raise exception 'Ahn admins her workspace'; end if;
+  if (select count(*) from public.deals) <> 0 then raise exception 'new workspace starts empty (sees %)', (select count(*) from public.deals); end if;
+  if (select count(*) from public.contacts) <> 0 then raise exception 'new workspace sees no contacts'; end if;
+  if (select count(*) from public.quotes) <> 0 or (select count(*) from public.deal_files) <> 0
+     or (select count(*) from public.projects) <> 0 or (select count(*) from public.activities) <> 0 then
+    raise exception 'new workspace sees no quotes, files, jobs or activity'; end if;
+  if (select count(*) from public.workspaces) <> 2 then raise exception 'workspace names are visible to share with'; end if;
+  insert into public.contacts (company_id, name) values (public.current_company_id(), 'Pat Ahnclient') returning id into v_contact;
+  insert into public.deals (id, company_id, contact_id, source, stage, scope, title)
+  values ('00000000-0000-0000-0000-0000000000e1', public.current_company_id(), v_contact, 'referral', 'new', 'kitchen', 'Ahn own')
+  returning id into v_deal;
+  if (select owner_id from public.deals where id = v_deal) <> '00000000-0000-0000-0000-0000000000a5' then
+    raise exception 'a new deal goes to the workspace admin'; end if;
+  insert into public.team_invites (company_id, email, name) values (public.current_company_id(), 'sam@example.com', 'Sam');
+  if (select count(*) from public.team_invites) <> 1 then raise exception 'Ahn sees only her own invites'; end if;
+  raise notice 'OK: Ahn''s own workspace starts empty; her deals, contacts and invites are hers';
+end $$;
+select pg_temp.expect_error($$update public.users set workspace_id = null where clerk_id = 'seed_ahn'$$, '%');
+select pg_temp.expect_error($$select public.share_deal('00000000-0000-0000-0000-0000000000d1', public.current_workspace_id())$$, 'Only the deal''s own workspace%');
+select pg_temp.act_as('seed_tugu');
+do $$ begin
+  if exists (select 1 from public.deals where id = '00000000-0000-0000-0000-0000000000e1') then raise exception 'Tugu can''t see Ahn''s deal'; end if;
+  if exists (select 1 from public.contacts where name = 'Pat Ahnclient') then raise exception 'Tugu can''t see Ahn''s contact'; end if;
+  if exists (select 1 from public.team_invites where email = 'sam@example.com') then raise exception 'Tugu can''t see Ahn''s invites'; end if;
+  if (select count(*) from public.deals) < 8 then raise exception 'Tugu still sees his own deals'; end if;
+  raise notice 'OK: the owner does not see a deal from another workspace until it''s shared';
+end $$;
+select pg_temp.expect_error($$select public.share_deal('00000000-0000-0000-0000-0000000000e1', private.first_workspace(public.current_company_id()))$$,
+                            'Only the deal''s own workspace%');
+-- Ahn shares; Tugu sees and edits it fully; only Ahn can stop sharing.
+select pg_temp.act_as('seed_ahn');
+select public.share_deal('00000000-0000-0000-0000-0000000000e1', (select id from public.workspaces where name <> 'Ahn Studio'));
+select public.share_deal('00000000-0000-0000-0000-0000000000e1', (select id from public.workspaces where name <> 'Ahn Studio'));
+select pg_temp.act_as('seed_tugu');
+do $$ begin
+  if not exists (select 1 from public.deals where id = '00000000-0000-0000-0000-0000000000e1') then raise exception 'shared deal visible'; end if;
+  if not exists (select 1 from public.contacts where name = 'Pat Ahnclient') then raise exception 'shared deal''s contact visible'; end if;
+  update public.deals set title = 'Ahn own (edited by Tugu)' where id = '00000000-0000-0000-0000-0000000000e1';
+  if not found then raise exception 'shared deal editable'; end if;
+  update public.contacts set phone = '(703) 555-0199' where name = 'Pat Ahnclient';
+  if not found then raise exception 'shared contact editable'; end if;
+  insert into public.activities (company_id, deal_id, type, summary)
+  values (public.current_company_id(), '00000000-0000-0000-0000-0000000000e1', 'call', 'Tugu called');
+  if (select count(*) from public.notifications where deal_id = '00000000-0000-0000-0000-0000000000e1') <> 1 then
+    raise exception 'Tugu notified once about the share'; end if;
+  if (select count(*) from public.deal_shares) <> 1 then raise exception 'Tugu sees the share'; end if;
+  raise notice 'OK: a shared deal is visible and fully editable in the other workspace; one notification';
+end $$;
+select pg_temp.expect_error($$select public.unshare_deal('00000000-0000-0000-0000-0000000000e1', public.current_workspace_id())$$,
+                            'Only the deal''s own workspace%');
+do $$ begin
+  delete from public.deal_shares;
+  if (select count(*) from public.deal_shares) <> 1 then raise exception 'only the home workspace removes a share'; end if;
+end $$;
+select pg_temp.expect_error($$update public.deals set workspace_id = public.current_workspace_id() where id = '00000000-0000-0000-0000-0000000000e1'$$,
+                            '%another workspace%');
+select pg_temp.act_as('user_other_rep');
+select pg_temp.expect_error($$select public.share_deal('00000000-0000-0000-0000-0000000000e1', public.current_workspace_id())$$,
+                            'Only the deal''s own workspace%');
+select pg_temp.act_as('seed_ahn');
+do $$ begin
+  if (select title from public.deals where id = '00000000-0000-0000-0000-0000000000e1') <> 'Ahn own (edited by Tugu)' then
+    raise exception 'Ahn sees Tugu''s edit'; end if;
+  if (select count(*) from public.deals) <> 1 then raise exception 'sharing is one deal, not the workspace'; end if;
+  perform public.unshare_deal('00000000-0000-0000-0000-0000000000e1', (select id from public.workspaces where name <> 'Ahn Studio'));
+end $$;
+select pg_temp.act_as('seed_tugu');
+do $$ begin
+  if exists (select 1 from public.deals where id = '00000000-0000-0000-0000-0000000000e1') then raise exception 'unshared deal hidden again'; end if;
+  if exists (select 1 from public.activities where deal_id = '00000000-0000-0000-0000-0000000000e1') then raise exception 'its activity hidden too'; end if;
+  -- Both ways: Tugu shares one of his with Ahn.
+  perform public.share_deal('00000000-0000-0000-0000-0000000000d1', (select id from public.workspaces where name = 'Ahn Studio'));
+  raise notice 'OK: stop sharing hides it again (deal + activity); the owner can share his own deal the other way';
+end $$;
+select pg_temp.act_as('seed_ahn');
+do $$ begin
+  if (select count(*) from public.deals) <> 2 then raise exception 'Ahn sees her deal + the one Tugu shared'; end if;
+  if exists (select 1 from public.deals where id = '00000000-0000-0000-0000-0000000000d2') then raise exception 'not the unshared ones'; end if;
+  raise notice 'OK: sharing works both ways';
+end $$;
+select pg_temp.expect_error($$select public.move_to_workspace((select id from public.users where clerk_id = 'user_kim'), public.current_workspace_id())$$,
+                            'Only the owner%');
+select pg_temp.act_as('seed_tugu');
+select public.move_to_workspace((select id from public.users where clerk_id = 'user_kim'), (select id from public.workspaces where name = 'Ahn Studio'));
+select pg_temp.act_as('user_kim');
+do $$ begin
+  if public.is_ws_admin() then raise exception 'a moved member is not the admin'; end if;
+  if (select count(*) from public.deals) <> 2 then raise exception 'Kim now sees Ahn Studio''s deals only (%)', (select count(*) from public.deals); end if;
+  raise notice 'OK: the owner moves a teammate into another workspace as a member';
+end $$;
+reset role;
+
 reset role;
 \echo ALL RULE TESTS PASSED

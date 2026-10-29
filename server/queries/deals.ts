@@ -5,7 +5,7 @@ export const DEAL_LIST_SELECT =
   "id, deal_number, deal_year, title, stage, scope, source, created_at, opened_on, first_response_at, " +
   "next_follow_up_at, last_touch_at, estimated_value_cents, sold_price_cents, change_orders_cents, " +
   "handed_off_at, sold_at, job_status, deposit_received_at, paid_in_full_at, cancelled_at, partner_updated_at, " +
-  "lost_reason, partner_id, commission_plan_id, owner_id, origin, contact:contacts(name, phone, address, city)";
+  "lost_reason, partner_id, commission_plan_id, owner_id, origin, workspace_id, contact:contacts(name, phone, address, city)";
 
 export type Stage = { key: string; label: string; kind: "open" | "handed_off" | "lost"; sort_order: number; active: boolean };
 
@@ -39,6 +39,8 @@ export type DealRow = {
   owner_id: string | null;
   /** legacy (0013): "partner" = created by a partner login; every deal is the company's since 0015 */
   origin: string;
+  /** 0016: the workspace the deal belongs to; another one sees it only when shared */
+  workspace_id: string | null;
   contact: { name: string | null; phone: string | null; address: string | null; city: string | null } | null;
 };
 
@@ -87,6 +89,16 @@ export async function listDeals(s: Session): Promise<DealRow[]> {
       .limit(500),
   );
   return rows as unknown as DealRow[];
+}
+
+/** Every workspace in the company (names only), for Share and "Shared by" labels. */
+export async function getWorkspaces(s: Session): Promise<{ id: string; name: string }[]> {
+  return must(await s.db.from("workspaces").select("id, name").eq("company_id", s.companyId).order("created_at"));
+}
+
+/** Workspaces this deal is shared with (readable by its home workspace and by each target). */
+export async function getDealShares(s: Session, dealId: string): Promise<{ workspace_id: string; shared_at: string }[]> {
+  return must(await s.db.from("deal_shares").select("workspace_id, shared_at").eq("deal_id", dealId));
 }
 
 export async function getCommissions(s: Session): Promise<Map<string, CommissionRow>> {

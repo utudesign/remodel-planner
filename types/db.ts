@@ -972,6 +972,7 @@ export type Database = {
           name: string | null
           notes: string | null
           phone: string | null
+          workspace_id: string | null
           zip: string | null
         }
         ComputedFields: never
@@ -985,6 +986,7 @@ export type Database = {
           name?: string | null
           notes?: string | null
           phone?: string | null
+          workspace_id?: string | null
           zip?: string | null
         }
         Update: {
@@ -997,9 +999,17 @@ export type Database = {
           name?: string | null
           notes?: string | null
           phone?: string | null
+          workspace_id?: string | null
           zip?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "contacts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contacts_company_id_fkey"
             columns: ["company_id"]
@@ -1354,9 +1364,55 @@ export type Database = {
         }
         Relationships: []
       }
+      deal_shares: {
+        Row: {
+          company_id: string
+          deal_id: string
+          shared_at: string
+          shared_by: string | null
+          workspace_id: string
+        }
+        ComputedFields: never
+        Insert: {
+          company_id: string
+          deal_id: string
+          shared_at?: string
+          shared_by?: string | null
+          workspace_id: string
+        }
+        Update: {
+          company_id?: string
+          deal_id?: string
+          shared_at?: string
+          shared_by?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_shares_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_shares_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_shares_shared_by_fkey"
+            columns: ["shared_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deals: {
         Row: {
-          origin: string
           booking_token: string
           budget_max_cents: number | null
           budget_min_cents: number | null
@@ -1389,6 +1445,7 @@ export type Database = {
           next_follow_up_at: string | null
           notes: string | null
           opened_on: string | null
+          origin: string
           owner_id: string | null
           owns_home: boolean | null
           paid_in_full_at: string | null
@@ -1398,8 +1455,8 @@ export type Database = {
           partner_updated_at: string | null
           permit_required: boolean
           scope: string | null
-          sold_in_home: boolean
           sold_at: string | null
+          sold_in_home: boolean
           sold_price_cents: number | null
           source: string | null
           stage: string
@@ -1407,11 +1464,11 @@ export type Database = {
           timeline: string | null
           title: string | null
           updated_at: string
+          workspace_id: string | null
           year_built: number | null
         }
         ComputedFields: never
         Insert: {
-          origin?: string
           booking_token?: string
           budget_max_cents?: number | null
           budget_min_cents?: number | null
@@ -1444,6 +1501,7 @@ export type Database = {
           next_follow_up_at?: string | null
           notes?: string | null
           opened_on?: string | null
+          origin?: string
           owner_id?: string | null
           owns_home?: boolean | null
           paid_in_full_at?: string | null
@@ -1453,8 +1511,8 @@ export type Database = {
           partner_updated_at?: string | null
           permit_required?: boolean
           scope?: string | null
-          sold_in_home?: boolean
           sold_at?: string | null
+          sold_in_home?: boolean
           sold_price_cents?: number | null
           source?: string | null
           stage?: string
@@ -1462,10 +1520,10 @@ export type Database = {
           timeline?: string | null
           title?: string | null
           updated_at?: string
+          workspace_id?: string | null
           year_built?: number | null
         }
         Update: {
-          origin?: string
           booking_token?: string
           budget_max_cents?: number | null
           budget_min_cents?: number | null
@@ -1498,6 +1556,7 @@ export type Database = {
           next_follow_up_at?: string | null
           notes?: string | null
           opened_on?: string | null
+          origin?: string
           owner_id?: string | null
           owns_home?: boolean | null
           paid_in_full_at?: string | null
@@ -1507,8 +1566,8 @@ export type Database = {
           partner_updated_at?: string | null
           permit_required?: boolean
           scope?: string | null
-          sold_in_home?: boolean
           sold_at?: string | null
+          sold_in_home?: boolean
           sold_price_cents?: number | null
           source?: string | null
           stage?: string
@@ -1516,9 +1575,17 @@ export type Database = {
           timeline?: string | null
           title?: string | null
           updated_at?: string
+          workspace_id?: string | null
           year_built?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "deals_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "deals_commission_plan_id_fkey"
             columns: ["commission_plan_id"]
@@ -1888,6 +1955,8 @@ export type Database = {
           label: string
           slug: string
           source: string
+          user_id: string | null
+          workspace_id: string | null
         }
         ComputedFields: never
         Insert: {
@@ -1898,6 +1967,8 @@ export type Database = {
           label?: string
           slug: string
           source?: string
+          user_id?: string | null
+          workspace_id?: string | null
         }
         Update: {
           active?: boolean
@@ -1907,8 +1978,24 @@ export type Database = {
           label?: string
           slug?: string
           source?: string
+          user_id?: string | null
+          workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "lead_links_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_links_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "lead_links_company_id_fkey"
             columns: ["company_id"]
@@ -3494,6 +3581,7 @@ export type Database = {
           id: string
           invited_at: string
           name: string | null
+          workspace_id: string | null
         }
         ComputedFields: never
         Insert: {
@@ -3504,6 +3592,7 @@ export type Database = {
           id?: string
           invited_at?: string
           name?: string | null
+          workspace_id?: string | null
         }
         Update: {
           accepted_at?: string | null
@@ -3513,8 +3602,16 @@ export type Database = {
           id?: string
           invited_at?: string
           name?: string | null
+          workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "team_invites_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "team_invites_accepted_by_fkey"
             columns: ["accepted_by"]
@@ -3612,6 +3709,8 @@ export type Database = {
           partner_id: string | null
           phone: string | null
           role: string
+          workspace_admin: boolean
+          workspace_id: string | null
         }
         ComputedFields: never
         Insert: {
@@ -3626,6 +3725,8 @@ export type Database = {
           partner_id?: string | null
           phone?: string | null
           role: string
+          workspace_admin?: boolean
+          workspace_id?: string | null
         }
         Update: {
           active?: boolean
@@ -3639,8 +3740,17 @@ export type Database = {
           partner_id?: string | null
           phone?: string | null
           role?: string
+          workspace_admin?: boolean
+          workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "users_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "users_company_id_fkey"
             columns: ["company_id"]
@@ -3653,6 +3763,36 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          name: string
+        }
+        ComputedFields: never
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspaces_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -4161,6 +4301,11 @@ export type Database = {
         Args: { p_clerk_user_id: string; p_email: string; p_name: string }
         Returns: string
       }
+      share_deal: { Args: { p_deal: string; p_workspace: string }; Returns: undefined }
+      unshare_deal: { Args: { p_deal: string; p_workspace: string }; Returns: undefined }
+      create_workspace_for: { Args: { p_user: string; p_name: string }; Returns: string }
+      move_to_workspace: { Args: { p_user: string; p_workspace: string }; Returns: undefined }
+      current_workspace_id: { Args: Record<PropertyKey, never>; Returns: string }
       mark_sold: {
         Args: { p_deal: string; p_price_cents: number; p_signed_on?: string; p_deposit_on?: string }
         Returns: string

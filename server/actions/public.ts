@@ -13,6 +13,7 @@ import { createAdminSupabase } from "@/lib/supabase/admin";
 import { formToObject, type ActionState } from "@/server/action-utils";
 import { kitchenRange } from "@/server/ballpark";
 import { notifyOwners } from "@/server/notify";
+import { busyMeetings } from "@/server/workspace";
 import type { Json } from "@/types/db";
 
 /**
@@ -95,7 +96,7 @@ export async function submitLeadForm(_: ActionState, fd: FormData): Promise<Acti
 
   const { data: link } = await db
     .from("lead_links")
-    .select("company_id, source, active")
+    .select("company_id, workspace_id, user_id, source, active")
     .eq("slug", v.slug)
     .maybeSingle();
   if (!link?.active) return { ok: false, error: "This link is no longer active." };
@@ -104,6 +105,7 @@ export async function submitLeadForm(_: ActionState, fd: FormData): Promise<Acti
     .from("contacts")
     .insert({
       company_id: link.company_id,
+      workspace_id: link.workspace_id,
       name: v.name,
       phone: formatPhone(v.phone) ?? v.phone,
       city: v.city || null,
@@ -121,6 +123,8 @@ export async function submitLeadForm(_: ActionState, fd: FormData): Promise<Acti
     .from("deals")
     .insert({
       company_id: link.company_id,
+      workspace_id: link.workspace_id,
+      owner_id: link.user_id ?? undefined,
       contact_id: contact.id,
       source: link.source,
       stage: "new",
@@ -150,7 +154,7 @@ export async function submitLeadForm(_: ActionState, fd: FormData): Promise<Acti
     body: (summary[0] ?? [v.zip, v.message].filter(Boolean).join(" · ")).slice(0, 140) || "From your share link",
     url: `/deals/${deal.deal_number}`,
     dealId: deal.id,
-  });
+  }, link.workspace_id);
   return { ok: true, message: "Thanks! I'll text you shortly to set up a time to come by." };
 }
 
@@ -166,7 +170,7 @@ export async function bookSlot(_: ActionState, fd: FormData): Promise<ActionStat
 
   const { data: deal } = await db
     .from("deals")
-    .select("id, company_id, stage, deal_number, deleted_at, contact:contacts(name), company:companies(timezone, settings_json)")
+    .select("id, company_id, workspace_id, stage, deal_number, deleted_at, contact:contacts(name), company:companies(timezone, settings_json)")
     .eq("booking_token", v.token)
     .maybeSingle();
   if (!deal || deal.deleted_at || !deal.company) return { ok: false, error: "This booking link is no longer valid." };
@@ -175,13 +179,8 @@ export async function bookSlot(_: ActionState, fd: FormData): Promise<ActionStat
 
   // Re-check the slot is still free right now (someone else may have taken it).
   const now = new Date();
-  const { data: booked } = await db
-    .from("meetings")
-    .select("starts_at, ends_at")
-    .eq("company_id", deal.company_id)
-    .eq("status", "scheduled")
-    .gte("starts_at", new Date(now.getTime() - 86400_000).toISOString());
-  const busy = (booked ?? []).map((m) => ({
+  const booked = await busyMeetings(deal.company_id, deal.workspace_id, now);
+  const busy = booked.map((m) => ({
     start: new Date(m.starts_at),
     end: new Date(m.ends_at ?? new Date(new Date(m.starts_at).getTime() + st.booking.minutes * 60_000)),
   }));
@@ -208,6 +207,6 @@ export async function bookSlot(_: ActionState, fd: FormData): Promise<ActionStat
     body: when,
     url: `/deals/${deal.deal_number}`,
     dealId: deal.id,
-  });
+  }, deal.workspace_id);
   return { ok: true, message: when };
 }

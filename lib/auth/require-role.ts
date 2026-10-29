@@ -28,6 +28,10 @@ export type Session = {
   role: Role;
   name: string;
   partnerId: string | null;
+  /** 0016: each workspace keeps its own deals; a deal shows elsewhere only when shared. */
+  workspaceId: string;
+  workspaceName: string;
+  isWsAdmin: boolean;
   settings: CompanySettings;
 };
 
@@ -67,7 +71,9 @@ export function readSettings(raw: Record<string, unknown>): CompanySettings {
 async function loadMember(db: Db, clerkUserId: string) {
   const { data, error } = await db
     .from("users")
-    .select("id, role, name, active, partner_id, company:companies(id, name, timezone, settings_json)")
+    .select(
+      "id, role, name, active, partner_id, workspace_id, workspace_admin, workspace:workspaces(id, name), company:companies(id, name, timezone, settings_json)",
+    )
     .eq("clerk_id", clerkUserId)
     .eq("active", true)
     .maybeSingle();
@@ -116,6 +122,9 @@ export const getSession = cache(async (): Promise<Session> => {
     role: member.role,
     name: member.name ?? "",
     partnerId: member.partner_id,
+    workspaceId: member.workspace_id ?? "",
+    workspaceName: member.workspace?.name ?? member.company.name,
+    isWsAdmin: member.role === "owner" || member.workspace_admin,
     settings: readSettings((member.company.settings_json ?? {}) as Record<string, unknown>),
   };
 });
@@ -132,6 +141,13 @@ export async function requireOwner(): Promise<Session> {
   const session = await getSession();
   if (session.role === "team" || session.role === "partner") redirect("/today");
   if (session.role !== "owner") redirect("/no-access");
+  return session;
+}
+
+/** Team page: whoever runs a workspace (the owner, Crystal) manages its people (0016). */
+export async function requireWsAdmin(): Promise<Session> {
+  const session = await getSession();
+  if (!session.isWsAdmin) redirect("/today");
   return session;
 }
 

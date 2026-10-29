@@ -2,24 +2,31 @@ import { createAdminSupabase } from "@/lib/supabase/admin";
 import { dayBoundsUtc, todayIn } from "@/lib/dates";
 
 /** The 3:30 PM digest: what piled up during the day job. Service role (cron only). */
-export async function digestFor(companyId: string, tz: string, now: Date) {
+/** 0016: counts the given workspace only (each workspace admin gets their own list). */
+export async function digestFor(companyId: string, tz: string, now: Date, workspaceId?: string | null) {
   const db = createAdminSupabase();
   const today = todayIn(tz, now);
   const { end } = dayBoundsUtc(today, tz);
+  let dealsQ = db
+    .from("deals")
+    .select("stage, first_response_at, next_follow_up_at")
+    .eq("company_id", companyId)
+    .is("deleted_at", null);
+  let visitsQ = db
+    .from("meetings")
+    .select("id, deal:deals!inner(workspace_id)")
+    .eq("company_id", companyId)
+    .eq("status", "scheduled")
+    .gte("starts_at", now.toISOString())
+    .lt("starts_at", end.toISOString());
+  if (workspaceId) {
+    dealsQ = dealsQ.eq("workspace_id", workspaceId);
+    visitsQ = visitsQ.eq("deal.workspace_id", workspaceId);
+  }
   const [{ data: stages }, { data: deals }, { data: visits }] = await Promise.all([
     db.from("pipeline_stages").select("key, kind").eq("company_id", companyId),
-    db
-      .from("deals")
-      .select("stage, first_response_at, next_follow_up_at")
-      .eq("company_id", companyId)
-      .is("deleted_at", null),
-    db
-      .from("meetings")
-      .select("id")
-      .eq("company_id", companyId)
-      .eq("status", "scheduled")
-      .gte("starts_at", now.toISOString())
-      .lt("starts_at", end.toISOString()),
+    dealsQ,
+    visitsQ,
   ]);
   const open = new Set((stages ?? []).filter((s) => s.kind === "open").map((s) => s.key));
   const mine = (deals ?? []).filter((d) => open.has(d.stage));

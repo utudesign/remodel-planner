@@ -10,7 +10,9 @@ The approved build plan is `docs/PLAN.md`; decisions go in `docs/DECISIONS.md`.
 If a request conflicts with the spec, flag it and propose a spec update. Never diverge silently.
 
 Roles: `owner` (Tugu: everything + Settings + Team invites), `team` (Crystal, Ahn, …: every deal, estimate,
-visit, job, KPI; invited from More → Team), `partner` (legacy; 0015 turned existing ones into `team`), `crew` unused.
+visit, job, KPI **in their workspace**; invited from More → Team), `partner` (legacy; 0015 turned existing ones into `team`), `crew` unused.
+**Workspaces (0016):** each deal lives in one workspace; another workspace sees it only when it's shared (`deal_shares`,
+full edit, both ways). Workspace admins (owner, Crystal) run their own Team page. Settings/texts/stages stay company-wide.
 
 **Tested handoff code — use it, don't rewrite it:** `supabase/migrations/0002`–`0006`,
 `lib/estimating/*`, `lib/deals/dealNumber.ts`, `lib/commission/commission.ts`, `supabase/seed/*`,
@@ -37,14 +39,14 @@ Ask before adding any dependency not listed here.
   Percentage splits: round each installment down, last installment absorbs the remainder.
 - **Time:** events = `timestamptz` (UTC); calendar days = `date`. Convert with `lib/dates.ts` only.
 - **Mutations:** server actions in `server/actions/*`. Each one: Zod parse → `requireRole()` →
-  query scoped by `company_id` → `revalidatePath`. Never trust client-side role checks.
+  query scoped by `company_id` (RLS adds the workspace) → `revalidatePath`. Never trust client-side role checks.
 - **Config lives in the DB:** pipeline stages, follow-up rules, payment templates, task templates,
   cost categories, lost reasons. Never hard-code them. Use stable `key` columns for logic, not labels.
 - **Migrations:** new file per change in `/supabase/migrations`, RLS policies in the same file.
   Never edit an applied migration. Ask before altering a table whose migration is applied.
 - **RLS:** every table is scoped by `company_id` via `public.current_company_id()` (Clerk `sub` →
-  `users`). Owner and team see everything in the company (`is_team()`); Settings, invites and config
-  writes are owner-only (`is_owner()`).
+  `users`). Deal data also needs `can_see_deal()` (own workspace or shared, 0016); Settings and config
+  writes are owner-only (`is_owner()`); invites/lead links are per workspace admin (`is_ws_admin()`).
 - **UI:** iPhone first at 375 px, 44 px tap targets, one hand. Every list has empty, loading, error and
   overdue states (overdue = red). A database refusal becomes a checklist with **Add** buttons, never a raw error.
 - **Photos are never lost:** offline queue (IndexedDB) until the `deal_files` row exists.

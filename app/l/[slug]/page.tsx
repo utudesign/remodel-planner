@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { LeadForm } from "@/components/public/lead-form";
 import { createAdminSupabase } from "@/lib/supabase/admin";
+import { hostFirstName } from "@/server/workspace";
 
 export const metadata = { title: "Free estimate" };
 
@@ -11,18 +12,11 @@ export default async function PublicLeadPage({ params }: { params: Promise<{ slu
   const db = createAdminSupabase();
   const { data: link } = await db
     .from("lead_links")
-    .select("active, company:companies(id)")
+    .select("active, user_id, company:companies(id)")
     .eq("slug", slug)
     .maybeSingle();
   if (!link?.active || !link.company) notFound();
-  const { data: owner } = await db
-    .from("users")
-    .select("name")
-    .eq("company_id", link.company.id)
-    .eq("role", "owner")
-    .eq("is_default_owner", true)
-    .maybeSingle();
-  const first = (owner?.name ?? "").split(/\s+/)[0];
+  const first = await hostFirstName(link.company.id, link.user_id);
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-5 px-4 py-8">
       <div>

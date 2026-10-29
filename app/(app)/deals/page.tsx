@@ -8,7 +8,7 @@ import { parseDealNumber } from "@/lib/deals/dealNumber";
 import { segmentOf, type Segment } from "@/lib/deals/segments";
 import { cn } from "@/lib/utils";
 import { must } from "@/server/action-utils";
-import { getStages, listDeals, type DealRow } from "@/server/queries/deals";
+import { getStages, getWorkspaces, listDeals, type DealRow } from "@/server/queries/deals";
 
 export const metadata = { title: "Deals" };
 
@@ -39,11 +39,13 @@ function matcher(q: string, currentYear: number) {
 export default async function DealsPage({ searchParams }: { searchParams: Promise<{ seg?: string; q?: string }> }) {
   const { seg: segParam, q = "" } = await searchParams;
   const s = await requireStaff();
-  const [stages, deals, people] = await Promise.all([
+  const [stages, deals, people, workspaces] = await Promise.all([
     getStages(s),
     listDeals(s),
     s.db.from("users").select("id, name").eq("company_id", s.companyId).then(must),
+    getWorkspaces(s),
   ]);
+  const wsName = new Map(workspaces.map((w) => [w.id, w.name]));
   const firstName = new Map(people.map((p) => [p.id, (p.name ?? "").split(" ")[0] || null]));
   const now = new Date();
   const year = Number(todayIn(s.timezone).slice(0, 4));
@@ -71,6 +73,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
       deal={d}
       stageKind={kind.get(d.stage)}
       ownerName={d.owner_id ? firstName.get(d.owner_id) : null}
+      sharedBy={d.workspace_id && d.workspace_id !== s.workspaceId ? (wsName.get(d.workspace_id) ?? "another workspace") : null}
       now={now}
     />
   );

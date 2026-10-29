@@ -7,7 +7,7 @@ import { digestFor } from "@/server/digest";
 
 /**
  * Vercel cron (vercel.json): 19:30 and 20:30 UTC, Monday–Friday. One of the two runs is
- * 3:30 PM in New York (EDT or EST); that run sends each owner's digest (SALES-REP-MODE §7).
+ * 3:30 PM in New York (EDT or EST); that run sends each workspace admin's digest (0016) (SALES-REP-MODE §7).
  * Every run also sends any pushes still waiting. Protected by CRON_SECRET.
  */
 export async function GET(req: NextRequest) {
@@ -22,14 +22,14 @@ export async function GET(req: NextRequest) {
   const db = createAdminSupabase();
   const { data: owners } = await db
     .from("users")
-    .select("id, company:companies(id, timezone, settings_json)")
-    .eq("role", "owner")
+    .select("id, workspace_id, company:companies(id, timezone, settings_json)")
+    .or("role.eq.owner,workspace_admin.eq.true")
     .eq("active", true);
   for (const o of owners ?? []) {
     if (!o.company) continue;
     const st = readSettings((o.company.settings_json ?? {}) as Record<string, unknown>);
     if (!force && !isDigestRun(now, st.digestTime, st.workday.days, o.company.timezone)) continue;
-    const d = await digestFor(o.company.id, o.company.timezone, now);
+    const d = await digestFor(o.company.id, o.company.timezone, now, o.workspace_id);
     if (!d) continue;
     result.digests += await pushToUsers([o.id], { kind: "digest", title: d.title, body: d.body, url: "/today" });
   }

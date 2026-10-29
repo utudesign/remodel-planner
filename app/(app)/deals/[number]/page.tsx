@@ -16,6 +16,7 @@ import { UploadButton } from "@/components/deals/upload-button";
 import { PhotoCapture } from "@/components/photos/photo-capture";
 import { AutoReplyCard } from "@/components/deals/auto-reply-card";
 import { QuickTexts } from "@/components/deals/quick-texts";
+import { ShareCard } from "@/components/deals/share-card";
 import { JobTab } from "@/components/jobs/job-tab";
 import { MarkSoldForm } from "@/components/jobs/sale-forms";
 import { NewEstimateForm } from "@/components/estimates/builder";
@@ -46,6 +47,7 @@ import {
   getChecklist,
   getDealByNumber,
   getDealFiles,
+  getDealShares,
   getIntake,
   getLostReasons,
   getMeetings,
@@ -53,6 +55,7 @@ import {
   getStages,
   getTextSends,
   getTextTemplates,
+  getWorkspaces,
   type ChecklistItem,
 } from "@/server/queries/deals";
 
@@ -103,6 +106,8 @@ export default async function DealJacket({
     meetings,
     quoteToken,
     intake,
+    workspaces,
+    shares,
   ] = await Promise.all([
     getStages(s),
     getLostReasons(s),
@@ -116,7 +121,15 @@ export default async function DealJacket({
     getMeetings(s, deal.id),
     getSharedQuoteToken(s, deal.id),
     getIntake(s, deal.id),
+    getWorkspaces(s),
+    getDealShares(s, deal.id),
   ]);
+  // 0016: a deal lives in one workspace; others see it only when it's shared with them.
+  const home = deal.workspace_id === s.workspaceId;
+  const homeName = workspaces.find((w) => w.id === deal.workspace_id)?.name ?? "another workspace";
+  const shareTargets = workspaces
+    .filter((w) => w.id !== deal.workspace_id)
+    .map((w) => ({ ...w, shared: shares.some((x) => x.workspace_id === w.id) }));
   const stage = stages.find((x) => x.key === deal.stage);
   const now = new Date();
   const step = nextStep({ ...deal, stageKind: stage?.kind }, now);
@@ -209,6 +222,15 @@ export default async function DealJacket({
           <ScopeBadge scope={deal.scope} />
         </div>
         {address ? <p className="truncate text-sm text-muted-foreground">{address}</p> : null}
+        {!home ? (
+          <p className="mt-1 inline-flex rounded-full bg-accent px-2.5 py-0.5 text-xs font-bold text-accent-foreground">
+            Shared by {homeName} · you can edit it
+          </p>
+        ) : shareTargets.some((w) => w.shared) ? (
+          <p className="mt-1 inline-flex rounded-full bg-secondary px-2.5 py-0.5 text-xs font-bold">
+            Shared with {shareTargets.filter((w) => w.shared).map((w) => w.name).join(", ")}
+          </p>
+        ) : null}
 
         <div className="mt-3 grid grid-cols-4 gap-2">
           {[
@@ -419,6 +441,8 @@ export default async function DealJacket({
                 <ContactForm dealId={deal.id} c={c} />
               </CardContent>
             </Card>
+
+            {home && shareTargets.length ? <ShareCard dealId={deal.id} workspaces={shareTargets} /> : null}
             <ArchiveButton dealId={deal.id} />
           </>
         ) : null}

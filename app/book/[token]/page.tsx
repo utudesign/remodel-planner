@@ -5,6 +5,7 @@ import { readSettings } from "@/lib/auth/require-role";
 import { availableSlots } from "@/lib/booking";
 import { formatDateTime } from "@/lib/dates";
 import { createAdminSupabase } from "@/lib/supabase/admin";
+import { busyMeetings, hostFirstName } from "@/server/workspace";
 
 export const metadata = { title: "Book your free visit" };
 
@@ -15,20 +16,15 @@ export default async function BookPage({ params }: { params: Promise<{ token: st
   const db = createAdminSupabase();
   const { data: deal } = await db
     .from("deals")
-    .select("id, company_id, deleted_at, contact:contacts(name), company:companies(timezone, settings_json)")
+    .select("id, company_id, workspace_id, owner_id, deleted_at, contact:contacts(name), company:companies(timezone, settings_json)")
     .eq("booking_token", token)
     .maybeSingle();
   if (!deal || deal.deleted_at || !deal.company) notFound();
   const tz = deal.company.timezone;
   const st = readSettings((deal.company.settings_json ?? {}) as Record<string, unknown>);
   const now = new Date();
-  const [{ data: booked }, { data: mine }, { data: owner }] = await Promise.all([
-    db
-      .from("meetings")
-      .select("starts_at, ends_at")
-      .eq("company_id", deal.company_id)
-      .eq("status", "scheduled")
-      .gte("starts_at", new Date(now.getTime() - 86400_000).toISOString()),
+  const [booked, { data: mine }, me] = await Promise.all([
+    busyMeetings(deal.company_id, deal.workspace_id, now),
     db
       .from("meetings")
       .select("starts_at")
@@ -37,9 +33,9 @@ export default async function BookPage({ params }: { params: Promise<{ token: st
       .gte("starts_at", now.toISOString())
       .order("starts_at")
       .limit(1),
-    db.from("users").select("name").eq("company_id", deal.company_id).eq("role", "owner").eq("is_default_owner", true).maybeSingle(),
+    hostFirstName(deal.company_id, deal.owner_id),
   ]);
-  const busy = (booked ?? []).map((m) => ({
+  const busy = booked.map((m) => ({
     start: new Date(m.starts_at),
     end: new Date(m.ends_at ?? new Date(new Date(m.starts_at).getTime() + st.booking.minutes * 60_000)),
   }));
@@ -54,7 +50,6 @@ export default async function BookPage({ params }: { params: Promise<{ token: st
     d.slots.push({ start: s.start, label: s.label });
   }
   const first = (deal.contact?.name ?? "").split(/\s+/)[0];
-  const me = (owner?.name ?? "").split(/\s+/)[0];
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-5 px-4 py-8">
       <div>

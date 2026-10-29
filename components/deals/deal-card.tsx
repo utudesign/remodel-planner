@@ -18,12 +18,15 @@ export function DealCard({
   deal: d,
   stageKind,
   ownerName,
+  sharedBy,
   now,
 }: {
   deal: DealRow;
   stageKind: StageKind | undefined;
   /** First name of the person working the deal. */
   ownerName?: string | null;
+  /** 0016: another workspace's name when this deal was shared with mine. */
+  sharedBy?: string | null;
   now: Date;
 }) {
   const step = nextStep({ ...d, stageKind }, now);
@@ -44,6 +47,9 @@ export function DealCard({
       <p className="mt-0.5 truncate text-base font-semibold">{name}</p>
       <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted-foreground">
         <ScopeBadge scope={d.scope} />
+        {sharedBy ? (
+          <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">Shared · {sharedBy}</span>
+        ) : null}
         {stageKind === "handed_off" ? (
           <span>{jobStatusLabel(d.job_status)}</span>
         ) : (

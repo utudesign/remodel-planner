@@ -38,7 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <aside className="sticky top-0 hidden h-dvh flex-col gap-6 border-r bg-card px-3 py-5 lg:flex">
         <div className="flex items-center justify-between px-3">
           <Link href="/today" className="truncate text-base font-semibold tracking-tight">
-            {s.companyName || "RenoDesign"}
+            {s.workspaceName && s.workspaceName !== s.companyName ? `${s.companyName} · ${s.workspaceName}` : s.companyName || "RenoDesign"}
           </Link>
           <BellLink count={unread} />
         </div>
@@ -51,7 +51,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex min-w-0 flex-col">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b bg-card/95 px-4 backdrop-blur lg:hidden">
           <Link href="/today" className="truncate font-semibold tracking-tight">
-            {s.companyName || "RenoDesign"}
+            {s.workspaceName && s.workspaceName !== s.companyName ? `${s.companyName} · ${s.workspaceName}` : s.companyName || "RenoDesign"}
           </Link>
           <div className="flex items-center gap-1">
             <BellLink count={unread} />

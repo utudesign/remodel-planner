@@ -16,19 +16,21 @@ export default async function MorePage() {
     .from("lead_links")
     .select("slug, active")
     .eq("company_id", s.companyId)
+    .eq("workspace_id", s.workspaceId)
     .eq("active", true)
     .limit(1)
     .maybeSingle();
   const shareUrl = link ? `${await appUrl()}/l/${link.slug}` : null;
   const owner = s.role === "owner";
+  const admin = s.isWsAdmin;
   const links = [
-    { href: "/team", label: "Team", icon: Users, hint: "Who can sign in · invite Crystal, Ahn and others" },
+    { href: "/team", label: "Team", icon: Users, hint: owner ? "Who can sign in · workspaces · invites" : "Who can sign in to your workspace" },
     { href: "/feedback", label: "Feedback", icon: MessageCircleHeart, hint: "Tell us what works and what to change" },
     { href: "/notifications", label: "Notifications", icon: Bell, hint: "Everything that happened" },
     { href: "/settings", label: "Settings", icon: Settings, hint: "Company, license, hours, booking slots, auto-reply" },
     { href: "/settings/texts", label: "Texts", icon: MessageSquare, hint: "On my way, thanks, estimate follow-ups, welcome" },
     { href: "/settings/pipeline", label: "Stages + follow-ups", icon: SlidersHorizontal, hint: "The pipeline and its cadence" },
-  ].filter((l) => owner || l.href === "/notifications" || l.href === "/feedback");
+  ].filter((l) => owner || l.href === "/notifications" || l.href === "/feedback" || (admin && l.href === "/team"));
   return (
     <>
       <PageHeader title="More" />
@@ -46,7 +48,7 @@ export default async function MorePage() {
           </li>
         ))}
       </ul>
-      {owner && shareUrl ? (
+      {admin && shareUrl ? (
         <Card className="mb-5">
           <CardHeader>
             <CardTitle>Free-estimate link</CardTitle>

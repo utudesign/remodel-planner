@@ -236,3 +236,19 @@ Supersedes the hand-off/commission parts of SALES-REP-MODE, 0006, 0010 and 0013 
 | Company name = RenoDesign (from the RenoDesign partner record); license moves to Settings → company (printed on client estimates, which now say "Payments are made to RenoDesign") | The estimate is from the company itself |
 | Texts: "Next: the contract" (hand-off) → **Welcome aboard** ("Your kitchen is on our schedule…"); `{brand}` = company name | No hand-off call from "our office" |
 | Estimate bottom bar shows gross profit instead of "This pays you" | Same reason |
+
+### Separate workspaces + Share (2026-10-29, Tugu)
+
+**Spec change.** Tugu: "i need to have one separate admin account that doesnt share data with mine, for crystal, only
+she can click share on her end so that it can be visible to me." Answers: shared deals are **full edit**; existing data
+stays in **Tugu's** workspace and Crystal starts fresh; sharing works **both ways**. Migration 0016.
+
+| Decision | Why |
+| --- | --- |
+| **Workspaces inside the one company** (`workspaces`; `users.workspace_id` + `workspace_admin`; `deals`/`contacts`/`lead_links`/`team_invites` carry `workspace_id`), not a second company | Deal numbers (`26-1047`), price list, stages and texts stay one set; a second company would fork all of it |
+| RLS on every deal-related table checks `can_see_deal()`: the deal's own workspace, or a `deal_shares` row for mine. Files, quotes, visits, activity, jobs (tasks, costs, payments, milestones, materials) and storage follow the deal | The database enforces privacy, not the screens |
+| **Share** card on a deal's Overview (only its own workspace sees it): Share / Stop sharing per workspace. The other workspace gets a notification and can see and edit everything; a "Shared by …" badge shows on the deal and its card | Crystal decides what Tugu sees, and the reverse |
+| The owner gives a teammate her own workspace from Team (`create_workspace_for()`): she becomes its admin, starts empty, gets her own free-estimate link. Deals she was working stay in the owner's workspace (reassigned to the owner) | "Mine; Crystal starts fresh" |
+| Workspace admins (owner, Crystal) invite and turn off people in their own workspace, rename it, and get their own new-lead / booking notifications and 3:30 digest. Booking slots are busy per workspace | Her workspace runs on its own |
+| KPIs count my workspace; deals shared with me sit under a **Shared with me** chip | No double counting |
+| Still company-wide (owner edits): Settings (hours, booking slots, auto-reply, license), Texts, Stages + follow-ups, price list + templates | One company; can be split later if Crystal needs her own |

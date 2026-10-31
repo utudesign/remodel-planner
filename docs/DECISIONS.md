@@ -275,3 +275,20 @@ job PM, daily reports and site rules come back (PLAN v3 §0a lists what this rev
 | Each delete / archive / restore writes a deal activity ("Estimate deleted: Draft v2") | Shows in History once batch B lands |
 | `types/db.ts` quotes columns added by hand (Supabase CLI needs Docker, not available in this workspace); `pnpm db:types` regenerates the same | Typecheck |
 | Vercel Hobby is for non-commercial use; move to Pro ($20) + Supabase Pro ($25) before crew/customers log in (PLAN v3 §3) | Pricing pages checked Oct 31, 2026 |
+
+### Batch B: deal jacket (0018)
+
+| Decision | Why |
+| --- | --- |
+| Checklist items can be **ticked by hand** (`deal_checklist_checks`: who + when, one per item). The checklist view and `deal_gate_missing()` are redefined in 0018 (same columns + `checked_at`/`checked_by` appended, same signature) so a tick satisfies **every** gate (Mark sold, order, start, close). Owner + team can tick/untick on deals they can see; another workspace can't | Item 1. The 0004/0005 gate counted files only, so this is the override; it's logged in History |
+| An item with a file attached shows ✓ and can't be unticked (remove the file to reopen it). "Checked by hand · Tugu · Oct 31" under the label otherwise; "Add photo/file" stays | One clear answer to "why is this ticked?" |
+| **History** = an audit trail written by one generic AFTER trigger (`private.audit_row`, `zz_audit` on deals, contacts, deal files, estimates + lines, visits, site visit form, checklist ticks, job, milestones, tasks, costs, payments, change orders) into `audit_log` (+ `deal_id`). Only changed columns are stored (old → new); bookkeeping columns (updated_at, last_touch_at, …) and no-op updates are skipped | Item 3: "every change, however small", from the database so nothing can bypass it |
+| History tab replaces Activity; the header **Log** button became **History**; `?tab=activity` links open History. Entries: who · what · when (ET), newest first, filter chips (Stage, Edits, Checklist, Photos & files, Estimates, Visits, Calls & texts, Notes, Job). "+ Note" opens the old log form | Item 3 |
+| One person's line edits on the same estimate within 15 minutes are one History entry ("Estimate edited: 26-1047-E1" + the changes) | Each tap is a row; 40 rows for one estimate is unreadable |
+| Team members read History on deals they can see (`audit_team_read`); crew read none (crew get the job feed in batch F) | History holds prices (estimate lines, sold price) |
+| Estimate delete/archive no longer writes its own activity (the audit trail covers it) | No double entries |
+| **Stage stepper** replaces the dropdown: current stage highlighted, earlier ones ticked, tap to jump (back asks first), big **Next: <stage>**, **Mark lost…** asks why, the Sold step opens Mark sold (DB allows nothing else). Follow-up shows as text ("Follow up Tue 6:00 PM", red when overdue/none) with +1 day / +3 days / +1 week / Pick date | Item 4 |
+| Quick follow-up buttons count from **today** at the follow-up's own clock time (9:00 AM if none), in Eastern time (`lib/deals/follow-up-bump.ts`, DST-tested) | A snooze; matches how the queue is used |
+| **Mark as visited** closes the booked visit closest to now (or records a done visit now), moves the deal to `visit_done` when it's earlier **by stage order** (no hard-coded list), and logs "Site visit done" so the follow-up resets from `follow_up_rules` in the database. The ✓ on a booked visit uses the same code | Item 5 |
+| **Edit visit** moves the booked visit (and its "On my way" follow-up) instead of booking a second one; cancel asks first | Item 5 "book or edit" |
+| Old `StageForm` / `FollowUpForm` removed | Replaced |

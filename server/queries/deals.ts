@@ -168,16 +168,27 @@ export type ChecklistItem = {
   sort_order: number;
   file_count: number;
   satisfied: boolean;
+  /** Ticked by hand (0018): when and by whom (name). Null when not ticked by hand. */
+  checked_at: string | null;
+  checked_by: string | null;
+  checked_by_name: string | null;
 };
 
 export async function getChecklist(s: Session, dealId: string, gate?: string): Promise<ChecklistItem[]> {
   let q = s.db
     .from("deal_jacket_checklist")
-    .select("requirement_id, gate, folder, label, required, sort_order, file_count, satisfied")
+    .select("requirement_id, gate, folder, label, required, sort_order, file_count, satisfied, checked_at, checked_by")
     .eq("deal_id", dealId);
   if (gate) q = q.eq("gate", gate);
   const rows = must(await q.order("sort_order"));
-  return rows as unknown as ChecklistItem[];
+  const ids = [...new Set(rows.map((r) => r.checked_by).filter((x): x is string => !!x))];
+  const names = ids.length
+    ? new Map(must(await s.db.from("users").select("id, name").in("id", ids)).map((u) => [u.id, u.name]))
+    : new Map<string, string | null>();
+  return rows.map((r) => ({
+    ...r,
+    checked_by_name: r.checked_by ? (names.get(r.checked_by) ?? null) : null,
+  })) as unknown as ChecklistItem[];
 }
 
 export type DealFile = {

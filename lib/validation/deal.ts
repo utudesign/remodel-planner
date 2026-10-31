@@ -96,6 +96,8 @@ export const followUpSchema = z.object({ deal_id: id, at: reqDateTimeLocal });
 
 export const bookVisitSchema = z.object({
   deal_id: id,
+  /** v3 item 5: editing a booked visit moves it instead of booking a second one. */
+  meeting_id: z.preprocess((v) => (v === "" ? undefined : v), z.uuid().optional()),
   starts_at: reqDateTimeLocal,
   minutes: z.coerce.number().int().min(15).max(480).default(90),
   notes: optText(500),

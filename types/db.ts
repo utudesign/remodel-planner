@@ -135,6 +135,7 @@ export type Database = {
           before: Json | null
           company_id: string
           created_at: string
+          deal_id: string | null
           id: number
           record_id: string | null
           table_name: string
@@ -147,6 +148,7 @@ export type Database = {
           before?: Json | null
           company_id: string
           created_at?: string
+          deal_id?: string | null
           id?: never
           record_id?: string | null
           table_name: string
@@ -158,6 +160,7 @@ export type Database = {
           before?: Json | null
           company_id?: string
           created_at?: string
+          deal_id?: string | null
           id?: never
           record_id?: string | null
           table_name?: string
@@ -1071,6 +1074,59 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deal_checklist_checks: {
+        Row: {
+          checked_at: string
+          checked_by: string | null
+          company_id: string
+          deal_id: string
+          id: string
+          note: string | null
+          requirement_id: string
+        }
+        ComputedFields: never
+        Insert: {
+          checked_at?: string
+          checked_by?: string | null
+          company_id: string
+          deal_id: string
+          id?: string
+          note?: string | null
+          requirement_id: string
+        }
+        Update: {
+          checked_at?: string
+          checked_by?: string | null
+          company_id?: string
+          deal_id?: string
+          id?: string
+          note?: string | null
+          requirement_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_checklist_checks_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_checklist_checks_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "document_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_checklist_checks_checked_by_fkey"
+            columns: ["checked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -3859,6 +3915,8 @@ export type Database = {
       }
       deal_jacket_checklist: {
         Row: {
+          checked_at: string | null
+          checked_by: string | null
           deal_id: string | null
           deal_number: string | null
           file_count: number | null

@@ -656,5 +656,85 @@ begin
 end $$;
 reset role;
 
+
+-- 0018 (v3 batch B): checklist ticks by hand, History audit trail ----------------------------
+select pg_temp.act_as('seed_tugu');
+set role authenticated;
+do $$
+declare dl uuid; n int; a record; c uuid;
+begin
+  insert into public.contacts (company_id, name, phone) values ('00000000-0000-0000-0000-0000000000c1', 'Ruby K', '7035550100') returning id into c;
+  insert into public.deals (company_id, source, stage, scope, title, contact_id)
+  values ('00000000-0000-0000-0000-0000000000c1', 'manual', 'new', 'kitchen', '0018 deal', c) returning id into dl;
+  perform set_config('test.d18', dl::text, false);
+
+  -- Hand ticks: who + when; every required item ticked → Mark sold goes through without a single file.
+  begin
+    perform public.mark_sold(dl, 4500000);
+    raise exception 'mark_sold should need the checklist';
+  exception when check_violation then null; end;
+  insert into public.deal_checklist_checks (deal_id, requirement_id, note)
+  select dl, r.id, 'checked on site'
+    from public.document_requirements r
+   where r.company_id = '00000000-0000-0000-0000-0000000000c1' and r.gate = 'before_handoff' and r.required;
+  if exists (select 1 from public.deal_checklist_checks where deal_id = dl and (checked_by is null or checked_at is null)) then
+    raise exception 'a tick records who and when'; end if;
+  if exists (select 1 from public.deal_jacket_checklist where deal_id = dl and gate = 'before_handoff' and required and not satisfied) then
+    raise exception 'ticked items show as satisfied'; end if;
+  if (select checked_by from public.deal_jacket_checklist where deal_id = dl and gate = 'before_handoff' and required limit 1)
+     <> public.current_user_id() then raise exception 'the view shows who ticked'; end if;
+  if exists (select 1 from public.deal_gate_missing(dl, 'before_handoff')) then raise exception 'gate accepts ticks'; end if;
+
+  -- Untick one: the gate wants it again.
+  delete from public.deal_checklist_checks
+   where deal_id = dl and requirement_id = (select requirement_id from public.deal_jacket_checklist
+                                             where deal_id = dl and gate = 'before_handoff' and required limit 1);
+  if not exists (select 1 from public.deal_gate_missing(dl, 'before_handoff')) then raise exception 'untick reopens the item'; end if;
+  insert into public.deal_checklist_checks (deal_id, requirement_id)
+  select dl, r.id from public.deal_gate_missing(dl, 'before_handoff') m(label)
+    join public.document_requirements r on r.label = m.label and r.company_id = '00000000-0000-0000-0000-0000000000c1'
+                                        and r.gate = 'before_handoff'
+  on conflict do nothing;
+
+  -- History: stage move, contact edit, checklist ticks, all with who + old → new.
+  update public.deals set stage = 'qualified' where id = dl;
+  select * into a from public.audit_log where deal_id = dl and table_name = 'deals' and action = 'update'
+   order by id desc limit 1;
+  if a.before ->> 'stage' <> 'new' or a.after ->> 'stage' <> 'qualified' or a.actor_id <> public.current_user_id() then
+    raise exception 'stage move logged old → new + who (%, %)', a.before, a.after; end if;
+  if a.after ? 'updated_at' or a.after ? 'stage_entered_at' then raise exception 'bookkeeping columns stay out of History'; end if;
+  update public.contacts set phone = '7035550199' where id = c;
+  if not exists (select 1 from public.audit_log where deal_id = dl and table_name = 'contacts'
+                  and before ->> 'phone' = '7035550100' and after ->> 'phone' = '7035550199') then
+    raise exception 'contact edits show on the deal'; end if;
+  select count(*) into n from public.audit_log where deal_id = dl and table_name = 'deal_checklist_checks';
+  if n < 3 then raise exception 'ticks and unticks are logged (%)', n; end if;
+  update public.deals set stage = 'qualified' where id = dl;   -- no real change
+  if (select count(*) from public.audit_log where deal_id = dl and table_name = 'deals' and action = 'update') <> 1 then
+    raise exception 'an update that changes nothing is not logged'; end if;
+
+  perform public.mark_sold(dl, 4500000);
+  raise notice 'OK: hand ticks (who + when) satisfy the gate and Mark sold; untick reopens; History logs old → new + who';
+end $$;
+select pg_temp.act_as('seed_ahn');
+do $$ begin
+  if exists (select 1 from public.audit_log where deal_id = current_setting('test.d18')::uuid) then
+    raise exception 'another workspace can''t read this deal''s History'; end if;
+  begin
+    insert into public.deal_checklist_checks (deal_id, requirement_id)
+    select current_setting('test.d18')::uuid, id from public.document_requirements limit 1;
+    raise exception 'another workspace can''t tick';
+  exception when insufficient_privilege or check_violation then null;
+            when raise_exception then if sqlerrm <> 'Deal not found' then raise; end if;
+  end;
+  raise notice 'OK: History and ticks stay inside the deal''s workspace';
+end $$;
+select pg_temp.act_as('seed_crew');
+do $$ begin
+  if exists (select 1 from public.audit_log) then raise exception 'crew read no History'; end if;
+  raise notice 'OK: crew reads no History';
+end $$;
+reset role;
+
 reset role;
 \echo ALL RULE TESTS PASSED

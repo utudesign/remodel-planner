@@ -1,19 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, MessageSquare, Navigation, NotebookPen, Phone } from "lucide-react";
+import { ChevronLeft, History, MessageSquare, Navigation, Phone } from "lucide-react";
 import { ScopeBadge } from "@/components/deals/deal-card";
 import {
   ArchiveButton,
-  BookVisitForm,
+  VisitActions,
   ContactForm,
-  FollowUpForm,
-  LogForm,
   MeetingButtons,
   QualifyForm,
-  StageForm,
 } from "@/components/deals/jacket-forms";
 import { UploadButton } from "@/components/deals/upload-button";
 import { EstimateActions } from "@/components/estimates/estimate-actions";
+import { ChecklistTick } from "@/components/deals/checklist-tick";
+import { StageStepper } from "@/components/deals/stage-stepper";
+import { HistoryList } from "@/components/deals/history-list";
+import { getDealHistory } from "@/server/queries/history";
 import { PhotoCapture } from "@/components/photos/photo-capture";
 import { AutoReplyCard } from "@/components/deals/auto-reply-card";
 import { QuickTexts } from "@/components/deals/quick-texts";
@@ -36,7 +37,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/states";
 import { requireStaff } from "@/lib/auth/require-role";
-import { formatDateTime, todayIn, utcToDatetimeLocal } from "@/lib/dates";
+import { DEFAULT_TZ, formatDateTime, todayIn, utcToDatetimeLocal } from "@/lib/dates";
 import { DEAL_FOLDERS, type DealFolder } from "@/lib/deals/dealNumber";
 import { FOLDER_LABELS, PHOTO_TAGS, sourceLabel, timelineLabel } from "@/lib/deals/display";
 import { leadScore, nextStep } from "@/lib/deals/segments";
@@ -44,7 +45,6 @@ import { formatBudget, formatCentsWhole } from "@/lib/money";
 import { signedUrls } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import {
-  getActivities,
   getChecklist,
   getDealByNumber,
   getDealFiles,
@@ -66,7 +66,7 @@ const TABS = [
   { key: "photos", label: "Photos" },
   { key: "files", label: "Files" },
   { key: "job", label: "Job" },
-  { key: "activity", label: "Activity" },
+  { key: "history", label: "History" },
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
 
@@ -94,7 +94,9 @@ export default async function DealJacket({
   // Sold = marked sold (0015), or an older hand-off / signed partner deal.
   const sold = !!deal.sold_at || !!deal.handed_off_at || (deal.origin === "partner" && deal.job_status !== "not_started");
   const tabs = [...TABS];
-  const tab: Tab = tabs.find((t) => t.key === tabParam)?.key ?? "overview";
+  // Old links (?tab=activity, the header "Log") open History (v3 item 3).
+  const wanted = tabParam === "activity" ? "history" : tabParam;
+  const tab: Tab = tabs.find((t) => t.key === wanted)?.key ?? "overview";
 
   const [
     stages,
@@ -243,9 +245,9 @@ export default async function DealJacket({
               Icon: Navigation,
             },
             {
-              href: `/deals/${deal.deal_number}?tab=activity#log`,
-              label: "Log",
-              Icon: NotebookPen,
+              href: `/deals/${deal.deal_number}?tab=history`,
+              label: "History",
+              Icon: History,
             },
           ].map(({ href, label, Icon }) =>
             href ? (
@@ -329,45 +331,19 @@ export default async function DealJacket({
               <CardHeader>
                 <CardTitle>Stage + follow-up</CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-col gap-4">
-                <StageForm
-                  key={deal.stage}
+              <CardContent>
+                <StageStepper
+                  key={`${deal.stage}:${deal.next_follow_up_at ?? ""}`}
                   dealId={deal.id}
+                  number={deal.deal_number}
                   stage={deal.stage}
                   stages={stages}
                   reasons={reasons}
+                  lostReason={deal.lost_reason}
+                  followUpAt={deal.next_follow_up_at}
+                  tz={s.timezone}
+                  nowMs={now.getTime()}
                 />
-                {deal.lost_reason ? (
-                  <p className="text-sm text-muted-foreground">
-                    Lost:{" "}
-                    {reasons.find((r) => r.key === deal.lost_reason)?.label ?? deal.lost_reason}
-                  </p>
-                ) : null}
-                {stage?.kind !== "lost" ? (
-                  <div className="flex flex-col gap-1.5">
-                    <p className="text-sm font-medium">
-                      Next follow-up{" "}
-                      <span
-                        className={cn(
-                          "font-normal",
-                          step.urgent ? "text-destructive" : "text-muted-foreground",
-                        )}
-                      >
-                        {deal.next_follow_up_at
-                          ? formatDateTime(deal.next_follow_up_at, s.timezone)
-                          : "none"}
-                      </span>
-                    </p>
-                    <FollowUpForm
-                      dealId={deal.id}
-                      value={
-                        deal.next_follow_up_at
-                          ? utcToDatetimeLocal(deal.next_follow_up_at, s.timezone)
-                          : ""
-                      }
-                    />
-                  </div>
-                ) : null}
               </CardContent>
             </Card>
 
@@ -486,7 +462,7 @@ export default async function DealJacket({
           />
         ) : null}
 
-        {tab === "activity" ? <ActivityTab dealId={deal.id} tz={s.timezone} /> : null}
+        {tab === "history" ? <HistoryTab dealId={deal.id} tz={s.timezone} /> : null}
       </div>
     </div>
   );
@@ -614,7 +590,7 @@ async function MarkSoldTab({
   );
 }
 
-function Checklist({ items, dealId }: { items: ChecklistItem[]; dealId: string }) {
+function Checklist({ items, dealId, tz = DEFAULT_TZ }: { items: ChecklistItem[]; dealId: string; tz?: string }) {
   if (!items.length)
     return <p className="text-sm text-muted-foreground">No checklist items set up.</p>;
   return (
@@ -624,18 +600,17 @@ function Checklist({ items, dealId }: { items: ChecklistItem[]; dealId: string }
           key={i.requirement_id}
           className="flex min-h-12 items-center gap-3 border-b border-border/60 py-2 last:border-0"
         >
+          <ChecklistTick
+            dealId={dealId}
+            requirementId={i.requirement_id}
+            label={i.label}
+            satisfied={i.satisfied}
+            hasFiles={i.file_count > 0}
+            checkedByHand={!!i.checked_at}
+          />
           <span
-            aria-hidden
             className={cn(
-              "flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold",
-              i.satisfied ? "bg-primary text-primary-foreground" : "ring-2 ring-input",
-            )}
-          >
-            {i.satisfied ? "✓" : ""}
-          </span>
-          <span
-            className={cn(
-              "flex-1 text-[15px]",
+              "min-w-0 flex-1 text-[15px]",
               !i.required && !i.satisfied && "text-muted-foreground",
             )}
           >
@@ -643,6 +618,12 @@ function Checklist({ items, dealId }: { items: ChecklistItem[]; dealId: string }
             {!i.required ? " (optional)" : ""}
             {i.file_count ? (
               <span className="ml-1 text-xs text-muted-foreground">· {i.file_count}</span>
+            ) : null}
+            {i.checked_at && !i.file_count ? (
+              <span className="block text-xs text-muted-foreground">
+                Checked by hand · {i.checked_by_name ?? "someone"} ·{" "}
+                {new Date(i.checked_at).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: tz })}
+              </span>
             ) : null}
           </span>
           <UploadButton
@@ -693,7 +674,7 @@ async function Visits({
                 {m.booked_via === "link" ? "Booked by the client" : "Booked by me"}
               </p>
             </div>
-            <MeetingButtons meetingId={m.id} />
+            <MeetingButtons meetingId={m.id} cancelOnly />
           </div>
         ))}
         {meetings
@@ -704,7 +685,11 @@ async function Visits({
               {formatDateTime(m.starts_at, tz)} · {m.status === "done" ? "done" : "canceled"}
             </p>
           ))}
-        <BookVisitForm dealId={dealId} minutes={minutes} />
+        <VisitActions
+          dealId={dealId}
+          minutes={minutes}
+          booked={upcoming[0] ? { id: upcoming[0].id, local: utcToDatetimeLocal(upcoming[0].starts_at, tz) } : null}
+        />
         <Link
           href={`/deals/${number}/visit`}
           className="flex h-12 items-center justify-center rounded-xl bg-primary font-semibold text-primary-foreground"
@@ -867,51 +852,11 @@ async function FilesTab({
   );
 }
 
-async function ActivityTab({ dealId, tz }: { dealId: string; tz: string }) {
+async function HistoryTab({ dealId, tz }: { dealId: string; tz: string }) {
   const s = await requireStaff();
-  const items = await getActivities(s, dealId);
-  const icon: Record<string, string> = {
-    call: "Call",
-    text: "Text",
-    fb_msg: "FB message",
-    email: "Email",
-    visit: "Visit",
-    note: "Note",
-    stage_change: "Stage",
-    system: "System",
-  };
-  return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Log a touch</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <LogForm dealId={dealId} />
-        </CardContent>
-      </Card>
-      {items.length === 0 ? (
-        <EmptyState title="Nothing logged yet" />
-      ) : (
-        <ol className="flex flex-col gap-2">
-          {items.map((a) => (
-            <li key={a.id} className="rounded-xl bg-card p-3 ring-1 ring-border">
-              <p className="flex justify-between gap-2 text-xs font-semibold text-muted-foreground">
-                <span>
-                  {icon[a.type] ?? a.type}
-                  {a.direction === "in" ? " · in" : a.direction === "out" ? " · out" : ""}
-                </span>
-                <span>{formatDateTime(a.occurred_at, tz)}</span>
-              </p>
-              {a.summary ? (
-                <p className="mt-1 text-[15px] whitespace-pre-wrap">{a.summary}</p>
-              ) : null}
-            </li>
-          ))}
-        </ol>
-      )}
-    </>
-  );
+  const entries = await getDealHistory(s, dealId);
+  const times = Object.fromEntries(entries.map((e) => [e.id, formatDateTime(e.at, tz)]));
+  return <HistoryList dealId={dealId} entries={entries} times={times} />;
 }
 
 async function EstimateTab({ dealId, number, sold }: { dealId: string; number: string; sold: boolean }) {

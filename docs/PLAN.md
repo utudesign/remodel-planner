@@ -1,6 +1,6 @@
 # PLAN v3: Change request v3, Step 0 (plan only, no code)
 
-Status: **approved Oct 31, 2026 with the defaults (Q1–Q21).** Batch A built (0017). Skyline = Spring Forest price lists (batch C). Older plan (Oct 23, sales tool) is in git history before this commit.
+Status: **approved Oct 31, 2026 with the defaults (Q1–Q21).** Batches A (0017) and B (0018) built. Skyline = Spring Forest price lists (batch C). Older plan (Oct 23, sales tool) is in git history before this commit.
 
 ---
 

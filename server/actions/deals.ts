@@ -21,6 +21,7 @@ import {
   stageSchema,
 } from "@/lib/validation/deal";
 import { formToObject, must, ok, run, type ActionState } from "@/server/action-utils";
+import { completeVisit } from "@/server/jacket-shared";
 
 async function dealRef(s: Session, dealId: string): Promise<DealRef & { contact_id: string | null }> {
   return must(
@@ -283,7 +284,26 @@ export async function bookVisit(_: ActionState, fd: FormData): Promise<ActionSta
     const v = bookVisitSchema.parse(formToObject(fd));
     const s = await requireRole("owner", "team", "partner");
     const d = await dealRef(s, v.deal_id);
-    await addVisit(s, d.id, datetimeLocalToUtc(v.starts_at, s.timezone), v.minutes, v.notes);
+    const start = datetimeLocalToUtc(v.starts_at, s.timezone);
+    if (v.meeting_id) {
+      // Move the booked visit; the "On my way" follow-up moves with it while the deal is still before the visit.
+      ok(
+        await s.db
+          .from("meetings")
+          .update({ starts_at: start.toISOString(), ends_at: new Date(start.getTime() + v.minutes * 60_000).toISOString() })
+          .eq("id", v.meeting_id)
+          .eq("deal_id", d.id)
+          .eq("status", "scheduled"),
+      );
+      const { data: cur } = await s.db.from("deals").select("stage").eq("id", d.id).single();
+      if (cur && ["new", "qualified", "visit_booked"].includes(cur.stage)) {
+        const due = new Date(start.getTime() - ON_MY_WAY_MIN * 60_000);
+        ok(await s.db.from("deals").update({ next_follow_up_at: due.toISOString() }).eq("id", d.id));
+      }
+      revalidateDeal(d.deal_number);
+      return { ok: true, message: "Visit moved" };
+    }
+    await addVisit(s, d.id, start, v.minutes, v.notes);
     revalidateDeal(d.deal_number);
     return { ok: true, message: "Visit booked" };
   });
@@ -293,26 +313,12 @@ export async function setMeetingStatus(input: { meeting_id: string; status: "don
   return run(async () => {
     const v = z.object({ meeting_id: z.uuid(), status: z.enum(["done", "canceled"]) }).parse(input);
     const s = await requireRole("owner", "team", "partner");
-    const m = must(
-      await s.db.from("meetings").update({ status: v.status }).eq("id", v.meeting_id).select("deal_id").single(),
-    );
+    const m = must(await s.db.from("meetings").select("deal_id").eq("id", v.meeting_id).single());
     if (v.status === "done") {
-      const d = must(await s.db.from("deals").select("stage, deal_number").eq("id", m.deal_id).single());
-      if (["new", "qualified", "visit_booked"].includes(d.stage)) {
-        ok(await s.db.from("deals").update({ stage: "visit_done" }).eq("id", m.deal_id));
-      }
-      ok(
-        await s.db.from("activities").insert({
-          company_id: s.companyId,
-          deal_id: m.deal_id,
-          type: "visit",
-          direction: "out",
-          summary: "Site visit done",
-          created_by: s.userId,
-        }),
-      );
-      revalidateDeal(d.deal_number ?? undefined);
+      // Same path as "Mark as visited" (v3 item 5): stage by pipeline order, follow-up from the rules.
+      await completeVisit(s, m.deal_id, v.meeting_id);
     } else {
+      ok(await s.db.from("meetings").update({ status: "canceled" }).eq("id", v.meeting_id));
       revalidateDeal();
     }
   });

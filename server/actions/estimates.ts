@@ -321,19 +321,7 @@ export async function deleteQuote(input: { quote_id: string }): Promise<ActionSt
     const v = z.object({ quote_id: z.uuid() }).parse(input);
     const s = await requireRole("owner", "team", "partner");
     const q = await quoteRef(s, v.quote_id);
-    const label = must(
-      await s.db.from("quotes").select("version, doc_number, name").eq("id", q.id).single(),
-    );
     ok(await s.db.from("quotes").update({ deleted_at: new Date().toISOString() }).eq("id", q.id));
-    ok(
-      await s.db.from("activities").insert({
-        company_id: s.companyId,
-        deal_id: q.deal_id,
-        type: "system",
-        summary: `Estimate deleted: ${label.doc_number ?? `Draft v${label.version}`}${label.name ? ` (${label.name})` : ""}`,
-        created_by: s.userId,
-      }),
-    );
     revalidatePath(`/deals/${q.number}`);
     return { ok: true, message: "Estimate deleted" };
   });
@@ -344,21 +332,11 @@ export async function setQuoteArchived(input: { quote_id: string; archived: bool
     const v = z.object({ quote_id: z.uuid(), archived: z.boolean() }).parse(input);
     const s = await requireRole("owner", "team", "partner");
     const q = await quoteRef(s, v.quote_id);
-    const label = must(await s.db.from("quotes").select("version, doc_number").eq("id", q.id).single());
     ok(
       await s.db
         .from("quotes")
         .update({ archived_at: v.archived ? new Date().toISOString() : null })
         .eq("id", q.id),
-    );
-    ok(
-      await s.db.from("activities").insert({
-        company_id: s.companyId,
-        deal_id: q.deal_id,
-        type: "system",
-        summary: `Estimate ${v.archived ? "archived" : "restored"}: ${label.doc_number ?? `Draft v${label.version}`}`,
-        created_by: s.userId,
-      }),
     );
     revalidateQuote(q.number, q.id);
     return { ok: true, message: v.archived ? "Archived" : "Restored" };

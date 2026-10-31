@@ -17,86 +17,12 @@ import {
   archiveDeal,
   bookVisit,
   logActivity,
-  moveStage,
-  setFollowUp,
   setMeetingStatus,
   updateContact,
   updateQualify,
 } from "@/server/actions/deals";
-import type { Stage } from "@/server/queries/deals";
-
-export function StageForm({
-  dealId,
-  stage,
-  stages,
-  reasons,
-}: {
-  dealId: string;
-  stage: string;
-  stages: Stage[];
-  reasons: { key: string; label: string; active: boolean }[];
-}) {
-  const [state, action] = useActionState(moveStage, null);
-  const [picked, setPicked] = useState(stage);
-  const kind = stages.find((s) => s.key === picked)?.kind;
-  const choices = stages.filter((s) => (s.active && s.kind !== "handed_off") || s.key === stage);
-  // React 19 resets a <form action> after the action runs (form.reset()). A controlled <select> is reset in
-  // the DOM to its first <option> without a re-render, so the screen showed the wrong stage after "Move".
-  // Fix: the select is uncontrolled with defaultValue = the saved stage (the caller keys this form on the
-  // stage, so a successful move remounts it), and onReset puts our copy of the pick back in step.
-  return (
-    <form action={action} onReset={() => setPicked(stage)} className="flex flex-col gap-3">
-      <input type="hidden" name="deal_id" value={dealId} />
-      <div className="flex gap-2">
-        <NativeSelect
-          name="stage"
-          aria-label="Stage"
-          defaultValue={stage}
-          onChange={(e) => setPicked(e.target.value)}
-          disabled={stages.find((s) => s.key === stage)?.kind === "handed_off"}
-        >
-          {choices.map((s) => (
-            <option key={s.key} value={s.key}>
-              {s.label}
-            </option>
-          ))}
-        </NativeSelect>
-        <SubmitButton variant="secondary">Move</SubmitButton>
-      </div>
-      {kind === "lost" ? (
-        <Field label="Why was it lost?" htmlFor="lost_reason">
-          <NativeSelect id="lost_reason" name="lost_reason" required defaultValue="">
-            <option value="" disabled>
-              Pick a reason
-            </option>
-            {reasons
-              .filter((r) => r.active)
-              .map((r) => (
-                <option key={r.key} value={r.key}>
-                  {r.label}
-                </option>
-              ))}
-          </NativeSelect>
-        </Field>
-      ) : null}
-      <FormMessage state={state} />
-    </form>
-  );
-}
-
-export function FollowUpForm({ dealId, value }: { dealId: string; value: string }) {
-  const [state, action] = useActionState(setFollowUp, null);
-  return (
-    <form action={action} className="flex flex-col gap-2">
-      <input type="hidden" name="deal_id" value={dealId} />
-      <div className="flex gap-2">
-        <Input type="datetime-local" name="at" defaultValue={value} aria-label="Next follow-up" required />
-        <SubmitButton variant="secondary">Set</SubmitButton>
-      </div>
-      <FormMessage state={state} />
-    </form>
-  );
-}
+import { markVisited } from "@/server/actions/jacket";
+import type { ActionState } from "@/server/action-utils";
 
 export type QualifyValues = {
   scope: string | null;
@@ -257,22 +183,99 @@ export function LogForm({ dealId }: { dealId: string }) {
   );
 }
 
-export function BookVisitForm({ dealId, minutes }: { dealId: string; minutes: number }) {
-  const [state, action] = useActionState(bookVisit, null);
+export function BookVisitForm({
+  dealId,
+  minutes,
+  meetingId,
+  defaultValue,
+  onDone,
+}: {
+  dealId: string;
+  minutes: number;
+  /** Editing a booked visit: move it instead of booking another one. */
+  meetingId?: string;
+  defaultValue?: string;
+  onDone?: () => void;
+}) {
+  const [state, action] = useActionState(async (prev: ActionState | null, fd: FormData) => {
+    const res = await bookVisit(prev, fd);
+    if (res?.ok) onDone?.();
+    return res;
+  }, null);
   return (
     <form action={action} className="flex flex-col gap-2">
       <input type="hidden" name="deal_id" value={dealId} />
       <input type="hidden" name="minutes" value={minutes} />
+      {meetingId ? <input type="hidden" name="meeting_id" value={meetingId} /> : null}
       <div className="flex gap-2">
-        <Input type="datetime-local" name="starts_at" required aria-label="Visit date and time" />
-        <SubmitButton variant="secondary">Book</SubmitButton>
+        <Input
+          type="datetime-local"
+          name="starts_at"
+          required
+          defaultValue={defaultValue}
+          aria-label="Visit date and time"
+        />
+        <SubmitButton variant="secondary">{meetingId ? "Save" : "Book"}</SubmitButton>
       </div>
       <FormMessage state={state} />
     </form>
   );
 }
 
-export function MeetingButtons({ meetingId }: { meetingId: string }) {
+/**
+ * The site visit's two buttons (change request v3 item 5): Book / Edit visit, and Mark as visited.
+ * Mark as visited closes the booked visit (or records one now), moves the deal to "Visit done" when
+ * it's earlier in the pipeline, and resets the follow-up from the stage's rules (database).
+ */
+export function VisitActions({
+  dealId,
+  minutes,
+  booked,
+}: {
+  dealId: string;
+  minutes: number;
+  /** The booked (scheduled) visit, as a datetime-local value in the company time zone. */
+  booked: { id: string; local: string } | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pending, start] = useTransition();
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const router = useRouter();
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="secondary" size="lg" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+          {booked ? "Edit visit" : "Book visit"}
+        </Button>
+        <Button
+          size="lg"
+          disabled={pending}
+          onClick={() =>
+            start(async () => {
+              const res = await markVisited({ deal_id: dealId });
+              setMsg(res?.ok ? { ok: true, text: "Marked as visited" } : { ok: false, text: res?.error ?? "Couldn't save" });
+              router.refresh();
+            })
+          }
+        >
+          <Check /> Mark as visited
+        </Button>
+      </div>
+      {open ? (
+        <BookVisitForm
+          dealId={dealId}
+          minutes={minutes}
+          meetingId={booked?.id}
+          defaultValue={booked?.local}
+          onDone={() => setOpen(false)}
+        />
+      ) : null}
+      {msg ? <p className={msg.ok ? "text-sm text-muted-foreground" : "text-sm text-destructive"}>{msg.text}</p> : null}
+    </div>
+  );
+}
+
+export function MeetingButtons({ meetingId, cancelOnly = false }: { meetingId: string; cancelOnly?: boolean }) {
   const [pending, start] = useTransition();
   const router = useRouter();
   const go = (status: "done" | "canceled") =>
@@ -282,10 +285,21 @@ export function MeetingButtons({ meetingId }: { meetingId: string }) {
     });
   return (
     <div className="flex gap-1.5">
-      <Button size="sm" variant="secondary" disabled={pending} onClick={() => go("done")}>
-        <Check /> Done
-      </Button>
-      <Button size="sm" variant="ghost" disabled={pending} onClick={() => go("canceled")} aria-label="Cancel visit">
+      {cancelOnly ? null : (
+        <Button size="sm" variant="secondary" disabled={pending} onClick={() => go("done")}>
+          <Check /> Done
+        </Button>
+      )}
+      <Button
+        size="icon"
+        variant="ghost"
+        disabled={pending}
+        onClick={() => {
+          if (window.confirm("Cancel this visit?")) go("canceled");
+        }}
+        aria-label="Cancel visit"
+        className="size-11"
+      >
         <X />
       </Button>
     </div>

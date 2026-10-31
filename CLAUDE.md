@@ -52,6 +52,7 @@ Ask before adding any dependency not listed here.
 - **UI:** iPhone first at 375 px, 44 px tap targets, one hand. Every list has empty, loading, error and
   overdue states (overdue = red). A database refusal becomes a checklist with **Add** buttons, never a raw error.
 - **Photos are never lost:** offline queue (IndexedDB) until the `deal_files` row exists.
+- **History:** every change on a deal is written by the 0018 audit trigger (`audit_log.deal_id`); don't log changes by hand.
 - **File types:** Photos = images; Files = PDF/Word only. One list: `lib/files/types.ts` (DB: 0017 `deal_file_type_ok()`).
 - **Secrets:** `.env.local` only (gitignored). Every var documented in `.env.example`.
 
@@ -60,7 +61,7 @@ Ask before adding any dependency not listed here.
 1. Every open deal has `next_follow_up_at` (new lead = +1 h; each stage/touch resets it from the rules).
 2. Lost requires a lost reason. Deals are never hard-deleted; numbers (`26-1047`) are never reused.
 3. A deal becomes Sold only through `mark_sold()` (0015): the job-ready checklist (`before_handoff` gate key)
-   complete + a sold price. It moves the deal to the Sold stage (kind `handed_off`), starts the job timeline and
+   complete (a file **or** a hand tick, 0018) + a sold price. It moves the deal to the Sold stage (kind `handed_off`), starts the job timeline and
    ticks Contract signed (+ Deposit). Sold deals have no sales follow-up; job steps take over.
 4. Revenue = sold price + change orders. Gross profit = revenue − job costs. No commission (0015).
 5. Client payments are recorded as dates on the deal (deposit, paid in full); no card processing in the app.

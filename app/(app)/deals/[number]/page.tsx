@@ -14,6 +14,8 @@ import { EstimateActions } from "@/components/estimates/estimate-actions";
 import { ChecklistTick } from "@/components/deals/checklist-tick";
 import { StageStepper } from "@/components/deals/stage-stepper";
 import { HistoryList } from "@/components/deals/history-list";
+import { SiteRulesForm, SiteRulesSummary } from "@/components/jobs/site-rules";
+import { getSiteRules } from "@/server/queries/jobs-pm";
 import { getDealHistory } from "@/server/queries/history";
 import { PhotoCapture } from "@/components/photos/photo-capture";
 import { AutoReplyCard } from "@/components/deals/auto-reply-card";
@@ -111,6 +113,7 @@ export default async function DealJacket({
     intake,
     workspaces,
     shares,
+    siteRules,
   ] = await Promise.all([
     getStages(s),
     getLostReasons(s),
@@ -126,6 +129,7 @@ export default async function DealJacket({
     getIntake(s, deal.id),
     getWorkspaces(s),
     getDealShares(s, deal.id),
+    getSiteRules(s, deal.id),
   ]);
   // 0016: a deal lives in one workspace; others see it only when it's shared with them.
   const home = deal.workspace_id === s.workspaceId;
@@ -354,6 +358,21 @@ export default async function DealJacket({
               minutes={s.settings.booking.minutes}
               bookingLink={bookingLink}
             />
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Site rules</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                <SiteRulesSummary rules={siteRules} />
+                <details>
+                  <summary className="flex h-11 cursor-pointer items-center text-sm font-semibold text-primary">
+                    {siteRules ? "Edit site rules" : "Add site rules (hours, condo / HOA, parking…)"}
+                  </summary>
+                  <SiteRulesForm dealId={deal.id} rules={siteRules} />
+                </details>
+              </CardContent>
+            </Card>
 
             {intake ? (
               <Card>

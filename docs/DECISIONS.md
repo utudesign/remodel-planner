@@ -338,3 +338,16 @@ An independent review of batch C found these; all fixed with SQL tests (rules 45
 | A single item can only come from the estimate's color group (or no color group) | Another color's cabinet could be added at the wrong price |
 | Square feet are rounded before the zero check | 0.04 sq ft made a $0 countertop line |
 | Skyline import at first sign-in can't block the sign-in (load it from Settings if it failed); Settings page allows 300 s | 3.5k items |
+
+## 2026-10-31 — v3 batch F2: Jobs as Asana-style PM (0021)
+
+- A job's plan = `tasks` grouped by **phase** (`job_phase_templates`, Settings → Jobs). Every new job gets one dated task per
+  active phase from its start day (trigger on `projects`); existing jobs were backfilled once. Editing the template never changes running jobs.
+- Task fields: assignee, trade (`trades`, Settings → Jobs), start/end date, optional times, % (0–100), status todo/doing/blocked/done,
+  notes, comments with an optional photo (stored in the deal's Photos, tagged progress/issue). The DB keeps status and % in step.
+- Views on /jobs: Board (column per phase; drag or "Move to" = `move_job_to_phase`), Timeline (Gantt, today line, amber = crew
+  double-booked or outside site hours), List, My work (Overdue/Today/This week/Later).
+- Site rules (item 15) = one row per deal (`site_rules`): hours per weekday, no loud work after, building type, HOA, elevator,
+  parking, debris, gate code, pets, notes. Shown on the deal Overview and the Job tab; workers will read them in F1.
+- Old job milestones stay as "Checkpoints" (payments/inspections still key off them).
+- Comments, site rules and task changes appear in the deal's History (0018 audit trigger).

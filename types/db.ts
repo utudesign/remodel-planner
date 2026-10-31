@@ -2185,6 +2185,41 @@ export type Database = {
           },
         ]
       }
+      job_phase_templates: {
+        Row: {
+          active: boolean
+          company_id: string
+          duration_days: number
+          key: string
+          label: string
+          sort_order: number
+          start_offset_days: number
+          trade_key: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          active?: boolean
+          company_id: string
+          duration_days?: number
+          key: string
+          label: string
+          sort_order?: number
+          start_offset_days?: number
+          trade_key?: string | null
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          duration_days?: number
+          key?: string
+          label?: string
+          sort_order?: number
+          start_offset_days?: number
+          trade_key?: string | null
+        }
+        Relationships: [
+        ]
+      }
       lead_links: {
         Row: {
           active: boolean
@@ -3598,6 +3633,66 @@ export type Database = {
           },
         ]
       }
+      site_rules: {
+        Row: {
+          building_type: string | null
+          company_id: string
+          deal_id: string
+          debris: string | null
+          elevator: string | null
+          gate_code: string | null
+          hoa_contact: string | null
+          hours: Json
+          loud_until: string | null
+          notes: string | null
+          parking: string | null
+          pets: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          building_type?: string | null
+          company_id: string
+          deal_id: string
+          debris?: string | null
+          elevator?: string | null
+          gate_code?: string | null
+          hoa_contact?: string | null
+          hours?: Json
+          loud_until?: string | null
+          notes?: string | null
+          parking?: string | null
+          pets?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          building_type?: string | null
+          company_id?: string
+          deal_id?: string
+          debris?: string | null
+          elevator?: string | null
+          gate_code?: string | null
+          hoa_contact?: string | null
+          hours?: Json
+          loud_until?: string | null
+          notes?: string | null
+          parking?: string | null
+          pets?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_rules_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_visits: {
         Row: {
           appliances: NonNullable<Json>
@@ -3766,34 +3861,123 @@ export type Database = {
           },
         ]
       }
+      task_comments: {
+        Row: {
+          author_id: string | null
+          body: string
+          company_id: string
+          created_at: string
+          file_id: string | null
+          id: string
+          task_id: string
+        }
+        ComputedFields: never
+        Insert: {
+          author_id?: string | null
+          body?: string
+          company_id: string
+          created_at?: string
+          file_id?: string | null
+          id?: string
+          task_id: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          company_id?: string
+          created_at?: string
+          file_id?: string | null
+          id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_comments_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "deal_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           assignee_id: string | null
+          company_id: string | null
           created_at: string
+          done_at: string | null
           due_date: string | null
+          end_on: string | null
+          end_time: string | null
           id: string
+          notes: string | null
+          pct: number
+          phase_key: string | null
           project_id: string | null
+          sort_order: number
+          start_on: string | null
+          start_time: string | null
           status: string | null
           title: string | null
+          trade_key: string | null
+          updated_at: string
         }
         ComputedFields: never
         Insert: {
           assignee_id?: string | null
+          company_id?: string | null
           created_at?: string
+          done_at?: string | null
           due_date?: string | null
+          end_on?: string | null
+          end_time?: string | null
           id?: string
+          notes?: string | null
+          pct?: number
+          phase_key?: string | null
           project_id?: string | null
+          sort_order?: number
+          start_on?: string | null
+          start_time?: string | null
           status?: string | null
           title?: string | null
+          trade_key?: string | null
+          updated_at?: string
         }
         Update: {
           assignee_id?: string | null
+          company_id?: string | null
           created_at?: string
+          done_at?: string | null
           due_date?: string | null
+          end_on?: string | null
+          end_time?: string | null
           id?: string
+          notes?: string | null
+          pct?: number
+          phase_key?: string | null
           project_id?: string | null
+          sort_order?: number
+          start_on?: string | null
+          start_time?: string | null
           status?: string | null
           title?: string | null
+          trade_key?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -3949,6 +4133,32 @@ export type Database = {
           stage_key?: string | null
         }
         Relationships: []
+      }
+      trades: {
+        Row: {
+          active: boolean
+          company_id: string
+          key: string
+          label: string
+          sort_order: number
+        }
+        ComputedFields: never
+        Insert: {
+          active?: boolean
+          company_id: string
+          key: string
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          key?: string
+          label?: string
+          sort_order?: number
+        }
+        Relationships: [
+        ]
       }
       users: {
         Row: {
@@ -4578,6 +4788,7 @@ export type Database = {
       accessory_item: { Args: { p_collection: string; p_company: string; p_key: string; p_vendor: string }; Returns: string }
       add_quote_item: { Args: { p_item: string; p_qty: number; p_quote: string }; Returns: string }
       import_brand_colors: { Args: { p_colors: Json; p_company_id: string; p_list_name: string }; Returns: number }
+      move_job_to_phase: { Args: { p_phase: string; p_project: string }; Returns: undefined }
       pick_quote_color: { Args: { p_color_id: string; p_quote_id: string }; Returns: { code: string; status: string }[] }
       share_deal: { Args: { p_deal: string; p_workspace: string }; Returns: undefined }
       sync_collection_colors: { Args: { p_company_id: string }; Returns: number }

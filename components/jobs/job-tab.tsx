@@ -1,5 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CostList, MilestoneList, StartJobButton, TaskList } from "@/components/jobs/job-parts";
+import { CostList, MilestoneList, StartJobButton } from "@/components/jobs/job-parts";
+import { PhaseTasks } from "@/components/jobs/phase-tasks";
+import { SiteRulesForm, SiteRulesSummary } from "@/components/jobs/site-rules";
+import { crewConflicts } from "@/lib/jobs/pm";
+import { signedUrls } from "@/lib/storage";
+import { getJobPm, getPmSetup, getSiteRules, listPmJobs, toRules } from "@/server/queries/jobs-pm";
 import { requireStaff } from "@/lib/auth/require-role";
 import { todayIn } from "@/lib/dates";
 import { jobMoney } from "@/lib/jobs";
@@ -37,6 +42,21 @@ export async function JobTab({ dealId }: { dealId: string; number: string }) {
     );
   }
   const today = todayIn(s.timezone);
+  // Tasks by phase (v3 item 13): this job's tasks + comments; crew conflicts are checked against every job.
+  const [pm, setup, rules, allJobs] = await Promise.all([getJobPm(s, dealId), getPmSetup(s), getSiteRules(s, dealId), listPmJobs(s)]);
+  const photoUrls = pm ? await signedUrls(pm.comments.map((c) => c.photo_path).filter((x): x is string => !!x), s.companyId) : {};
+  const conflictMap = crewConflicts(allJobs.flatMap((j) => j.tasks));
+  const numberOf = new Map(allJobs.map((j) => [j.projectId, j.number]));
+  const personOf = new Map(setup.people.map((p) => [p.id, p.name]));
+  const conflictText: Record<string, string[]> = {};
+  for (const t of pm?.tasks ?? []) {
+    const others = conflictMap.get(t.id);
+    if (others?.length) {
+      conflictText[t.id] = others.map(
+        (o) => `${personOf.get(o.assignee_id ?? "") ?? "Same person"} is also on #${numberOf.get(o.project_id) ?? "?"} (${o.title})`,
+      );
+    }
+  }
   const money = jobMoney({
     soldCents: deal?.sold_price_cents ?? null,
     changeOrdersCents: deal?.change_orders_cents ?? 0,
@@ -44,8 +64,6 @@ export async function JobTab({ dealId }: { dealId: string; number: string }) {
   });
   const done = job.milestones.filter((m) => m.done_on).length;
   const total = job.milestones.length;
-  const people = job.people.map((p) => ({ id: p.id, name: p.name ?? "No name" }));
-  const nameOf = new Map(people.map((p) => [p.id, p.name]));
 
   return (
     <>
@@ -61,8 +79,22 @@ export async function JobTab({ dealId }: { dealId: string; number: string }) {
       </div>
 
       <Card>
+        <CardHeader>
+          <CardTitle>Site rules</CardTitle>
+          <CardDescription>Shown to workers at the top of the job and on their daily report.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <SiteRulesSummary rules={rules} />
+          <details>
+            <summary className="flex h-11 cursor-pointer items-center text-sm font-semibold text-primary">Edit site rules</summary>
+            <SiteRulesForm dealId={dealId} rules={rules} />
+          </details>
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
-          <CardTitle>Timeline</CardTitle>
+          <CardTitle>Checkpoints</CardTitle>
           <span className="text-sm font-semibold tabular-nums text-muted-foreground">
             {done}/{total}
           </span>
@@ -95,22 +127,26 @@ export async function JobTab({ dealId }: { dealId: string; number: string }) {
       ) : null}
 
       <Card>
-        <CardHeader>
-          <CardTitle>Tasks</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle>Tasks by phase</CardTitle>
+          <a href="/jobs?view=board" className="text-sm font-semibold text-primary">
+            All jobs
+          </a>
         </CardHeader>
         <CardContent>
-          <TaskList
-            projectId={job.project.id}
-            today={today}
-            people={people}
-            tasks={job.tasks.map((t) => ({
-              id: t.id,
-              title: t.title ?? "",
-              status: t.status ?? "todo",
-              due_date: t.due_date,
-              assignee: t.assignee_id ? (nameOf.get(t.assignee_id) ?? null) : null,
-            }))}
-          />
+          {pm ? (
+            <PhaseTasks
+              projectId={pm.projectId}
+              tasks={pm.tasks}
+              phases={setup.phases}
+              trades={setup.trades}
+              people={setup.people}
+              comments={pm.comments.map((c) => ({ ...c, photo_url: c.photo_path ? (photoUrls[c.photo_path] ?? null) : null }))}
+              rules={toRules(rules)}
+              today={today}
+              conflicts={conflictText}
+            />
+          ) : null}
         </CardContent>
       </Card>
 

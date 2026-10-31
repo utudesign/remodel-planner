@@ -128,3 +128,82 @@ export async function importSkylinePriceList(): Promise<ActionState> {
     return { ok: true, message: `Skyline loaded: ${r.items.toLocaleString("en-US")} items in ${r.colors} colors` };
   });
 }
+
+const keyRe = /^[a-z0-9_]{2,40}$/;
+const phaseRows = z
+  .array(
+    z.object({
+      key: z.string().regex(keyRe).nullable(), // null = new
+      label: z.string().trim().min(1).max(60),
+      trade_key: z.string().regex(keyRe).nullable(),
+      start_offset_days: z.number().int().min(0).max(365),
+      duration_days: z.number().int().min(1).max(120),
+      active: z.boolean(),
+    }),
+  )
+  .max(40);
+
+/**
+ * Settings → Jobs: the phase template new jobs start from (v3 item 13). Order = list order. Keys never change;
+ * a hidden phase stays on jobs that already have it. Existing jobs aren't changed.
+ */
+export async function saveJobPhases(input: z.input<typeof phaseRows>): Promise<ActionState> {
+  return run(async () => {
+    const rows = phaseRows.parse(input);
+    const s = await requireRole("owner");
+    const existing = new Set(
+      must(await s.db.from("job_phase_templates").select("key").eq("company_id", s.companyId)).map((r) => r.key),
+    );
+    for (const [i, r] of rows.entries()) {
+      let key = r.key;
+      if (!key) {
+        key = slugify(r.label).slice(0, 36) || "phase";
+        while (existing.has(key)) key = `${key}_${Math.floor(Math.random() * 1000)}`;
+        existing.add(key);
+      }
+      ok(
+        await s.db.from("job_phase_templates").upsert(
+          {
+            company_id: s.companyId,
+            key,
+            label: r.label,
+            trade_key: r.trade_key,
+            start_offset_days: r.start_offset_days,
+            duration_days: r.duration_days,
+            sort_order: i + 1,
+            active: r.active,
+          },
+          { onConflict: "company_id,key" },
+        ),
+      );
+    }
+    revalidatePath("/jobs");
+    return done("/settings/jobs");
+  });
+}
+
+const tradeRows = z
+  .array(z.object({ key: z.string().regex(keyRe).nullable(), label: z.string().trim().min(1).max(40), active: z.boolean() }))
+  .max(30);
+
+export async function saveTrades(input: z.input<typeof tradeRows>): Promise<ActionState> {
+  return run(async () => {
+    const rows = tradeRows.parse(input);
+    const s = await requireRole("owner");
+    const existing = new Set(must(await s.db.from("trades").select("key").eq("company_id", s.companyId)).map((r) => r.key));
+    for (const [i, r] of rows.entries()) {
+      let key = r.key;
+      if (!key) {
+        key = slugify(r.label).slice(0, 26) || "trade";
+        while (existing.has(key)) key = `${key}_${Math.floor(Math.random() * 1000)}`;
+        existing.add(key);
+      }
+      ok(
+        await s.db
+          .from("trades")
+          .upsert({ company_id: s.companyId, key, label: r.label, sort_order: i + 1, active: r.active }, { onConflict: "company_id,key" }),
+      );
+    }
+    return done("/settings/jobs");
+  });
+}

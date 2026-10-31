@@ -879,5 +879,70 @@ do $$ begin
 end $$;
 reset role;
 
+-- 0021 job PM: phase tasks, status/% in step, board moves, comments, site rules ---------------------
+select pg_temp.act_as('seed_tugu');
+set role authenticated;
+do $$
+declare d uuid := '00000000-0000-0000-0000-0000000000d2'; j uuid; t uuid; n int; st text; pc int;
+begin
+  j := public.start_job(d);
+  select count(*) into n from public.tasks where project_id = j and phase_key is not null;
+  if n <> (select count(*) from public.job_phase_templates where company_id = public.current_company_id() and active) or n < 9 then
+    raise exception 'one task per active phase, got %', n; end if;
+  if exists (select 1 from public.tasks where project_id = j and phase_key is not null and (start_on is null or end_on < start_on)) then
+    raise exception 'phase tasks are planned with dates'; end if;
+  -- % and status stay in step.
+  select id into t from public.tasks where project_id = j and phase_key = 'demo';
+  update public.tasks set pct = 40 where id = t;
+  select status, pct into st, pc from public.tasks where id = t;
+  if st <> 'doing' then raise exception '40%% → doing, got %', st; end if;
+  update public.tasks set pct = 100 where id = t;
+  if (select status from public.tasks where id = t) <> 'done' or (select done_at from public.tasks where id = t) is null then
+    raise exception '100%% → done + done_at'; end if;
+  update public.tasks set status = 'doing' where id = t;
+  if (select pct from public.tasks where id = t) <> 90 or (select done_at from public.tasks where id = t) is not null then
+    raise exception 'reopen → 90%%, done_at cleared'; end if;
+  begin update public.tasks set pct = 120 where id = t; raise exception 'pct over 100';
+  exception when check_violation then null; end;
+  -- Board move: earlier phases done, this one doing; moving back reopens later ones.
+  perform public.move_job_to_phase(j, 'countertop_install');
+  if exists (select 1 from public.tasks x where x.project_id = j and x.phase_key is not null
+               and x.sort_order < (select sort_order from public.tasks where project_id = j and phase_key = 'countertop_install')
+               and x.status <> 'done') then raise exception 'earlier phases done'; end if;
+  if (select status from public.tasks where project_id = j and phase_key = 'countertop_install') <> 'doing' then raise exception 'phase doing'; end if;
+  perform public.move_job_to_phase(j, 'cabinet_install');
+  if (select status from public.tasks where project_id = j and phase_key = 'countertop_template') <> 'todo' then raise exception 'moving back reopens'; end if;
+  begin perform public.move_job_to_phase(j, 'nope'); raise exception 'unknown phase';
+  exception when others then if sqlerrm not like '%no nope phase%' then raise; end if; end;
+  -- Comments + site rules (both land in the deal's History).
+  insert into public.task_comments (task_id, body) values (t, 'Demo done, dumpster full');
+  begin insert into public.task_comments (task_id, body) values (t, '   '); raise exception 'empty comment';
+  exception when check_violation then null; end;
+  insert into public.site_rules (deal_id, building_type, loud_until, gate_code) values (d, 'condo', '17:00', '#1234');
+  if (select company_id from public.site_rules where deal_id = d) <> public.current_company_id() then raise exception 'rules company filled'; end if;
+  if not exists (select 1 from public.audit_log where deal_id = d and table_name = 'task_comments') then raise exception 'comment in History'; end if;
+  if not exists (select 1 from public.audit_log where deal_id = d and table_name = 'site_rules') then raise exception 'rules in History'; end if;
+  raise notice 'OK: jobs get one dated task per phase; status/%% stay in step; board move sets phases; comments + site rules logged';
+end $$;
+-- Another workspace sees none of it and can't move the job.
+select pg_temp.act_as('seed_ahn');
+do $$ begin
+  if exists (select 1 from public.task_comments) or exists (select 1 from public.site_rules where deal_id = '00000000-0000-0000-0000-0000000000d2') then
+    raise exception 'other workspace sees comments / rules'; end if;
+  begin
+    perform public.move_job_to_phase((select id from public.projects where deal_id = '00000000-0000-0000-0000-0000000000d2'), 'demo');
+    raise exception 'other workspace moved the job';
+  exception when insufficient_privilege then null; end;
+  begin insert into public.site_rules (deal_id, notes) values ('00000000-0000-0000-0000-0000000000d2', 'x'); raise exception 'other ws wrote rules';
+  exception when insufficient_privilege then null; end;
+  raise notice 'OK: another workspace can''t see or change job comments, site rules or phases';
+end $$;
+select pg_temp.act_as('seed_crew');
+do $$ begin
+  if exists (select 1 from public.task_comments) or exists (select 1 from public.site_rules) then raise exception 'crew sees team-only PM data'; end if;
+  raise notice 'OK: crew sees no team PM data (crew views come in batch F1)';
+end $$;
+reset role;
+
 reset role;
 \echo ALL RULE TESTS PASSED

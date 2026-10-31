@@ -95,6 +95,18 @@ const FIELD_LABELS: Record<string, string> = {
   deleted_at: "Archived",
   cancelled_at: "Cancelled",
   lost_reason: "Lost reason",
+  assignee_id: "Assignee",
+  pct: "% complete",
+  status: "Status",
+  start_on: "Start",
+  end_on: "Finish",
+  start_time: "From",
+  end_time: "Until",
+  phase_key: "Phase",
+  trade_key: "Trade",
+  building_type: "Building",
+  loud_until: "No loud work after",
+  hours: "Work hours",
 };
 
 /** Fields shown as times / money / people. */
@@ -103,7 +115,8 @@ const MONEY_FIELDS = /_cents$/;
 
 function fmtValue(key: string, v: unknown, L: HistoryLookups): string {
   if (v === null || v === undefined || v === "") return "—";
-  if (key === "owner_id" || key.endsWith("_by")) return L.people.get(String(v)) ?? "someone";
+  if (key === "owner_id" || key === "assignee_id" || key.endsWith("_by")) return L.people.get(String(v)) ?? "someone";
+  if (key === "pct" && typeof v === "number") return `${v}%`;
   if (key === "lost_reason") return L.lostReasons.get(String(v)) ?? String(v);
   if (key === "stage") return L.stages.get(String(v)) ?? String(v);
   if (MONEY_FIELDS.test(key) && typeof v === "number") return L.formatMoney(v);
@@ -258,6 +271,16 @@ function fromAudit(r: AuditRow, L: HistoryLookups): HistoryEntry[] {
       if (r.action === "delete") return [{ ...base, id, kind: "job", title: `Task removed: ${t}`, lines: [] }];
       return [{ ...base, id, kind: "job", title: `Task: ${t}`, lines: changes(r, L) }];
     }
+    case "task_comments": {
+      const row = r.action === "delete" ? b : a;
+      return [{
+        ...base, id, kind: "job",
+        title: r.action === "delete" ? "Task comment removed" : row.file_id ? "Task comment + photo" : "Task comment",
+        lines: row.body ? [str(row.body)] : [],
+      }];
+    }
+    case "site_rules":
+      return [{ ...base, id, kind: "change", title: r.action === "insert" ? "Site rules added" : "Site rules edited", lines: changes(r, L, ["hours"]).concat("hours" in a && r.action === "update" ? ["Work hours changed"] : []) }];
     case "costs":
     case "payments":
     case "change_orders": {

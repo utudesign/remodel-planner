@@ -16,6 +16,7 @@ import { formatCents, formatCentsWhole } from "@/lib/money";
 import { formFromTakeoff } from "@/lib/quick-estimate";
 import { getDealByNumber } from "@/server/queries/deals";
 import { getQuote } from "@/server/queries/estimates";
+import { EstimateActions } from "@/components/estimates/estimate-actions";
 import { ItemSearch } from "@/components/estimates/item-search";
 
 export const metadata = { title: "Quick estimate" };
@@ -42,11 +43,23 @@ export default async function QuoteBuilder({
         <Link href={`/deals/${deal.deal_number}?tab=estimate`} className="-ml-1 flex h-11 items-center gap-0.5 text-[15px] font-medium text-primary">
           <ChevronLeft className="size-5" /> #{deal.deal_number} {deal.contact?.name ?? ""}
         </Link>
-        <h1 className="text-[28px] leading-tight font-bold tracking-tight">Quick estimate</h1>
-        <p className="text-sm text-muted-foreground">
-          {quote.doc_number ?? `Draft v${quote.version}`} · {quote.status}
-          {locked ? " · locked" : ""}
-        </p>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h1 className="text-[28px] leading-tight font-bold tracking-tight">Quick estimate</h1>
+            <p className="text-sm text-muted-foreground">
+              {quote.doc_number ?? `Draft v${quote.version}`} · {quote.status}
+              {locked ? " · locked" : ""}
+              {quote.archived_at ? " · archived" : ""}
+            </p>
+          </div>
+          <EstimateActions
+            quoteId={quote.id}
+            label={quote.doc_number ?? `Draft v${quote.version}`}
+            record={!!(quote.sent_at || quote.doc_number || quote.status !== "draft" || deal.sold_at || deal.handed_off_at)}
+            archived={!!quote.archived_at}
+            redirectTo={`/deals/${deal.deal_number}?tab=estimate`}
+          />
+        </div>
       </div>
 
       <Card>

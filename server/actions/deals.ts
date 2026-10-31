@@ -9,6 +9,7 @@ import { datetimeLocalToUtc } from "@/lib/dates";
 import { suggestText, type TextTemplate } from "@/lib/texts";
 import type { DealFolder } from "@/lib/deals/dealNumber";
 import { uploadDealFiles, type DealRef } from "@/lib/storage";
+import { classifyFile, FILES_ONLY_MESSAGE, tagForRequirementFolder } from "@/lib/files/types";
 import {
   bookVisitSchema,
   contactSchema,
@@ -332,22 +333,49 @@ export async function archiveDeal(input: { deal_id: string }): Promise<ActionSta
   return res;
 }
 
-/** Add photos/documents to the jacket (server upload; the offline queue uses signed uploads, Step 3). */
+/**
+ * Add photos/documents to the jacket (server upload; the offline queue uses signed uploads, Step 3).
+ * v3 item 8: the Files tab takes PDF / Word only. An image picked there is filed in Photos instead,
+ * still linked to its checklist item (so "Measurements + sketch" can be a photo of the sketch).
+ */
 export async function addDealFiles(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = dealFileSchema.parse(formToObject(fd));
     const s = await requireRole("owner", "team", "partner");
     const files = fd.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
     if (!files.length) throw new Error("Pick a file or take a photo first");
+    const kinds = files.map((f) => ({ f, kind: classifyFile(f.name, f.type).kind }));
+    const bad = kinds.filter((k) => k.kind === "bad").map((k) => k.f.name);
+    if (bad.length) throw new Error(`${bad.join(", ")}: ${v.folder === "photos" ? "only photos can go here" : FILES_ONLY_MESSAGE}`);
+    const photos = kinds.filter((k) => k.kind === "photo").map((k) => k.f);
+    const docs = kinds.filter((k) => k.kind === "doc").map((k) => k.f);
+    if (v.folder === "photos" && docs.length) throw new Error("Photos only here. Add PDF or Word files on the Files tab");
     const d = await dealRef(s, v.deal_id);
-    await uploadDealFiles(s.db, d, files, {
-      folder: v.folder as DealFolder,
-      photoTag: v.folder === "photos" ? (v.photo_tag ?? null) : null,
-      requirementId: v.requirement_id ?? null,
-      title: v.title || null,
-    });
+    if (docs.length) {
+      await uploadDealFiles(s.db, d, docs, {
+        folder: v.folder as DealFolder,
+        requirementId: v.requirement_id ?? null,
+        title: v.title || null,
+      });
+    }
+    if (photos.length) {
+      await uploadDealFiles(s.db, d, photos, {
+        folder: "photos",
+        photoTag: v.folder === "photos" ? (v.photo_tag ?? null) : tagForRequirementFolder(v.folder),
+        requirementId: v.requirement_id ?? null,
+        title: v.title || null,
+      });
+    }
     revalidateDeal(d.deal_number);
-    return { ok: true, message: `${files.length} file${files.length === 1 ? "" : "s"} added` };
+    const parts = [
+      docs.length ? `${docs.length} file${docs.length === 1 ? "" : "s"} added` : "",
+      photos.length
+        ? v.folder === "photos"
+          ? `${photos.length} photo${photos.length === 1 ? "" : "s"} added`
+          : `${photos.length} photo${photos.length === 1 ? "" : "s"} filed in Photos`
+        : "",
+    ].filter(Boolean);
+    return { ok: true, message: parts.join(" · ") };
   });
 }
 

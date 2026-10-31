@@ -40,14 +40,18 @@ export function StageForm({
   const [picked, setPicked] = useState(stage);
   const kind = stages.find((s) => s.key === picked)?.kind;
   const choices = stages.filter((s) => (s.active && s.kind !== "handed_off") || s.key === stage);
+  // React 19 resets a <form action> after the action runs (form.reset()). A controlled <select> is reset in
+  // the DOM to its first <option> without a re-render, so the screen showed the wrong stage after "Move".
+  // Fix: the select is uncontrolled with defaultValue = the saved stage (the caller keys this form on the
+  // stage, so a successful move remounts it), and onReset puts our copy of the pick back in step.
   return (
-    <form action={action} className="flex flex-col gap-3">
+    <form action={action} onReset={() => setPicked(stage)} className="flex flex-col gap-3">
       <input type="hidden" name="deal_id" value={dealId} />
       <div className="flex gap-2">
         <NativeSelect
           name="stage"
           aria-label="Stage"
-          value={picked}
+          defaultValue={stage}
           onChange={(e) => setPicked(e.target.value)}
           disabled={stages.find((s) => s.key === stage)?.kind === "handed_off"}
         >

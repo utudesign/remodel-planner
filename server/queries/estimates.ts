@@ -5,14 +5,16 @@ export async function listQuotes(s: Session, dealId: string) {
   const [quotes, totals] = await Promise.all([
     s.db
       .from("quotes")
-      .select("id, version, name, status, doc_number, sent_at, created_at, client_token")
+      .select("id, version, name, status, doc_number, sent_at, created_at, client_token, archived_at")
       .eq("deal_id", dealId)
+      .is("deleted_at", null)
       .order("version", { ascending: false })
       .then(must),
     s.db.from("quote_totals").select("quote_id, total_price_cents, gross_margin, line_count").eq("deal_id", dealId).then(must),
   ]);
   const t = new Map(totals.map((x) => [x.quote_id, x]));
-  return quotes.map((q) => ({ ...q, totals: t.get(q.id) ?? null }));
+  // v3 item 6: drafts can be deleted; anything sent to the client (it has a number) can only be archived.
+  return quotes.map((q) => ({ ...q, totals: t.get(q.id) ?? null, record: !!(q.sent_at || q.doc_number || q.status !== "draft") }));
 }
 
 export async function getTemplates(s: Session) {
@@ -48,10 +50,11 @@ export async function getQuote(s: Session, quoteId: string) {
     await s.db
       .from("quotes")
       .select(
-        "id, deal_id, version, name, status, doc_number, takeoff, collection_id, target_margin, contingency_rate, tax_rate, labor_rate_cents, client_token, sent_at, site_visit_id",
+        "id, deal_id, version, name, status, doc_number, takeoff, collection_id, target_margin, contingency_rate, tax_rate, labor_rate_cents, client_token, sent_at, site_visit_id, archived_at",
       )
       .eq("id", quoteId)
       .eq("company_id", s.companyId)
+      .is("deleted_at", null)
       .maybeSingle(),
   );
   if (!quote) return null;

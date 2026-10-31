@@ -1,6 +1,7 @@
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { dealStoragePath, type DealFolder } from "@/lib/deals/dealNumber";
 import type { Db } from "@/lib/supabase/server";
+import { classifyFile, FILES_ONLY_MESSAGE, MAX_DOC_BYTES, MAX_PHOTO_BYTES } from "@/lib/files/types";
 
 /**
  * Deal files live in the private "deal-files" bucket at {company}/{year}/{deal number}/{folder}/{file}
@@ -9,18 +10,6 @@ import type { Db } from "@/lib/supabase/server";
  * the offline IndexedDB queue are PROMPT-deals Step 3.
  */
 export const BUCKET = "deal-files";
-const MAX_PHOTO = 12 * 1024 * 1024;
-const MAX_FILE = 25 * 1024 * 1024;
-const PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
-const DOC_TYPES = new Set([
-  ...PHOTO_TYPES,
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-]);
-
 export type DealRef = { id: string; company_id: string; deal_year: number; deal_number: string };
 
 export async function uploadDealFiles(
@@ -35,10 +24,12 @@ export async function uploadDealFiles(
   const paths: string[] = [];
   for (const f of real) {
     const photo = opts.folder === "photos";
-    if (!(photo ? PHOTO_TYPES : DOC_TYPES).has(f.type)) {
-      throw new Error(`${f.name}: ${photo ? "only photos" : "PDF, photo, Word or Excel files"} can go here`);
+    // v3 item 8 (0017): photos = images; every other folder = PDF / Word. Same rules as the database.
+    const c = classifyFile(f.name, f.type);
+    if (c.kind !== (photo ? "photo" : "doc")) {
+      throw new Error(`${f.name}: ${photo ? "only photos can go here" : FILES_ONLY_MESSAGE}`);
     }
-    if (f.size > (photo ? MAX_PHOTO : MAX_FILE)) throw new Error(`${f.name} is too large`);
+    if (f.size > (photo ? MAX_PHOTO_BYTES : MAX_DOC_BYTES)) throw new Error(`${f.name} is too large`);
     const path = dealStoragePath(deal.company_id, deal.deal_year, deal.deal_number, opts.folder, f.name || "file");
     // Row first: RLS + triggers validate the path, folder and who's allowed (crew: photos on own deals).
     const { error: rowError } = await db.from("deal_files").insert({
@@ -48,12 +39,12 @@ export async function uploadDealFiles(
       photo_tag: photo ? (opts.photoTag ?? null) : null,
       title: opts.title ?? f.name,
       storage_path: path,
-      mime_type: f.type,
+      mime_type: c.mime,
       size_bytes: f.size,
       requirement_id: opts.requirementId ?? null,
     });
     if (rowError) throw new Error(rowError.message);
-    const { error } = await admin.storage.from(BUCKET).upload(path, f, { contentType: f.type, upsert: false });
+    const { error } = await admin.storage.from(BUCKET).upload(path, f, { contentType: c.mime, upsert: false });
     if (error) {
       await admin.from("deal_files").update({ deleted_at: new Date().toISOString() }).eq("storage_path", path);
       throw new Error(`Upload failed: ${error.message}`);

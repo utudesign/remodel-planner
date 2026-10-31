@@ -420,8 +420,8 @@ select pg_temp.expect_error($$insert into public.team_invites (company_id, email
 select pg_temp.expect_error($$update public.deals set stage = 'handed_off' where id = '00000000-0000-0000-0000-0000000000d5'$$, 'Use Mark sold%');
 select pg_temp.expect_error($$select public.mark_sold('00000000-0000-0000-0000-0000000000d5', 900000)$$, 'Job-ready checklist is missing:%');
 select pg_temp.expect_error($$select public.start_job('00000000-0000-0000-0000-0000000000d5')$$, 'Mark the deal sold first%');
-insert into public.deal_files (deal_id, folder, storage_path, mime_type, size_bytes, requirement_id, title)
-select d.id, r.folder, d.company_id || '/' || d.deal_year || '/' || d.deal_number || '/' || r.folder || '/' || gen_random_uuid() || '.jpg',
+insert into public.deal_files (deal_id, folder, photo_tag, storage_path, mime_type, size_bytes, requirement_id, title)
+select d.id, 'photos', 'before', d.company_id || '/' || d.deal_year || '/' || d.deal_number || '/photos/' || gen_random_uuid() || '.jpg',
        'image/jpeg', 1000, r.id, r.label
   from public.deals d
   join public.document_requirements r on r.company_id = d.company_id and r.gate = 'before_handoff' and r.required
@@ -567,6 +567,92 @@ do $$ begin
   if public.is_ws_admin() then raise exception 'a moved member is not the admin'; end if;
   if (select count(*) from public.deals) <> 2 then raise exception 'Kim now sees Ahn Studio''s deals only (%)', (select count(*) from public.deals); end if;
   raise notice 'OK: the owner moves a teammate into another workspace as a member';
+end $$;
+reset role;
+
+
+-- 0017 (v3 batch A): estimates delete / archive, file types per folder ------------------
+select pg_temp.act_as('seed_tugu');
+set role authenticated;
+do $$
+declare q_draft uuid; q_sent uuid; q_sold uuid; n int; open_deal uuid;
+begin
+  insert into public.deals (company_id, source, stage, scope, title)
+  values ('00000000-0000-0000-0000-0000000000c1', 'manual', 'new', 'kitchen', '0017 open deal') returning id into open_deal;
+  perform set_config('test.open_deal', open_deal::text, false);
+  insert into public.quotes (deal_id, version, name) values (open_deal, 901, 'draft to delete') returning id into q_draft;
+  insert into public.quotes (deal_id, version, name, sent_at) values (open_deal, 902, 'sent', now()) returning id into q_sent;
+  insert into public.quotes (deal_id, version, name) values ('00000000-0000-0000-0000-0000000000d1', 903, 'on a sold deal') returning id into q_sold;
+
+  update public.quotes set deleted_at = now() where id = q_draft;
+  if (select deleted_by from public.quotes where id = q_draft) is null then raise exception 'delete records who'; end if;
+  begin
+    update public.quotes set deleted_at = null where id = q_draft;
+    raise exception 'undelete should fail';
+  exception when check_violation then null; end;
+  begin
+    insert into public.quote_line_items (quote_id, section_id, name, qty, unit_cost_cents)
+    select q_draft, id, 'x', 1, 100 from public.quote_sections limit 1;
+    raise exception 'lines on a deleted estimate should fail';
+  exception when check_violation then null; end;
+
+  begin
+    update public.quotes set deleted_at = now() where id = q_sent;
+    raise exception 'deleting a sent estimate should fail';
+  exception when check_violation then
+    if sqlerrm not like '%archive it instead%' then raise; end if;
+  end;
+  begin
+    update public.quotes set deleted_at = now() where id = q_sold;
+    raise exception 'deleting an estimate on a sold deal should fail';
+  exception when check_violation then null; end;
+
+  update public.quotes set archived_at = now() where id = q_sent;
+  if (select archived_by from public.quotes where id = q_sent) is null then raise exception 'archive records who'; end if;
+  update public.quotes set archived_at = null where id = q_sent;
+  if (select archived_by from public.quotes where id = q_sent) is not null then raise exception 'unarchive clears who'; end if;
+
+  delete from public.quotes where id = q_draft;
+  get diagnostics n = row_count;
+  if n <> 0 then raise exception 'no hard deletes through the API'; end if;
+  raise notice 'OK: drafts soft-delete (who + when, no undo, frozen); sent / sold estimates only archive; no hard deletes';
+end $$;
+
+do $$
+declare d record;
+begin
+  select id, company_id || '/' || deal_year || '/' || deal_number as p into d from public.deals
+   where id = current_setting('test.open_deal')::uuid;
+  insert into public.deal_files (deal_id, folder, storage_path, mime_type, size_bytes)
+  values (d.id, 'design', d.p || '/design/' || gen_random_uuid() || '-plan.pdf', 'application/pdf', 100),
+         (d.id, 'contract', d.p || '/contract/' || gen_random_uuid() || '-c.docx',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 100),
+         (d.id, 'other', d.p || '/other/' || gen_random_uuid() || '-old.doc', 'application/msword', 100),
+         (d.id, 'design', d.p || '/design/' || gen_random_uuid() || '-measurements.txt', 'text/plain', 100),
+         (d.id, 'photos', d.p || '/photos/' || gen_random_uuid() || '.jpg', 'image/jpeg', 100);
+  begin
+    insert into public.deal_files (deal_id, folder, storage_path, mime_type, size_bytes)
+    values (d.id, 'design', d.p || '/design/' || gen_random_uuid() || '.jpg', 'image/jpeg', 100);
+    raise exception 'an image in Files should fail';
+  exception when check_violation then
+    if sqlerrm not like '%Photos go on the Photos tab%' then raise; end if;
+  end;
+  begin
+    insert into public.deal_files (deal_id, folder, storage_path, mime_type, size_bytes)
+    values (d.id, 'contract', d.p || '/contract/' || gen_random_uuid() || '.xlsx', 'application/pdf', 100);
+    raise exception 'type and extension must agree';
+  exception when check_violation then null; end;
+  begin
+    insert into public.deal_files (deal_id, folder, storage_path, mime_type, size_bytes)
+    values (d.id, 'contract', d.p || '/contract/' || gen_random_uuid() || '.txt', 'text/plain', 100);
+    raise exception 'text notes only in design / other';
+  exception when check_violation then null; end;
+  begin
+    insert into public.deal_files (deal_id, folder, photo_tag, storage_path, mime_type, size_bytes)
+    values (d.id, 'photos', 'before', d.p || '/photos/' || gen_random_uuid() || '.pdf', 'application/pdf', 100);
+    raise exception 'a PDF in Photos should fail';
+  exception when check_violation then null; end;
+  raise notice 'OK: Files take PDF / Word (type + extension), the app''s own .txt notes, photos take images only';
 end $$;
 reset role;
 

@@ -252,3 +252,26 @@ stays in **Tugu's** workspace and Crystal starts fresh; sharing works **both way
 | Workspace admins (owner, Crystal) invite and turn off people in their own workspace, rename it, and get their own new-lead / booking notifications and 3:30 digest. Booking slots are busy per workspace | Her workspace runs on its own |
 | KPIs count my workspace; deals shared with me sit under a **Shared with me** chip | No double counting |
 | Still company-wide (owner edits): Settings (hours, booking slots, auto-reply, license), Texts, Stages + follow-ups, price list + templates | One company; can be split later if Crystal needs her own |
+
+## Change request v3 (2026-10-31, Tugu: "lets begin the update")
+
+Approved plan: `docs/PLAN.md` (v3), defaults taken for Q1–Q21. Spec change: crew (+ trade) and customer logins,
+job PM, daily reports and site rules come back (PLAN v3 §0a lists what this reverses). New migrations start at
+**0017**; 0001–0016 are never edited. "Skyline" in the request = the **Spring Forest** price lists (Tugu, Oct 31).
+
+### Batch A: quick fixes (0017)
+
+| Decision | Why |
+| --- | --- |
+| Stage dropdown bug: React 19 resets a `<form action>` after the action (`form.reset()`); the **controlled** select was reset in the DOM to its first option without a re-render. Now uncontrolled (`defaultValue` = saved stage), the form is keyed on the stage, and `onReset` syncs the picked stage | Root cause, not a workaround; the stepper (batch B) replaces the form anyway |
+| Texting cards (auto-reply, ready-made texts) moved to the end of Overview | Item 2 |
+| Photos tab label shows the count as a small badge ("Photos ③"), not "Photos 1" | Item 7 |
+| Files tab = PDF / Word only (.pdf, .doc, .docx; type **and** extension must agree). One list in `lib/files/types.ts` used by the picker, the server actions, the signed-upload ticket; the database checks again (`deal_file_type_ok()`, new rows only) and the bucket gets the same types + 25 MB | Item 8: check on the client, the server and the bucket |
+| An image picked from a checklist **Add** is filed in **Photos** (tag sketch / appliance label), still linked to that checklist item; the Files tab picker doesn't offer images at all | Item 8 "images go to Photos" without breaking "Measurements + sketch" photos |
+| The app's own site-visit notes stay `.txt` in Design / Other (DB allows `text/plain` only there, only `.txt`) | They're generated, not uploaded; changing them to PDF needs a PDF library |
+| Bucket limits are set only where `storage.buckets` has the columns (Supabase), skipped on the plain-Postgres test stand-in | Same migration runs in both |
+| Estimates: drafts **Delete** (soft: `deleted_at` + who; no undo; frozen); anything sent (has a number / sent date / not draft) or on a sold deal only **Archive** / Restore. Enforced by trigger `quotes_soft_delete`; hard deletes blocked by a restrictive RLS policy | Item 6; the DB is the rule, the buttons only offer the right one |
+| Deleted estimates vanish from lists, KPIs and the estimate page; archived ones move to a closed "Archived (n)" list, aren't used for the `{link}` text or KPIs, but their client link still opens (it was sent) | A sent document stays a real record |
+| Each delete / archive / restore writes a deal activity ("Estimate deleted: Draft v2") | Shows in History once batch B lands |
+| `types/db.ts` quotes columns added by hand (Supabase CLI needs Docker, not available in this workspace); `pnpm db:types` regenerates the same | Typecheck |
+| Vercel Hobby is for non-commercial use; move to Pro ($20) + Supabase Pro ($25) before crew/customers log in (PLAN v3 §3) | Pricing pages checked Oct 31, 2026 |

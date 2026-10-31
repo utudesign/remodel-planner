@@ -6,6 +6,7 @@ import { useFormStatus } from "react-dom";
 import { FormMessage } from "@/components/shared/form";
 import { NativeSelect } from "@/components/ui/native-select";
 import { PHOTO_TAGS } from "@/lib/deals/display";
+import { classifyFile, DOC_ACCEPT, FILES_ONLY_MESSAGE } from "@/lib/files/types";
 import { cn } from "@/lib/utils";
 import { addDealFiles } from "@/server/actions/deals";
 
@@ -49,6 +50,7 @@ export function UploadButton({
   showTag = false,
   defaultTag = "before",
   compact = false,
+  allowPhotos,
 }: {
   dealId: string;
   folder: string;
@@ -57,16 +59,35 @@ export function UploadButton({
   showTag?: boolean;
   defaultTag?: string;
   compact?: boolean;
+  /** Files tab: documents only. Checklist "Add": photos too (they're filed in Photos). Default: photos folder only. */
+  allowPhotos?: boolean;
 }) {
   const [state, action] = useActionState(addDealFiles, null);
   const form = useRef<HTMLFormElement>(null);
   const [preparing, setPreparing] = useState(false);
   const photo = folder === "photos";
+  const photosOk = photo || !!allowPhotos;
+  const [pickError, setPickError] = useState<string | null>(null);
 
   async function onChange(e: React.ChangeEvent<HTMLInputElement>) {
     const input = e.currentTarget;
     const files = Array.from(input.files ?? []).slice(0, 8);
     if (!files.length) return;
+    // v3 item 8: check before uploading; the server and the database check again.
+    const wrong = files.filter((f) => {
+      const k = classifyFile(f.name, f.type).kind;
+      return photo ? k !== "photo" : k === "bad" || (k === "photo" && !photosOk);
+    });
+    if (wrong.length) {
+      setPickError(
+        `${wrong.map((f) => f.name).join(", ")}: ${
+          photo ? "only photos can go here" : photosOk ? FILES_ONLY_MESSAGE + " or photos" : FILES_ONLY_MESSAGE + ". Photos go on the Photos tab"
+        }`,
+      );
+      input.value = "";
+      return;
+    }
+    setPickError(null);
     setPreparing(true);
     const small = await Promise.all(files.map(compress));
     const dt = new DataTransfer();
@@ -105,7 +126,7 @@ export function UploadButton({
             type="file"
             name="files"
             multiple
-            accept={photo ? "image/*" : "image/*,application/pdf,.doc,.docx,.xls,.xlsx"}
+            accept={photo ? "image/*" : photosOk ? `image/*,${DOC_ACCEPT}` : DOC_ACCEPT}
             {...(photo ? { capture: "environment" as const } : {})}
             className="sr-only"
             onChange={onChange}
@@ -113,7 +134,7 @@ export function UploadButton({
         </label>
         <Busy label={label} />
       </div>
-      <FormMessage state={state} />
+      {pickError ? <p className="text-sm text-destructive">{pickError}</p> : <FormMessage state={state} />}
     </form>
   );
 }

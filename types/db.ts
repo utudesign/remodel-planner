@@ -3196,6 +3196,8 @@ export type Database = {
           approved_at: string | null
           approved_cost_cents: number | null
           approved_price_cents: number | null
+          archived_at: string | null
+          archived_by: string | null
           client_token: string
           collection_id: string | null
           company_id: string
@@ -3203,6 +3205,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           deal_id: string
+          deleted_at: string | null
+          deleted_by: string | null
           doc_number: string | null
           file_url: string | null
           id: string
@@ -3223,6 +3227,8 @@ export type Database = {
           approved_at?: string | null
           approved_cost_cents?: number | null
           approved_price_cents?: number | null
+          archived_at?: string | null
+          archived_by?: string | null
           client_token?: string
           collection_id?: string | null
           company_id: string
@@ -3230,6 +3236,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           deal_id: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           doc_number?: string | null
           file_url?: string | null
           id?: string
@@ -3249,6 +3257,8 @@ export type Database = {
           approved_at?: string | null
           approved_cost_cents?: number | null
           approved_price_cents?: number | null
+          archived_at?: string | null
+          archived_by?: string | null
           client_token?: string
           collection_id?: string | null
           company_id?: string
@@ -3256,6 +3266,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           deal_id?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           doc_number?: string | null
           file_url?: string | null
           id?: string

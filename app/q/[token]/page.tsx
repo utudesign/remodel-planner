@@ -15,10 +15,10 @@ export default async function ClientEstimate({ params }: { params: Promise<{ tok
   const db = createAdminSupabase();
   const { data: q } = await db
     .from("quotes")
-    .select("id, company_id, doc_number, sent_at, status, deal:deals(owner_id, scope, contact:contacts(name, address, city))")
+    .select("id, company_id, doc_number, sent_at, status, deleted_at, deal:deals(owner_id, scope, contact:contacts(name, address, city))")
     .eq("client_token", token)
     .maybeSingle();
-  if (!q || !q.doc_number || q.status === "superseded") notFound();
+  if (!q || !q.doc_number || q.status === "superseded" || q.deleted_at) notFound();
   const [{ data: sections }, { data: totals }, { data: people }, { data: company }] = await Promise.all([
     db
       .from("quote_section_totals")

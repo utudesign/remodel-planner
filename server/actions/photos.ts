@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth/require-role";
 import { DEAL_FOLDERS, dealStoragePath, type DealFolder } from "@/lib/deals/dealNumber";
 import { PHOTO_TAG_KEYS } from "@/lib/deals/display";
 import { BUCKET } from "@/lib/storage";
+import { classifyFile } from "@/lib/files/types";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { must, maybe } from "@/server/action-utils";
 
@@ -24,6 +25,9 @@ const ticketSchema = z.object({
   file_name: z.string().min(1).max(160),
   mime: z.enum(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"]),
   size: z.number().int().positive().max(25 * 1024 * 1024),
+}).refine((v) => classifyFile(v.file_name, v.mime).kind === (v.folder === "photos" ? "photo" : "doc"), {
+  // v3 item 8 (0017): same folder rules as the database trigger.
+  message: "Photos go on the Photos tab; Files take PDF or Word only",
 });
 
 export type UploadTicket = { ok: true; path: string; url: string } | { ok: false; error: string };

@@ -13,6 +13,7 @@ import {
   StageForm,
 } from "@/components/deals/jacket-forms";
 import { UploadButton } from "@/components/deals/upload-button";
+import { EstimateActions } from "@/components/estimates/estimate-actions";
 import { PhotoCapture } from "@/components/photos/photo-capture";
 import { AutoReplyCard } from "@/components/deals/auto-reply-card";
 import { QuickTexts } from "@/components/deals/quick-texts";
@@ -281,7 +282,11 @@ export default async function DealJacket({
               )}
             >
               {t.label}
-              {t.key === "photos" && photos.length ? ` ${photos.length}` : ""}
+              {t.key === "photos" && photos.length ? (
+                <span className="ml-1 rounded-full bg-secondary px-1.5 py-0.5 text-[11px] font-bold text-muted-foreground tabular-nums">
+                  {photos.length}
+                </span>
+              ) : null}
             </Link>
           ))}
         </nav>
@@ -290,28 +295,6 @@ export default async function DealJacket({
       <div className="flex flex-col gap-4 px-4 pt-4 lg:px-0">
         {tab === "overview" ? (
           <>
-            {needsReply ? (
-              <AutoReplyCard
-                dealId={deal.id}
-                phone={c?.phone ?? null}
-                waitingLabel={step.label.replace("Reply · ", "")}
-                message={fillAutoReply(s.settings.autoReply, {
-                  customerName: c?.name,
-                  myName: s.name,
-                  link: bookingLink,
-                })}
-              />
-            ) : null}
-            {!needsReply && stage?.kind !== "lost" && quickTexts.length ? (
-              <QuickTexts
-                dealId={deal.id}
-                phone={c?.phone ?? null}
-                firstName={vars.first === "there" ? "the client" : vars.first}
-                texts={quickTexts}
-                suggestedKey={sug.current?.key ?? null}
-                hint={textHint}
-              />
-            ) : null}
             <div className="grid grid-cols-2 gap-3 rounded-2xl bg-card p-4 ring-1 ring-border">
               <Stat
                 label={deal.sold_price_cents ? "Sold price" : "Value"}
@@ -347,7 +330,13 @@ export default async function DealJacket({
                 <CardTitle>Stage + follow-up</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                <StageForm dealId={deal.id} stage={deal.stage} stages={stages} reasons={reasons} />
+                <StageForm
+                  key={deal.stage}
+                  dealId={deal.id}
+                  stage={deal.stage}
+                  stages={stages}
+                  reasons={reasons}
+                />
                 {deal.lost_reason ? (
                   <p className="text-sm text-muted-foreground">
                     Lost:{" "}
@@ -442,12 +431,35 @@ export default async function DealJacket({
               </CardContent>
             </Card>
 
+            {/* Texting sits at the end of Overview (change request v3, item 2). */}
+            {needsReply ? (
+              <AutoReplyCard
+                dealId={deal.id}
+                phone={c?.phone ?? null}
+                waitingLabel={step.label.replace("Reply · ", "")}
+                message={fillAutoReply(s.settings.autoReply, {
+                  customerName: c?.name,
+                  myName: s.name,
+                  link: bookingLink,
+                })}
+              />
+            ) : null}
+            {!needsReply && stage?.kind !== "lost" && quickTexts.length ? (
+              <QuickTexts
+                dealId={deal.id}
+                phone={c?.phone ?? null}
+                firstName={vars.first === "there" ? "the client" : vars.first}
+                texts={quickTexts}
+                suggestedKey={sug.current?.key ?? null}
+                hint={textHint}
+              />
+            ) : null}
             {home && shareTargets.length ? <ShareCard dealId={deal.id} workspaces={shareTargets} /> : null}
             <ArchiveButton dealId={deal.id} />
           </>
         ) : null}
 
-        {tab === "estimate" ? <EstimateTab dealId={deal.id} number={deal.deal_number} /> : null}
+        {tab === "estimate" ? <EstimateTab dealId={deal.id} number={deal.deal_number} sold={sold} /> : null}
 
         {tab === "photos" ? (
           <PhotosTab
@@ -639,6 +651,7 @@ function Checklist({ items, dealId }: { items: ChecklistItem[]; dealId: string }
             requirementId={i.requirement_id}
             label="Add"
             compact
+            allowPhotos
             defaultTag={i.folder === "photos" ? "before" : undefined}
           />
         </li>
@@ -901,37 +914,45 @@ async function ActivityTab({ dealId, tz }: { dealId: string; tz: string }) {
   );
 }
 
-async function EstimateTab({ dealId, number }: { dealId: string; number: string }) {
+async function EstimateTab({ dealId, number, sold }: { dealId: string; number: string; sold: boolean }) {
   const s = await requireStaff();
-  const [quotes, templates] = await Promise.all([listQuotes(s, dealId), getTemplates(s)]);
+  const [all, templates] = await Promise.all([listQuotes(s, dealId), getTemplates(s)]);
+  // v3 item 6: deleted drafts are gone (listQuotes skips them); archived ones sit in a closed list.
+  const quotes = all.filter((q) => !q.archived_at);
+  const archived = all.filter((q) => q.archived_at);
+  const row = (q: (typeof all)[number]) => {
+    const label = q.doc_number ?? `Draft v${q.version}`;
+    return (
+      <li key={q.id} className="flex items-center gap-1 rounded-2xl bg-card pr-1 ring-1 ring-border">
+        <Link
+          href={`/deals/${number}/estimate/${q.id}`}
+          className="flex min-w-0 flex-1 items-center justify-between gap-3 p-4"
+        >
+          <span className="min-w-0">
+            <span className="block truncate font-semibold">{label}</span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {q.name ?? "Estimate"} · {q.status}
+              {q.totals ? ` · ${Math.round(Number(q.totals.gross_margin) * 1000) / 10}% margin` : ""}
+            </span>
+          </span>
+          <span className="text-lg font-bold tabular-nums">
+            {q.totals ? formatCentsWhole(q.totals.total_price_cents) : "—"}
+          </span>
+        </Link>
+        <EstimateActions quoteId={q.id} label={label} record={q.record || sold} archived={!!q.archived_at} />
+      </li>
+    );
+  };
   return (
     <>
-      {quotes.length ? (
-        <ul className="flex flex-col gap-2">
-          {quotes.map((q) => (
-            <li key={q.id}>
-              <Link
-                href={`/deals/${number}/estimate/${q.id}`}
-                className="flex items-center justify-between gap-3 rounded-2xl bg-card p-4 ring-1 ring-border"
-              >
-                <span>
-                  <span className="block font-semibold">
-                    {q.doc_number ?? `Draft v${q.version}`}
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    {q.name ?? "Estimate"} · {q.status}
-                    {q.totals
-                      ? ` · ${Math.round(Number(q.totals.gross_margin) * 1000) / 10}% margin`
-                      : ""}
-                  </span>
-                </span>
-                <span className="text-lg font-bold tabular-nums">
-                  {q.totals ? formatCentsWhole(q.totals.total_price_cents) : "—"}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+      {quotes.length ? <ul className="flex flex-col gap-2">{quotes.map(row)}</ul> : null}
+      {archived.length ? (
+        <details className="rounded-2xl bg-secondary/60 p-3">
+          <summary className="flex h-11 cursor-pointer items-center text-sm font-semibold text-muted-foreground">
+            Archived ({archived.length})
+          </summary>
+          <ul className="mt-2 flex flex-col gap-2">{archived.map(row)}</ul>
+        </details>
       ) : null}
       <Card>
         <CardHeader>

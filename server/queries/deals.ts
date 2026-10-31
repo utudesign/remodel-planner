@@ -269,6 +269,8 @@ export async function getSharedQuoteToken(s: Session, dealId: string): Promise<s
     .select("client_token, sent_at")
     .eq("deal_id", dealId)
     .not("doc_number", "is", null)
+    .is("deleted_at", null)
+    .is("archived_at", null)
     .order("sent_at", { ascending: false, nullsFirst: false })
     .limit(1)
     .maybeSingle();

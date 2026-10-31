@@ -24,7 +24,7 @@ export default async function KpisPage({ searchParams }: { searchParams: Promise
   const [deals, peopleRes, quotesRes, totalsRes, projectsRes] = await Promise.all([
     listDeals(s),
     s.db.from("users").select("id, name").eq("company_id", s.companyId).eq("workspace_id", s.workspaceId).eq("active", true).in("role", ["owner", "team", "partner"]).order("created_at"),
-    s.db.from("quotes").select("id, deal_id, version").eq("company_id", s.companyId),
+    s.db.from("quotes").select("id, deal_id, version").eq("company_id", s.companyId).is("deleted_at", null).is("archived_at", null),
     s.db.from("quote_totals").select("quote_id, total_price_cents").eq("company_id", s.companyId),
     s.db.from("projects").select("deal_id, costs(actual_amount)").eq("company_id", s.companyId),
   ]);

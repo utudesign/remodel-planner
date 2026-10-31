@@ -1,7 +1,8 @@
 # CLAUDE.md — RenoDesign Kitchen Sales Tool (one company, first contact → paid in full)
 
-**Since 0015 (2026-10-27) this is RenoDesign's own tool: no hand-off, no commission.** The newest
-`docs/DECISIONS.md` entry ("One company") wins over older docs, including SALES-REP-MODE's hand-off/commission parts.
+**Since 0015 (2026-10-27) this is RenoDesign's own tool: no hand-off, no commission.** Since change request v3
+(2026-10-31, `docs/PLAN.md`) the crew (+ trade) and customer logins, job PM, daily reports and site rules are being
+built in batches. The newest `docs/DECISIONS.md` entry wins over older docs, including SALES-REP-MODE's hand-off/commission parts.
 
 Read first, in this order (earlier wins on conflict): `docs/DECISIONS.md` (0015 entry), `docs/SALES-REP-MODE.md`, `docs/DEALS.md`,
 `docs/QUICK-ESTIMATE.md` + `docs/ESTIMATING.md`, `docs/COMPLIANCE-AND-OPS.md` §0, `docs/CONTEXT.md`
@@ -10,7 +11,8 @@ The approved build plan is `docs/PLAN.md`; decisions go in `docs/DECISIONS.md`.
 If a request conflicts with the spec, flag it and propose a spec update. Never diverge silently.
 
 Roles: `owner` (Tugu: everything + Settings + Team invites), `team` (Crystal, Ahn, …: every deal, estimate,
-visit, job, KPI **in their workspace**; invited from More → Team), `partner` (legacy; 0015 turned existing ones into `team`), `crew` unused.
+visit, job, KPI **in their workspace**; invited from More → Team), `partner` (legacy; 0015 turned existing ones into `team`),
+`crew` (+ trade; screens coming in PLAN v3 batch F) and `customer` (batch F).
 **Workspaces (0016):** each deal lives in one workspace; another workspace sees it only when it's shared (`deal_shares`,
 full edit, both ways). Workspace admins (owner, Crystal) run their own Team page. Settings/texts/stages stay company-wide.
 
@@ -50,6 +52,7 @@ Ask before adding any dependency not listed here.
 - **UI:** iPhone first at 375 px, 44 px tap targets, one hand. Every list has empty, loading, error and
   overdue states (overdue = red). A database refusal becomes a checklist with **Add** buttons, never a raw error.
 - **Photos are never lost:** offline queue (IndexedDB) until the `deal_files` row exists.
+- **File types:** Photos = images; Files = PDF/Word only. One list: `lib/files/types.ts` (DB: 0017 `deal_file_type_ok()`).
 - **Secrets:** `.env.local` only (gitignored). Every var documented in `.env.example`.
 
 ## Business rules (the database enforces them; see `supabase/tests/rules_test.sql` + `test/`)
@@ -72,7 +75,7 @@ app/api/cron  app/api/webhooks/clerk
 components/deals  components/settings  components/shared  components/ui
 lib/auth  lib/deals  lib/estimating  lib/commission  lib/validation  money.ts dates.ts workday.ts storage.ts
 server/actions  server/queries  server/onboarding.ts  server/digest.ts  server/push.ts
-supabase/migrations (0001–0007…)  supabase/seed.sql  supabase/seed/  supabase/tests/rules_test.sql
+supabase/migrations (0001–0016 applied; new ones from 0017)  supabase/seed.sql  supabase/seed/  supabase/tests/rules_test.sql
 test/                         handoff SQL tests (run by scripts/test-db.sh)
 tests/  lib/**/__tests__      Vitest
 ```
@@ -87,5 +90,5 @@ tests/  lib/**/__tests__      Vitest
 
 - Adding a paid service or a heavy library, or changing an applied table.
 - Something is hard to undo (data deletes, auth model, production env).
-- Building more of the contractor module (team/admin/crew screens). Jobs (milestones, tasks, costs) + KPIs exist (0013).
+- Building contractor-module pieces that are **not** in PLAN v3 (crew/customer/job PM/daily reports are now planned).
   Otherwise pick the simplest option, log it in `docs/DECISIONS.md`, keep going.

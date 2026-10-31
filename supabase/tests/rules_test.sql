@@ -819,5 +819,65 @@ do $$ begin
 end $$;
 reset role;
 
+
+-- 0020 (batch C review fixes): locked estimates, atomic color pick, grants ---------------------------------
+select pg_temp.act_as('seed_tugu');
+set role authenticated;
+do $$
+declare d uuid; q uuid; tp uuid; sky uuid; wf uuid; r record; n int; msg text;
+begin
+  insert into public.deals (company_id, source, stage, scope, title)
+  values ('00000000-0000-0000-0000-0000000000c1', 'manual', 'new', 'kitchen', '0020 deal') returning id into d;
+  insert into public.quotes (deal_id, version, name) values (d, 1, 'E') returning id into q;
+  select id into tp from public.catalog_colors where code = 'TSW';
+  select id into sky from public.catalog_colors where code = 'SW';
+  perform * from public.pick_quote_color(q, tp);
+  -- TimberPeak: 2 x B24 + 3 x filler (WF342).
+  perform public.add_quote_item(q, (select id from public.catalog_items where collection_id = (select collection_id from public.quotes where id = q) and code = 'B24'), 2);
+  wf := public.accessory_item('00000000-0000-0000-0000-0000000000c1', 'filler', 'TimberPeak', (select collection_id from public.quotes where id = q));
+  perform public.add_quote_item(q, wf, 3);
+  -- Switch to Skyline Shaker White in one call: B24 re-priced, filler moved to F342 with the same qty.
+  for r in select * from public.pick_quote_color(q, sky) loop
+    if r.code = 'WF342' and r.status <> 'moved' then raise exception 'WF342 reported as %', r.status; end if;
+  end loop;
+  if (select color_code from public.quotes where id = q) <> 'SW' then raise exception 'color saved'; end if;
+  if exists (select 1 from public.quote_line_items where quote_id = q and code = 'WF342') then raise exception 'old filler removed'; end if;
+  if (select qty from public.quote_line_items where quote_id = q and code = 'F342') <> 3 then raise exception 'filler qty moved'; end if;
+  if (select unit_cost_cents from public.quote_line_items where quote_id = q and code = 'B24')
+     <> (select ci.unit_cost_cents from public.catalog_items ci join public.catalog_colors c on c.collection_id = ci.collection_id
+          where c.code = 'SW' and ci.code = 'B24') then raise exception 'B24 re-priced'; end if;
+
+  -- Archived: no line changes (add, change, delete) and no color change.
+  update public.quotes set archived_at = now() where id = q;
+  begin perform public.add_quote_item(q, wf, 1); raise exception 'add on archived';
+  exception when check_violation then null; end;
+  begin delete from public.quote_line_items where quote_id = q; raise exception 'delete on archived';
+  exception when check_violation then null; end;
+  begin perform * from public.pick_quote_color(q, tp); raise exception 'color on archived';
+  exception when check_violation then null; end;
+  begin update public.quotes set color_code = 'X' where id = q; raise exception 'color column on archived';
+  exception when check_violation then null; end;
+  update public.quotes set archived_at = null where id = q;   -- restore works
+
+  -- Approved: color locked too (0002 locked pricing only).
+  update public.quotes set status = 'approved' where id = q;
+  begin update public.quotes set color_code = 'GR' where id = q; raise exception 'color on approved';
+  exception when check_violation then null; end;
+  raise notice 'OK: one-call color pick (re-price + accessory moved); archived / approved estimates locked in the database';
+end $$;
+do $$ begin
+  begin perform public.sync_collection_colors('00000000-0000-0000-0000-0000000000c1'); raise exception 'sync is server-only';
+  exception when insufficient_privilege then null; end;
+  raise notice 'OK: sync_collection_colors is service-role only';
+end $$;
+reset role;
+set role anon;
+do $$ begin
+  begin perform public.cabinet_group_of('00000000-0000-0000-0000-0000000000c1', 'W3030', 'Cabinets'); raise exception 'anon can call cabinet_group_of';
+  exception when insufficient_privilege then null; end;
+  raise notice 'OK: anon can''t probe group rules';
+end $$;
+reset role;
+
 reset role;
 \echo ALL RULE TESTS PASSED

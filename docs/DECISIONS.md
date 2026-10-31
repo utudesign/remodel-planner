@@ -322,3 +322,19 @@ grouped by line; picking a color picks the price column. Source files: the 5 pri
 | Quantities are typeable (feet, sq ft) as well as − / + | 20 ft of backsplash shouldn't be 20 taps |
 | Client view unchanged | Item 10 |
 | Not built (follow-up): a Settings editor for accessories / groups / special types (rows are owner-editable in the DB now) | Scope |
+
+### Batch C review fixes (0020)
+
+An independent review of batch C found these; all fixed with SQL tests (rules 45 OK).
+
+| Fix | Why |
+| --- | --- |
+| Archived, deleted, approved and superseded estimates are locked **in the database**: no line insert/update/delete on archived or deleted ones (`quote_lines_locked`), and their color group + color can't change (`quotes_color_lock`). Server actions check first (`editableQuote`) for a clear message | The page showed "locked" but the new actions could still change them; 0002 only locked approved/superseded lines, 0017 missed deletes |
+| Picking a color is **one database call** (`pick_quote_color`): re-price by code, save the color, move accessory quantities to the new brand's item, all in one transaction. Moved accessories aren't reported as "not made in this color" | It was 4+ separate calls; a failure halfway could lose an accessory qty |
+| `sync_collection_colors()` is service-role only; `cabinet_group_of()` runs as the caller and anon can't call it | Both took any company id |
+| The bulk-add sheet reloads when the color changes | It kept showing the old color's items |
+| Sink suggestions come from the Sink & plumbing category only | "Sink base" cabinets and the plumber job were matched and moved between step totals |
+| Bulk add merges the same item twice into one line; only active items | Duplicate lines |
+| A single item can only come from the estimate's color group (or no color group) | Another color's cabinet could be added at the wrong price |
+| Square feet are rounded before the zero check | 0.04 sq ft made a $0 countertop line |
+| Skyline import at first sign-in can't block the sign-in (load it from Settings if it failed); Settings page allows 300 s | 3.5k items |

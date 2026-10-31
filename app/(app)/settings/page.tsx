@@ -5,6 +5,8 @@ import { requireOwner } from "@/lib/auth/require-role";
 import { must } from "@/server/action-utils";
 
 export const metadata = { title: "Settings" };
+// The Skyline import (3.5k items) runs as a server action from this page.
+export const maxDuration = 300;
 
 export default async function SettingsPage() {
   const s = await requireOwner();

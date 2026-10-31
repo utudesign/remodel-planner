@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole, type Session } from "@/lib/auth/require-role";
-import { noteWithSinkType, resolveAccessory, SINK_TYPES, SPECIAL_PREFIX } from "@/lib/estimating/builder-steps";
+import { noteWithSinkType, SINK_TYPES, SPECIAL_PREFIX } from "@/lib/estimating/builder-steps";
 import { likeEscape, parseItemQuery, rankByCode, type FoundItem } from "@/lib/item-search";
 import { formToObject, must, maybe, ok, run, type ActionState } from "@/server/action-utils";
 
@@ -18,6 +18,18 @@ async function quoteRef(s: Session, quoteId: string) {
       .single(),
   );
   return { ...q, number: q.deal?.deal_number ?? "" };
+}
+
+/** Mutating actions: archived, deleted, approved or superseded estimates are locked (the database refuses too, 0020). */
+async function editableQuote(s: Session, quoteId: string) {
+  const q = await quoteRef(s, quoteId);
+  const lock = must(
+    await s.db.from("quotes").select("status, archived_at, deleted_at").eq("id", q.id).single(),
+  );
+  if (lock.deleted_at) throw new Error("This estimate was deleted");
+  if (lock.archived_at) throw new Error("This estimate is archived: restore it to change it");
+  if (lock.status === "approved" || lock.status === "superseded") throw new Error("This estimate is locked: duplicate it to change it");
+  return q;
 }
 
 function revalidateQuote(number: string, quoteId: string) {
@@ -158,6 +170,10 @@ export async function setLineQty(input: { line_id: string; qty: number }): Promi
   return run(async () => {
     const v = z.object({ line_id: z.uuid(), qty: z.number().min(0).max(10000) }).parse(input);
     const s = await requireRole("owner", "team", "partner");
+    const owner = must(
+      await s.db.from("quote_line_items").select("quote_id").eq("id", v.line_id).eq("company_id", s.companyId).single(),
+    );
+    await editableQuote(s, owner.quote_id);
     const line = must(
       await s.db
         .from("quote_line_items")
@@ -179,6 +195,7 @@ export async function removeLine(input: { line_id: string }): Promise<ActionStat
     const line = must(
       await s.db.from("quote_line_items").select("quote_id").eq("id", v.line_id).eq("company_id", s.companyId).single(),
     );
+    await editableQuote(s, line.quote_id);
     ok(await s.db.from("quote_line_items").delete().eq("id", v.line_id));
     const q = await quoteRef(s, line.quote_id);
     revalidateQuote(q.number, q.id);
@@ -192,7 +209,7 @@ export async function addCatalogItem(input: { quote_id: string; catalog_item_id:
       .object({ quote_id: z.uuid(), catalog_item_id: z.uuid(), qty: z.number().min(0.01).max(10000).default(1) })
       .parse(input);
     const s = await requireRole("owner", "team", "partner");
-    const q = await quoteRef(s, v.quote_id);
+    const q = await editableQuote(s, v.quote_id);
     const existing = maybe(
       await s.db.from("quote_line_items").select("id, qty").eq("quote_id", q.id).eq("catalog_item_id", v.catalog_item_id).limit(1).maybeSingle(),
     );
@@ -220,7 +237,7 @@ export async function addCustomLine(_: ActionState, fd: FormData): Promise<Actio
       })
       .parse(formToObject(fd));
     const s = await requireRole("owner", "team", "partner");
-    const q = await quoteRef(s, v.quote_id);
+    const q = await editableQuote(s, v.quote_id);
     const other = must(
       await s.db
         .from("catalog_categories")
@@ -357,86 +374,21 @@ export async function findCatalogItems(input: { quote_id: string; q: string }): 
 // Estimate builder (change request v3 items 9 + 10): brand → color → cabinets → labor → countertop → special work
 // ---------------------------------------------------------------------------------------------
 
-/** Accessory list rows for the estimate's brand (brand rows win over "every brand" rows). */
-async function brandAccessories(s: Session, quoteId: string) {
-  const quote = must(await s.db.from("quotes").select("collection_id").eq("id", quoteId).single());
-  let brand: string | null = null;
-  if (quote.collection_id) {
-    const c = must(
-      await s.db.from("catalog_collections").select("price_list:price_lists(vendor)").eq("id", quote.collection_id).single(),
-    );
-    brand = c.price_list?.vendor ?? null;
-  }
-  const rows = must(
-    await s.db.from("estimate_accessories").select("id, key, vendor, code, item_name").eq("company_id", s.companyId).eq("active", true),
-  );
-  const byKey = new Map<string, (typeof rows)[number]>();
-  for (const a of rows) {
-    if (a.vendor && a.vendor !== brand) continue;
-    const cur = byKey.get(a.key);
-    if (!cur || (!cur.vendor && a.vendor)) byKey.set(a.key, a);
-  }
-  const accs = [...byKey.values()];
-  const codes = accs.map((a) => a.code).filter((c): c is string => !!c);
-  const names = accs.map((a) => a.item_name).filter((n): n is string => !!n);
-  const items = [
-    ...(codes.length
-      ? must(
-          await s.db
-            .from("catalog_items")
-            .select("id, code, name, collection_id")
-            .eq("company_id", s.companyId)
-            .eq("active", true)
-            .in("code", codes)
-            .or(quote.collection_id ? `collection_id.is.null,collection_id.eq.${quote.collection_id}` : "collection_id.is.null"),
-        )
-      : []),
-    ...(names.length
-      ? must(
-          await s.db
-            .from("catalog_items")
-            .select("id, code, name, collection_id")
-            .eq("company_id", s.companyId)
-            .eq("active", true)
-            .is("collection_id", null)
-            .in("name", names),
-        )
-      : []),
-  ];
-  return accs.map((a) => ({ ...a, item: resolveAccessory(a, quote.collection_id, items) }));
-}
-
 /**
- * Pick the door color. The estimate moves to that color's price group: every cabinet line with the same code is
- * re-priced (set_quote_collection, 0002), and accessory lines follow the brand (Skyline F342 ↔ TimberPeak WF342).
+ * Pick the door color: one database call (pick_quote_color, 0020) re-prices every line with the same code,
+ * saves the color, and moves accessory quantities to the new brand's item (TimberPeak WF342 ↔ Skyline F342).
  */
 export async function pickColor(input: { quote_id: string; color_id: string }): Promise<ActionState> {
   return run(async () => {
     const v = z.object({ quote_id: z.uuid(), color_id: z.uuid() }).parse(input);
     const s = await requireRole("owner", "team", "partner");
-    const q = await quoteRef(s, v.quote_id);
+    const q = await editableQuote(s, v.quote_id);
     const color = must(
-      await s.db.from("catalog_colors").select("code, name, collection_id").eq("id", v.color_id).eq("company_id", s.companyId).single(),
+      await s.db.from("catalog_colors").select("name").eq("id", v.color_id).eq("company_id", s.companyId).single(),
     );
-    // Accessory quantities before the switch, by accessory key.
-    const before = await brandAccessories(s, q.id);
-    const lines = must(await s.db.from("quote_line_items").select("catalog_item_id, qty").eq("quote_id", q.id));
-    const qtyBefore = new Map(
-      before.map((a) => [
-        a.key,
-        { itemId: a.item?.id ?? null, qty: lines.filter((l) => a.item && l.catalog_item_id === a.item.id).reduce((n, l) => n + Number(l.qty), 0) },
-      ]),
-    );
-    const rows = must(await s.db.rpc("set_quote_collection", { p_quote_id: q.id, p_collection_id: color.collection_id }));
-    ok(await s.db.from("quotes").update({ color_code: color.code }).eq("id", q.id));
-    for (const a of await brandAccessories(s, q.id)) {
-      const old = qtyBefore.get(a.key);
-      if (!old || !old.qty || !old.itemId || !a.item || old.itemId === a.item.id) continue;
-      await setItemTotal(s, q.id, old.itemId, 0);
-      await setItemTotal(s, q.id, a.item.id, old.qty);
-    }
+    const rows = must(await s.db.rpc("pick_quote_color", { p_quote_id: q.id, p_color_id: v.color_id }));
     revalidateQuote(q.number, q.id);
-    const missing = [...new Set(rows.filter((r) => r.status !== "swapped").map((r) => r.code))];
+    const missing = [...new Set(rows.filter((r) => r.status === "missing in color group").map((r) => r.code))];
     return missing.length
       ? { ok: true, message: `${color.name}. Not made in this color: ${missing.join(", ")}. Swap or remove them.` }
       : { ok: true, message: color.name };
@@ -453,22 +405,25 @@ export async function addCatalogItems(input: { quote_id: string; items: { id: st
       })
       .parse(input);
     const s = await requireRole("owner", "team", "partner");
-    const q = await quoteRef(s, v.quote_id);
-    const ids = v.items.map((i) => i.id);
+    const q = await editableQuote(s, v.quote_id);
+    // The same item twice in one add = one line with the summed qty.
+    const merged = new Map<string, number>();
+    for (const i of v.items) merged.set(i.id, (merged.get(i.id) ?? 0) + i.qty);
+    const ids = [...merged.keys()];
     // Only items from this company, and from the estimate's color group or no color group.
     const allowed = must(
-      await s.db.from("catalog_items").select("id, collection_id").eq("company_id", s.companyId).in("id", ids),
+      await s.db.from("catalog_items").select("id, collection_id").eq("company_id", s.companyId).eq("active", true).in("id", ids),
     );
     const quote = must(await s.db.from("quotes").select("collection_id").eq("id", q.id).single());
     const bad = allowed.filter((a) => a.collection_id && a.collection_id !== quote.collection_id);
-    if (bad.length || allowed.length !== new Set(ids).size) throw new Error("Pick the color first, then add its cabinets");
+    if (bad.length || allowed.length !== ids.length) throw new Error("Pick the color first, then add its cabinets");
     const existing = must(await s.db.from("quote_line_items").select("id, qty, catalog_item_id").eq("quote_id", q.id).in("catalog_item_id", ids));
     let n = 0;
-    for (const it of v.items) {
-      const cur = existing.find((e) => e.catalog_item_id === it.id);
-      if (cur) ok(await s.db.from("quote_line_items").update({ qty: Number(cur.qty) + it.qty }).eq("id", cur.id));
-      else await insertCatalogLine(s, q.id, it.id, it.qty);
-      n += it.qty;
+    for (const [id, qty] of merged) {
+      const cur = existing.find((e) => e.catalog_item_id === id);
+      if (cur) ok(await s.db.from("quote_line_items").update({ qty: Number(cur.qty) + qty }).eq("id", cur.id));
+      else await insertCatalogLine(s, q.id, id, qty);
+      n += qty;
     }
     revalidateQuote(q.number, q.id);
     return { ok: true, message: `Added ${n} item${n === 1 ? "" : "s"}` };
@@ -482,8 +437,14 @@ export async function setItemQty(input: { quote_id: string; catalog_item_id: str
       .object({ quote_id: z.uuid(), catalog_item_id: z.uuid(), qty: z.number().min(0).max(10000) })
       .parse(input);
     const s = await requireRole("owner", "team", "partner");
-    const q = await quoteRef(s, v.quote_id);
-    must(await s.db.from("catalog_items").select("id").eq("id", v.catalog_item_id).eq("company_id", s.companyId).single());
+    const q = await editableQuote(s, v.quote_id);
+    const item = must(
+      await s.db.from("catalog_items").select("id, collection_id").eq("id", v.catalog_item_id).eq("company_id", s.companyId).single(),
+    );
+    if (item.collection_id) {
+      const quote = must(await s.db.from("quotes").select("collection_id").eq("id", q.id).single());
+      if (item.collection_id !== quote.collection_id) throw new Error("That item belongs to another color. Pick it from this color's list");
+    }
     await setItemTotal(s, q.id, v.catalog_item_id, Math.round(v.qty * 100) / 100);
     revalidateQuote(q.number, q.id);
   });
@@ -506,7 +467,7 @@ export async function setCountertop(input: {
       })
       .parse(input);
     const s = await requireRole("owner", "team", "partner");
-    const q = await quoteRef(s, v.quote_id);
+    const q = await editableQuote(s, v.quote_id);
     const level = must(
       await s.db
         .from("catalog_items")
@@ -534,18 +495,19 @@ export async function setCountertop(input: {
         .limit(1)
         .maybeSingle(),
     );
-    if (v.sqft <= 0) {
+    const sqft = Math.round(v.sqft * 10) / 10;
+    if (sqft <= 0) {
       if (cur) ok(await s.db.from("quote_line_items").delete().eq("id", cur.id));
     } else if (cur) {
       if (cur.catalog_item_id !== level.id) ok(await s.db.rpc("swap_line_item", { p_line_id: cur.id, p_catalog_item_id: level.id }));
       ok(
         await s.db
           .from("quote_line_items")
-          .update({ qty: Math.round(v.sqft * 10) / 10, note: noteWithSinkType(cur.note, v.sink_type) })
+          .update({ qty: sqft, note: noteWithSinkType(cur.note, v.sink_type) })
           .eq("id", cur.id),
       );
     } else {
-      await insertCatalogLine(s, q.id, level.id, Math.round(v.sqft * 10) / 10, noteWithSinkType(null, v.sink_type));
+      await insertCatalogLine(s, q.id, level.id, sqft, noteWithSinkType(null, v.sink_type));
     }
     revalidateQuote(q.number, q.id);
     return { ok: true, message: "Countertop saved" };
@@ -572,7 +534,7 @@ export async function addSpecialWork(_: ActionState, fd: FormData): Promise<Acti
       })
       .parse(formToObject(fd));
     const s = await requireRole("owner", "team", "partner");
-    const q = await quoteRef(s, v.quote_id);
+    const q = await editableQuote(s, v.quote_id);
     const type = must(
       await s.db
         .from("estimate_special_types")

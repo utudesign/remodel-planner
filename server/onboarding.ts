@@ -36,7 +36,12 @@ export async function bootstrapOwner(input: {
   if (error || !data) throw new Error(`Could not set up your account: ${error?.message ?? "no data"}`);
   if (data.created) {
     await importTimberPeak(data.company_id);
-    await importSkyline(data.company_id);
+    // Skyline is big (3.5k items); if it fails here the owner loads it from Settings → Price lists.
+    try {
+      await importSkyline(data.company_id);
+    } catch (e) {
+      console.error("Skyline import at sign-up failed; load it from Settings", e);
+    }
   }
   return { ok: true };
 }

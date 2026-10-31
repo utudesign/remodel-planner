@@ -4575,7 +4575,10 @@ export type Database = {
         Args: { p_clerk_user_id: string; p_email: string; p_name: string }
         Returns: string
       }
+      accessory_item: { Args: { p_collection: string; p_company: string; p_key: string; p_vendor: string }; Returns: string }
+      add_quote_item: { Args: { p_item: string; p_qty: number; p_quote: string }; Returns: string }
       import_brand_colors: { Args: { p_colors: Json; p_company_id: string; p_list_name: string }; Returns: number }
+      pick_quote_color: { Args: { p_color_id: string; p_quote_id: string }; Returns: { code: string; status: string }[] }
       share_deal: { Args: { p_deal: string; p_workspace: string }; Returns: undefined }
       sync_collection_colors: { Args: { p_company_id: string }; Returns: number }
       unshare_deal: { Args: { p_deal: string; p_workspace: string }; Returns: undefined }

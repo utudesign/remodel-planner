@@ -104,7 +104,7 @@ export default async function QuoteBuilder({
           <StepTotal cents={totals3} />
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {!locked ? <BulkAdd quoteId={quote.id} groups={data.groups} disabled={!quote.collection_id} /> : null}
+          {!locked ? <BulkAdd key={quote.collection_id ?? "none"} quoteId={quote.id} groups={data.groups} disabled={!quote.collection_id} /> : null}
           {!quote.collection_id && !locked ? (
             <p className="text-sm text-muted-foreground">Pick the brand and color first: cabinet prices come from that color.</p>
           ) : null}

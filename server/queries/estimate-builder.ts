@@ -120,8 +120,9 @@ export async function getBuilderData(s: Session, quoteId: string) {
   const extras = counterItems
     .filter((g) => !/sq\s*ft/i.test(g.unit))
     .map((g) => ({ id: g.id, name: g.name, unit: g.unit, qty: qtyOf(g.id) }));
+  const sinkCats = new Set(categories.filter((c) => c.name === "Sink & plumbing").map((c) => c.id));
   const sinkItems = generic
-    .filter((g) => /\bsink\b/i.test(g.name) && !/cord|disposal/i.test(g.name))
+    .filter((g) => sinkCats.has(g.category_id) && /\bsink\b/i.test(g.name) && !/cord|disposal|base/i.test(g.name))
     .map((g) => ({ id: g.id, name: g.name, qty: qtyOf(g.id) }));
 
   const levelIds = new Set(levels.map((l) => l.id));

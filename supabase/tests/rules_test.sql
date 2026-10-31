@@ -736,5 +736,88 @@ do $$ begin
 end $$;
 reset role;
 
+
+-- 0019 (v3 batch C): brands + colors, bulk-add groups, accessories, special work, estimate color ------------
+select pg_temp.act_as('seed_tugu');
+set role authenticated;
+do $$
+declare q uuid; d uuid; sky uuid; tp uuid; n int; r record; grp text;
+begin
+  -- Both brands are loaded, with named Skyline colors that point at the right price group.
+  if (select count(distinct pl.vendor) from public.catalog_colors c join public.price_lists pl on pl.id = c.price_list_id) <> 2 then
+    raise exception 'two brands with colors'; end if;
+  select c.collection_id into sky from public.catalog_colors c join public.price_lists pl on pl.id = c.price_list_id
+   where pl.vendor = 'Skyline' and c.code = 'HW';
+  if (select colors from public.catalog_collections where id = sky) <> array['HW','HG'] then raise exception 'HW is priced with HG'; end if;
+  if (select name from public.catalog_colors where code = 'NB') <> 'Navy Blue' then raise exception 'color names'; end if;
+  if (select count(*) from public.catalog_colors c join public.price_lists pl on pl.id = c.price_list_id where pl.vendor = 'Skyline') <> 32 then
+    raise exception 'Skyline has 32 colors'; end if;
+  -- Prices: list from the vendor sheet, cost = list x 0.35, touch-up kit at full list (excluded from discount).
+  select list_price_cents, unit_cost_cents into r from public.catalog_items where collection_id = sky and code = 'B12';
+  if r.list_price_cents <> 45600 or r.unit_cost_cents <> 15960 then raise exception 'B12 HW price % / %', r.list_price_cents, r.unit_cost_cents; end if;
+  if (select unit_cost_cents from public.catalog_items ci join public.catalog_collections c on c.id = ci.collection_id
+       where c.name = 'Skyline Essential & Charm SW/GR' and ci.code = 'TUK') <> 2200 then raise exception 'TUK at full list'; end if;
+  -- Groups for bulk add.
+  for r in select * from (values ('W3030','wall'), ('B24','base'), ('BBC39','corner'), ('U249624','pantry'), ('V3021DL','vanity'),
+                                 ('CM8','accessories'), ('TKC','accessories'), ('CSB36','corner'), ('SD','skip')) v(code, want) loop
+    select group_key into grp from public.catalog_items_grouped g join public.catalog_collections c on c.id = g.collection_id
+     where c.name = 'Skyline Essential & Charm SW/GR' and g.code = r.code;
+    if grp is distinct from r.want and not (r.code = 'SD' and grp is null) then
+      raise exception '% should be %, got %', r.code, r.want, grp; end if;
+  end loop;
+  if exists (select 1 from public.catalog_items_grouped where group_key is null and collection_id is not null) then
+    raise exception 'every vendor item has a group (%)', (select string_agg(distinct code, ', ') from public.catalog_items_grouped
+                                                         where group_key is null and collection_id is not null); end if;
+
+  -- An estimate: color code + price group; switching brand re-prices cabinets with the same code.
+  insert into public.deals (company_id, source, stage, scope, title)
+  values ('00000000-0000-0000-0000-0000000000c1', 'manual', 'new', 'kitchen', '0019 deal') returning id into d;
+  insert into public.quotes (deal_id, version, name) values (d, 1, 'Estimate') returning id into q;
+  select c.collection_id into tp from public.catalog_colors c join public.price_lists pl on pl.id = c.price_list_id
+   where pl.vendor = 'TimberPeak' and c.code = 'TSW';
+  perform public.set_quote_collection(q, tp);
+  insert into public.quote_line_items (quote_id, section_id, category_id, catalog_item_id, collection_id, code, name, qty, unit_cost_cents)
+  select q, cc.default_section_id, ci.category_id, ci.id, ci.collection_id, ci.code, ci.name, 2, ci.unit_cost_cents
+    from public.catalog_items ci join public.catalog_categories cc on cc.id = ci.category_id
+   where ci.collection_id = tp and ci.code = 'B24';
+  perform public.set_quote_collection(q, sky);
+  update public.quotes set color_code = 'HW' where id = q;
+  if (select unit_cost_cents from public.quote_line_items where quote_id = q and code = 'B24')
+     <> (select unit_cost_cents from public.catalog_items where collection_id = sky and code = 'B24') then
+    raise exception 'B24 re-priced in Skyline HW'; end if;
+  if (select color_code from public.quotes where id = q) <> 'HW' then raise exception 'color saved'; end if;
+
+  -- Accessories + special work types are set up per company.
+  select count(*) into n from public.estimate_accessories where vendor = 'Skyline';
+  if n < 6 then raise exception 'Skyline accessory rows (%)', n; end if;
+  if not exists (select 1 from public.catalog_items where collection_id = sky and code = (select code from public.estimate_accessories where vendor = 'Skyline' and key = 'toe_kick')) then
+    raise exception 'the Skyline toe kick code exists in its price list'; end if;
+  if (select count(*) from public.estimate_special_types) <> 5 then raise exception 'five special work types'; end if;
+  raise notice 'OK: Skyline + TimberPeak colors, cost x0.35 (TUK full list), bulk-add groups, color switch re-prices, accessories, special work';
+end $$;
+-- Config is owner-only: a team member reads but can't change it.
+select pg_temp.act_as('seed_ahn');
+do $$
+declare n int;
+begin
+  if not exists (select 1 from public.catalog_colors) then raise exception 'team reads colors'; end if;
+  update public.estimate_accessories set label = 'x';
+  get diagnostics n = row_count;
+  if n <> 0 then raise exception 'team can''t edit accessories'; end if;
+  begin
+    insert into public.cabinet_group_rules (company_id, group_key, match_on, pattern)
+    values ('00000000-0000-0000-0000-0000000000c1', 'wall', 'code', '^X');
+    raise exception 'team can''t add group rules';
+  exception when insufficient_privilege then null; end;
+  raise notice 'OK: estimate config is read-only for the team';
+end $$;
+select pg_temp.act_as('seed_crew');
+do $$ begin
+  if exists (select 1 from public.catalog_colors) or exists (select 1 from public.estimate_accessories) then
+    raise exception 'crew read no price config'; end if;
+  raise notice 'OK: crew read no colors / accessories';
+end $$;
+reset role;
+
 reset role;
 \echo ALL RULE TESTS PASSED

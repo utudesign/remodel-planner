@@ -50,7 +50,7 @@ export async function getQuote(s: Session, quoteId: string) {
     await s.db
       .from("quotes")
       .select(
-        "id, deal_id, version, name, status, doc_number, takeoff, collection_id, target_margin, contingency_rate, tax_rate, labor_rate_cents, client_token, sent_at, site_visit_id, archived_at",
+        "id, deal_id, version, name, status, doc_number, takeoff, collection_id, target_margin, contingency_rate, tax_rate, labor_rate_cents, client_token, sent_at, site_visit_id, archived_at, color_code",
       )
       .eq("id", quoteId)
       .eq("company_id", s.companyId)

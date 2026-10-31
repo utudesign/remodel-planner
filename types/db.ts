@@ -281,6 +281,64 @@ export type Database = {
         }
         Relationships: []
       }
+      cabinet_group_rules: {
+        Row: {
+          active: boolean
+          company_id: string
+          group_key: string
+          id: string
+          match_on: string
+          pattern: string
+          sort_order: number
+        }
+        ComputedFields: never
+        Insert: {
+          active?: boolean
+          company_id: string
+          group_key: string
+          id?: string
+          match_on: string
+          pattern: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          group_key?: string
+          id?: string
+          match_on?: string
+          pattern?: string
+          sort_order?: number
+        }
+        Relationships: [
+        ]
+      }
+      cabinet_groups: {
+        Row: {
+          active: boolean
+          company_id: string
+          key: string
+          label: string
+          sort_order: number
+        }
+        ComputedFields: never
+        Insert: {
+          active?: boolean
+          company_id: string
+          key: string
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          key?: string
+          label?: string
+          sort_order?: number
+        }
+        Relationships: [
+        ]
+      }
       catalog_categories: {
         Row: {
           company_id: string
@@ -383,6 +441,61 @@ export type Database = {
             columns: ["price_list_id"]
             isOneToOne: false
             referencedRelation: "price_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      catalog_colors: {
+        Row: {
+          active: boolean
+          code: string
+          collection_id: string
+          company_id: string
+          id: string
+          line: string | null
+          name: string
+          price_list_id: string
+          sort_order: number
+          swatch_url: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          active?: boolean
+          code: string
+          collection_id: string
+          company_id: string
+          id?: string
+          line?: string | null
+          name: string
+          price_list_id: string
+          sort_order?: number
+          swatch_url?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          collection_id?: string
+          company_id?: string
+          id?: string
+          line?: string | null
+          name?: string
+          price_list_id?: string
+          sort_order?: number
+          swatch_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_colors_price_list_id_fkey"
+            columns: ["price_list_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalog_colors_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_collections"
             referencedColumns: ["id"]
           },
         ]
@@ -1726,6 +1839,76 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      estimate_accessories: {
+        Row: {
+          active: boolean
+          code: string | null
+          company_id: string
+          id: string
+          item_name: string | null
+          key: string
+          label: string
+          sort_order: number
+          suggested: boolean
+          vendor: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          active?: boolean
+          code?: string | null
+          company_id: string
+          id?: string
+          item_name?: string | null
+          key: string
+          label: string
+          sort_order?: number
+          suggested?: boolean
+          vendor?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string | null
+          company_id?: string
+          id?: string
+          item_name?: string | null
+          key?: string
+          label?: string
+          sort_order?: number
+          suggested?: boolean
+          vendor?: string | null
+        }
+        Relationships: [
+        ]
+      }
+      estimate_special_types: {
+        Row: {
+          active: boolean
+          company_id: string
+          key: string
+          label: string
+          section_sort: number
+          sort_order: number
+        }
+        ComputedFields: never
+        Insert: {
+          active?: boolean
+          company_id: string
+          key: string
+          label: string
+          section_sort?: number
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          key?: string
+          label?: string
+          section_sort?: number
+          sort_order?: number
+        }
+        Relationships: [
         ]
       }
       estimating_settings: {
@@ -3256,6 +3439,7 @@ export type Database = {
           archived_by: string | null
           client_token: string
           collection_id: string | null
+          color_code: string | null
           company_id: string
           contingency_rate: number
           created_at: string
@@ -3287,6 +3471,7 @@ export type Database = {
           archived_by?: string | null
           client_token?: string
           collection_id?: string | null
+          color_code?: string | null
           company_id: string
           contingency_rate: number
           created_at?: string
@@ -3317,6 +3502,7 @@ export type Database = {
           archived_by?: string | null
           client_token?: string
           collection_id?: string | null
+          color_code?: string | null
           company_id?: string
           contingency_rate?: number
           created_at?: string
@@ -3867,6 +4053,24 @@ export type Database = {
       }
     }
     Views: {
+      catalog_items_grouped: {
+        Row: {
+          active: boolean | null
+          category_id: string | null
+          category_name: string | null
+          code: string | null
+          collection_id: string | null
+          company_id: string | null
+          group_key: string | null
+          id: string | null
+          list_price_cents: number | null
+          name: string | null
+          unit: string | null
+          unit_cost_cents: number | null
+        }
+        ComputedFields: never
+        Relationships: []
+      }
       deal_commissions: {
         Row: {
           basis: string | null
@@ -4371,7 +4575,9 @@ export type Database = {
         Args: { p_clerk_user_id: string; p_email: string; p_name: string }
         Returns: string
       }
+      import_brand_colors: { Args: { p_colors: Json; p_company_id: string; p_list_name: string }; Returns: number }
       share_deal: { Args: { p_deal: string; p_workspace: string }; Returns: undefined }
+      sync_collection_colors: { Args: { p_company_id: string }; Returns: number }
       unshare_deal: { Args: { p_deal: string; p_workspace: string }; Returns: undefined }
       create_workspace_for: { Args: { p_user: string; p_name: string }; Returns: string }
       move_to_workspace: { Args: { p_user: string; p_workspace: string }; Returns: undefined }

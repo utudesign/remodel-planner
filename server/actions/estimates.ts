@@ -4,18 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireRole, type Session } from "@/lib/auth/require-role";
-import { applyTakeoff, computeTakeoff, type TakeoffInputs } from "@/lib/estimating/takeoff";
-import {
-  formFromTakeoff,
-  measureFromWalls,
-  parseFeetList,
-  parseInchList,
-  takeoffFromForm,
-  takeoffSettings,
-} from "@/lib/quick-estimate";
+import { noteWithSinkType, resolveAccessory, SINK_TYPES, SPECIAL_PREFIX } from "@/lib/estimating/builder-steps";
 import { likeEscape, parseItemQuery, rankByCode, type FoundItem } from "@/lib/item-search";
 import { formToObject, must, maybe, ok, run, type ActionState } from "@/server/action-utils";
-import type { Json } from "@/types/db";
 
 async function quoteRef(s: Session, quoteId: string) {
   const q = must(
@@ -34,135 +25,133 @@ function revalidateQuote(number: string, quoteId: string) {
   revalidatePath(`/deals/${number}/estimate/${quoteId}`);
 }
 
-/** Apply a takeoff: recompute quantities and update only the lines that changed. */
-async function applyMeasurements(s: Session, quoteId: string, takeoff: TakeoffInputs) {
-  const [settings, lines] = await Promise.all([
-    s.db.from("estimating_settings").select("*").eq("company_id", s.companyId).maybeSingle().then(maybe),
-    s.db.from("quote_line_items").select("id, qty, qty_source").eq("quote_id", quoteId).then(must),
-  ]);
-  const result = computeTakeoff(takeoff, takeoffSettings(settings));
-  const changes = applyTakeoff(
-    lines.map((l) => ({ id: l.id, qty: Number(l.qty), qtySource: l.qty_source })),
-    result,
+/** Copy a price-list item into an estimate line (cost is copied in, like the template lines). */
+async function insertCatalogLine(s: Session, quoteId: string, catalogItemId: string, qty: number, note?: string | null) {
+  const ci = must(
+    await s.db
+      .from("catalog_items")
+      .select("*, category:catalog_categories(id, cost_category, default_section_id, default_pick_phase_id)")
+      .eq("id", catalogItemId)
+      .eq("company_id", s.companyId)
+      .single(),
   );
-  ok(await s.db.from("quotes").update({ takeoff: takeoff as unknown as NonNullable<Json> }).eq("id", quoteId));
-  for (const c of changes) ok(await s.db.from("quote_line_items").update({ qty: c.qty }).eq("id", c.id));
-  return result.warnings;
+  const { data: last } = await s.db
+    .from("quote_line_items")
+    .select("sort_order")
+    .eq("quote_id", quoteId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const row = must(
+    await s.db
+      .from("quote_line_items")
+      .insert({
+        company_id: s.companyId,
+        quote_id: quoteId,
+        section_id: ci.section_id ?? ci.category!.default_section_id,
+        category_id: ci.category_id,
+        pick_phase_id: ci.category!.default_pick_phase_id,
+        catalog_item_id: ci.id,
+        cost_category: ci.cost_category ?? ci.category!.cost_category,
+        code: ci.code,
+        name: ci.name,
+        qty,
+        unit: ci.unit,
+        unit_cost_cents: ci.unit_cost_cents,
+        uses_labor_rate: ci.uses_labor_rate,
+        taxable: ci.taxable,
+        is_allowance: ci.is_allowance,
+        vendor: ci.vendor,
+        qty_source: ci.qty_source,
+        note: note ?? ci.notes,
+        sort_order: (last?.sort_order ?? 0) + 1,
+        pricing_mode: ci.pricing_mode,
+        unit_price_cents: ci.unit_price_cents,
+        list_price_cents: ci.list_price_cents,
+        collection_id: ci.collection_id,
+      })
+      .select("id")
+      .single(),
+  );
+  return { id: row.id, code: ci.code, name: ci.name };
 }
 
-/** "New quick estimate": template → lines; a done site visit's walls seed the measurements. */
+/** Set the total qty of one price-list item on an estimate: 0 removes it, else one line with that qty. */
+async function setItemTotal(s: Session, quoteId: string, catalogItemId: string, qty: number) {
+  const lines = must(
+    await s.db.from("quote_line_items").select("id").eq("quote_id", quoteId).eq("catalog_item_id", catalogItemId).order("sort_order"),
+  );
+  if (qty <= 0) {
+    for (const l of lines) ok(await s.db.from("quote_line_items").delete().eq("id", l.id));
+    return;
+  }
+  if (!lines.length) {
+    await insertCatalogLine(s, quoteId, catalogItemId, qty);
+    return;
+  }
+  ok(await s.db.from("quote_line_items").update({ qty }).eq("id", lines[0].id));
+  for (const l of lines.slice(1)) ok(await s.db.from("quote_line_items").delete().eq("id", l.id));
+}
+
+/**
+ * "New estimate" (change request v3 item 10): an empty estimate. Brand and color come first, then cabinets
+ * from the bulk-add sheet; suggestions are one-tap chips, never pre-filled lines. The deal moves to the
+ * Estimate stage when it's earlier in the pipeline (by stage order).
+ */
 export async function newQuickEstimate(_: ActionState, fd: FormData): Promise<ActionState> {
   let target = "";
   const res = await run(async () => {
-    const v = z.object({ deal_id: z.uuid(), template_id: z.uuid() }).parse(formToObject(fd));
+    const v = z.object({ deal_id: z.uuid() }).parse(formToObject(fd));
     const s = await requireRole("owner", "team", "partner");
     const deal = must(
-      await s.db.from("deals").select("id, deal_number").eq("id", v.deal_id).eq("company_id", s.companyId).single(),
+      await s.db.from("deals").select("id, deal_number, stage").eq("id", v.deal_id).eq("company_id", s.companyId).single(),
     );
-    const quoteId = must(
-      await s.db.rpc("create_quote_from_template", { p_deal_id: deal.id, p_template_id: v.template_id, p_name: "Quick estimate" }),
-    ) as string;
-    const visit = maybe(
+    // Version numbers are never reused (deleted estimates keep theirs). A second estimate starts with the
+    // deal's last brand + color (options usually change cabinets, not the door).
+    const { data: top } = await s.db
+      .from("quotes")
+      .select("version, collection_id, color_code")
+      .eq("deal_id", deal.id)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    // Rates come from Settings (the quotes_defaults trigger, 0002, would fill the same values).
+    const rates = maybe(
       await s.db
-        .from("site_visits")
-        .select("id, walls")
-        .eq("deal_id", deal.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
+        .from("estimating_settings")
+        .select("target_margin, contingency_rate, tax_rate, labor_rate_cents")
+        .eq("company_id", s.companyId)
         .maybeSingle(),
     );
-    const walls = ((visit?.walls ?? []) as { ft?: number }[]).map((w) => ({ ft: Number(w.ft ?? 0) }));
-    if (visit && walls.some((w) => w.ft > 0)) {
-      const q = must(await s.db.from("quotes").select("takeoff").eq("id", quoteId).single());
-      const base = (q.takeoff ?? {}) as Partial<TakeoffInputs>;
-      await applyMeasurements(s, quoteId, takeoffFromForm(measureFromWalls(walls, formFromTakeoff(base)), base));
-      ok(await s.db.from("quotes").update({ site_visit_id: visit.id }).eq("id", quoteId));
+    const q = must(
+      await s.db
+        .from("quotes")
+        .insert({
+          company_id: s.companyId,
+          deal_id: deal.id,
+          version: (top?.version ?? 0) + 1,
+          name: "Estimate",
+          collection_id: top?.collection_id ?? null,
+          color_code: top?.color_code ?? null,
+          created_by: s.userId,
+          target_margin: rates?.target_margin ?? 0.35,
+          contingency_rate: rates?.contingency_rate ?? 0.07,
+          tax_rate: rates?.tax_rate ?? 0.06,
+          labor_rate_cents: rates?.labor_rate_cents ?? 5500,
+        })
+        .select("id")
+        .single(),
+    );
+    const stages = must(await s.db.from("pipeline_stages").select("key, kind, sort_order").eq("company_id", s.companyId));
+    const cur = stages.find((x) => x.key === deal.stage);
+    const est = stages.find((x) => x.key === "estimate");
+    if (cur && est && cur.kind === "open" && cur.sort_order < est.sort_order) {
+      ok(await s.db.from("deals").update({ stage: est.key }).eq("id", deal.id));
     }
-    if (["new", "qualified", "visit_booked", "visit_done"].includes((await s.db.from("deals").select("stage").eq("id", deal.id).single()).data?.stage ?? "")) {
-      ok(await s.db.from("deals").update({ stage: "estimate" }).eq("id", deal.id));
-    }
-    target = `/deals/${deal.deal_number}/estimate/${quoteId}`;
+    target = `/deals/${deal.deal_number}/estimate/${q.id}`;
   });
   if (res?.ok && target) redirect(target);
   return res;
-}
-
-const measureSchema = z.object({
-  quote_id: z.uuid(),
-  walls: z.string().max(200),
-  corners: z.coerce.number().int().min(0).max(6),
-  openings: z.string().max(200).optional().default(""),
-  crown_lf: z.coerce.number().min(0).max(500),
-  light_rail_lf: z.coerce.number().min(0).max(500),
-  toe_kick_lf: z.coerce.number().min(0).max(500),
-  scribe_lf: z.coerce.number().min(0).max(500),
-  doors: z.coerce.number().int().min(0).max(200),
-  drawers: z.coerce.number().int().min(0).max(200),
-  led_ft: z.coerce.number().min(0).max(200),
-  countertop_outlets: z.coerce.number().int().min(0).max(30),
-  cabinet_lf: z.coerce.number().min(0).max(200),
-});
-
-export async function saveMeasurements(_: ActionState, fd: FormData): Promise<ActionState> {
-  return run(async () => {
-    const v = measureSchema.parse(formToObject(fd));
-    const s = await requireRole("owner", "team", "partner");
-    const q = await quoteRef(s, v.quote_id);
-    const walls = parseFeetList(v.walls);
-    if (!walls.length) throw new Error("Enter at least one wall length in feet, like 10, 12");
-    const base = (q.takeoff ?? {}) as Partial<TakeoffInputs>;
-    const warnings = await applyMeasurements(
-      s,
-      q.id,
-      takeoffFromForm(
-        {
-          walls_ft: walls,
-          corners: v.corners,
-          openings_in: parseInchList(v.openings),
-          crown_lf: v.crown_lf,
-          light_rail_lf: v.light_rail_lf,
-          toe_kick_lf: v.toe_kick_lf,
-          scribe_lf: v.scribe_lf,
-          doors: v.doors,
-          drawers: v.drawers,
-          led_ft: v.led_ft,
-          countertop_outlets: v.countertop_outlets,
-          cabinet_lf: v.cabinet_lf || walls.reduce((a, b) => a + b, 0),
-        },
-        base,
-      ),
-    );
-    revalidateQuote(q.number, q.id);
-    return { ok: true, message: warnings.length ? `Saved. ${warnings.join(" ")}` : "Quantities updated" };
-  });
-}
-
-/** Door color group: re-prices every cabinet, filler and trim line from the vendor list. */
-export async function setColorGroup(input: { quote_id: string; collection_id: string }): Promise<ActionState> {
-  return run(async () => {
-    const v = z.object({ quote_id: z.uuid(), collection_id: z.uuid() }).parse(input);
-    const s = await requireRole("owner", "team", "partner");
-    const q = await quoteRef(s, v.quote_id);
-    const rows = must(await s.db.rpc("set_quote_collection", { p_quote_id: q.id, p_collection_id: v.collection_id }));
-    const missing = rows.filter((r) => r.status !== "swapped").map((r) => r.code);
-    revalidateQuote(q.number, q.id);
-    return missing.length
-      ? { ok: true, message: `Not in this color group: ${missing.join(", ")}. Swap or remove them.` }
-      : { ok: true, message: `${rows.length} cabinet lines re-priced` };
-  });
-}
-
-/** Quartz level 1–4: swaps every quartz line, keeping the square feet. */
-export async function setQuartzLevel(input: { quote_id: string; catalog_item_id: string }): Promise<ActionState> {
-  return run(async () => {
-    const v = z.object({ quote_id: z.uuid(), catalog_item_id: z.uuid() }).parse(input);
-    const s = await requireRole("owner", "team", "partner");
-    const q = await quoteRef(s, v.quote_id);
-    const lines = must(await s.db.from("quote_line_items").select("id").eq("quote_id", q.id).like("code", "QZ%"));
-    if (!lines.length) throw new Error("This estimate has no quartz line. Add one from the price list.");
-    for (const l of lines) ok(await s.db.rpc("swap_line_item", { p_line_id: l.id, p_catalog_item_id: v.catalog_item_id }));
-    revalidateQuote(q.number, q.id);
-  });
 }
 
 export async function setLineQty(input: { line_id: string; qty: number }): Promise<ActionState> {
@@ -196,7 +185,7 @@ export async function removeLine(input: { line_id: string }): Promise<ActionStat
   });
 }
 
-/** Add a price-list item to the estimate (cost is copied in, like the template lines). */
+/** Add a price-list item to the estimate (adds to the qty when it's already there). */
 export async function addCatalogItem(input: { quote_id: string; catalog_item_id: string; qty?: number }): Promise<ActionState> {
   return run(async () => {
     const v = z
@@ -204,57 +193,18 @@ export async function addCatalogItem(input: { quote_id: string; catalog_item_id:
       .parse(input);
     const s = await requireRole("owner", "team", "partner");
     const q = await quoteRef(s, v.quote_id);
-    const ci = must(
-      await s.db
-        .from("catalog_items")
-        .select("*, category:catalog_categories(id, cost_category, default_section_id, default_pick_phase_id)")
-        .eq("id", v.catalog_item_id)
-        .eq("company_id", s.companyId)
-        .single(),
-    );
     const existing = maybe(
-      await s.db.from("quote_line_items").select("id, qty").eq("quote_id", q.id).eq("catalog_item_id", ci.id).limit(1).maybeSingle(),
+      await s.db.from("quote_line_items").select("id, qty").eq("quote_id", q.id).eq("catalog_item_id", v.catalog_item_id).limit(1).maybeSingle(),
     );
+    let label = "Added";
     if (existing) {
       ok(await s.db.from("quote_line_items").update({ qty: Number(existing.qty) + v.qty }).eq("id", existing.id));
     } else {
-      const { data: last } = await s.db
-        .from("quote_line_items")
-        .select("sort_order")
-        .eq("quote_id", q.id)
-        .order("sort_order", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      ok(
-        await s.db.from("quote_line_items").insert({
-          company_id: s.companyId,
-          quote_id: q.id,
-          section_id: ci.section_id ?? ci.category!.default_section_id,
-          category_id: ci.category_id,
-          pick_phase_id: ci.category!.default_pick_phase_id,
-          catalog_item_id: ci.id,
-          cost_category: ci.cost_category ?? ci.category!.cost_category,
-          code: ci.code,
-          name: ci.name,
-          qty: v.qty,
-          unit: ci.unit,
-          unit_cost_cents: ci.unit_cost_cents,
-          uses_labor_rate: ci.uses_labor_rate,
-          taxable: ci.taxable,
-          is_allowance: ci.is_allowance,
-          vendor: ci.vendor,
-          qty_source: ci.qty_source,
-          note: ci.notes,
-          sort_order: (last?.sort_order ?? 0) + 1,
-          pricing_mode: ci.pricing_mode,
-          unit_price_cents: ci.unit_price_cents,
-          list_price_cents: ci.list_price_cents,
-          collection_id: ci.collection_id,
-        }),
-      );
+      const l = await insertCatalogLine(s, q.id, v.catalog_item_id, v.qty);
+      label = `Added ${l.code || l.name}`;
     }
     revalidateQuote(q.number, q.id);
-    return { ok: true, message: `Added ${ci.code || ci.name}` };
+    return { ok: true, message: label };
   });
 }
 
@@ -401,4 +351,291 @@ export async function findCatalogItems(input: { quote_id: string; q: string }): 
       .limit(6),
   ) as Row[];
   return nameRows.map(toFound);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Estimate builder (change request v3 items 9 + 10): brand → color → cabinets → labor → countertop → special work
+// ---------------------------------------------------------------------------------------------
+
+/** Accessory list rows for the estimate's brand (brand rows win over "every brand" rows). */
+async function brandAccessories(s: Session, quoteId: string) {
+  const quote = must(await s.db.from("quotes").select("collection_id").eq("id", quoteId).single());
+  let brand: string | null = null;
+  if (quote.collection_id) {
+    const c = must(
+      await s.db.from("catalog_collections").select("price_list:price_lists(vendor)").eq("id", quote.collection_id).single(),
+    );
+    brand = c.price_list?.vendor ?? null;
+  }
+  const rows = must(
+    await s.db.from("estimate_accessories").select("id, key, vendor, code, item_name").eq("company_id", s.companyId).eq("active", true),
+  );
+  const byKey = new Map<string, (typeof rows)[number]>();
+  for (const a of rows) {
+    if (a.vendor && a.vendor !== brand) continue;
+    const cur = byKey.get(a.key);
+    if (!cur || (!cur.vendor && a.vendor)) byKey.set(a.key, a);
+  }
+  const accs = [...byKey.values()];
+  const codes = accs.map((a) => a.code).filter((c): c is string => !!c);
+  const names = accs.map((a) => a.item_name).filter((n): n is string => !!n);
+  const items = [
+    ...(codes.length
+      ? must(
+          await s.db
+            .from("catalog_items")
+            .select("id, code, name, collection_id")
+            .eq("company_id", s.companyId)
+            .eq("active", true)
+            .in("code", codes)
+            .or(quote.collection_id ? `collection_id.is.null,collection_id.eq.${quote.collection_id}` : "collection_id.is.null"),
+        )
+      : []),
+    ...(names.length
+      ? must(
+          await s.db
+            .from("catalog_items")
+            .select("id, code, name, collection_id")
+            .eq("company_id", s.companyId)
+            .eq("active", true)
+            .is("collection_id", null)
+            .in("name", names),
+        )
+      : []),
+  ];
+  return accs.map((a) => ({ ...a, item: resolveAccessory(a, quote.collection_id, items) }));
+}
+
+/**
+ * Pick the door color. The estimate moves to that color's price group: every cabinet line with the same code is
+ * re-priced (set_quote_collection, 0002), and accessory lines follow the brand (Skyline F342 ↔ TimberPeak WF342).
+ */
+export async function pickColor(input: { quote_id: string; color_id: string }): Promise<ActionState> {
+  return run(async () => {
+    const v = z.object({ quote_id: z.uuid(), color_id: z.uuid() }).parse(input);
+    const s = await requireRole("owner", "team", "partner");
+    const q = await quoteRef(s, v.quote_id);
+    const color = must(
+      await s.db.from("catalog_colors").select("code, name, collection_id").eq("id", v.color_id).eq("company_id", s.companyId).single(),
+    );
+    // Accessory quantities before the switch, by accessory key.
+    const before = await brandAccessories(s, q.id);
+    const lines = must(await s.db.from("quote_line_items").select("catalog_item_id, qty").eq("quote_id", q.id));
+    const qtyBefore = new Map(
+      before.map((a) => [
+        a.key,
+        { itemId: a.item?.id ?? null, qty: lines.filter((l) => a.item && l.catalog_item_id === a.item.id).reduce((n, l) => n + Number(l.qty), 0) },
+      ]),
+    );
+    const rows = must(await s.db.rpc("set_quote_collection", { p_quote_id: q.id, p_collection_id: color.collection_id }));
+    ok(await s.db.from("quotes").update({ color_code: color.code }).eq("id", q.id));
+    for (const a of await brandAccessories(s, q.id)) {
+      const old = qtyBefore.get(a.key);
+      if (!old || !old.qty || !old.itemId || !a.item || old.itemId === a.item.id) continue;
+      await setItemTotal(s, q.id, old.itemId, 0);
+      await setItemTotal(s, q.id, a.item.id, old.qty);
+    }
+    revalidateQuote(q.number, q.id);
+    const missing = [...new Set(rows.filter((r) => r.status !== "swapped").map((r) => r.code))];
+    return missing.length
+      ? { ok: true, message: `${color.name}. Not made in this color: ${missing.join(", ")}. Swap or remove them.` }
+      : { ok: true, message: color.name };
+  });
+}
+
+/** Bulk add: several cabinets at once, with quantities (adds to lines that are already there). */
+export async function addCatalogItems(input: { quote_id: string; items: { id: string; qty: number }[] }): Promise<ActionState> {
+  return run(async () => {
+    const v = z
+      .object({
+        quote_id: z.uuid(),
+        items: z.array(z.object({ id: z.uuid(), qty: z.number().int().min(1).max(200) })).min(1).max(100),
+      })
+      .parse(input);
+    const s = await requireRole("owner", "team", "partner");
+    const q = await quoteRef(s, v.quote_id);
+    const ids = v.items.map((i) => i.id);
+    // Only items from this company, and from the estimate's color group or no color group.
+    const allowed = must(
+      await s.db.from("catalog_items").select("id, collection_id").eq("company_id", s.companyId).in("id", ids),
+    );
+    const quote = must(await s.db.from("quotes").select("collection_id").eq("id", q.id).single());
+    const bad = allowed.filter((a) => a.collection_id && a.collection_id !== quote.collection_id);
+    if (bad.length || allowed.length !== new Set(ids).size) throw new Error("Pick the color first, then add its cabinets");
+    const existing = must(await s.db.from("quote_line_items").select("id, qty, catalog_item_id").eq("quote_id", q.id).in("catalog_item_id", ids));
+    let n = 0;
+    for (const it of v.items) {
+      const cur = existing.find((e) => e.catalog_item_id === it.id);
+      if (cur) ok(await s.db.from("quote_line_items").update({ qty: Number(cur.qty) + it.qty }).eq("id", cur.id));
+      else await insertCatalogLine(s, q.id, it.id, it.qty);
+      n += it.qty;
+    }
+    revalidateQuote(q.number, q.id);
+    return { ok: true, message: `Added ${n} item${n === 1 ? "" : "s"}` };
+  });
+}
+
+/** Accessory list, labor chips, countertop extras, sink: set one item's total qty (0 removes it). */
+export async function setItemQty(input: { quote_id: string; catalog_item_id: string; qty: number }): Promise<ActionState> {
+  return run(async () => {
+    const v = z
+      .object({ quote_id: z.uuid(), catalog_item_id: z.uuid(), qty: z.number().min(0).max(10000) })
+      .parse(input);
+    const s = await requireRole("owner", "team", "partner");
+    const q = await quoteRef(s, v.quote_id);
+    must(await s.db.from("catalog_items").select("id").eq("id", v.catalog_item_id).eq("company_id", s.companyId).single());
+    await setItemTotal(s, q.id, v.catalog_item_id, Math.round(v.qty * 100) / 100);
+    revalidateQuote(q.number, q.id);
+  });
+}
+
+/** Countertop: material/level (a per-sq-ft price-book item), square feet, and the sink type (kept on the line). */
+export async function setCountertop(input: {
+  quote_id: string;
+  level_id: string;
+  sqft: number;
+  sink_type: string | null;
+}): Promise<ActionState> {
+  return run(async () => {
+    const v = z
+      .object({
+        quote_id: z.uuid(),
+        level_id: z.uuid(),
+        sqft: z.number().min(0).max(2000),
+        sink_type: z.enum(SINK_TYPES).nullable(),
+      })
+      .parse(input);
+    const s = await requireRole("owner", "team", "partner");
+    const q = await quoteRef(s, v.quote_id);
+    const level = must(
+      await s.db
+        .from("catalog_items")
+        .select("id, unit, category:catalog_categories(name)")
+        .eq("id", v.level_id)
+        .eq("company_id", s.companyId)
+        .single(),
+    );
+    if (level.category?.name !== "Countertop" || !/sq\s*ft/i.test(level.unit)) throw new Error("Pick a countertop level");
+    // The estimate's current countertop line (any per-sq-ft countertop item).
+    const levels = must(
+      await s.db
+        .from("catalog_items")
+        .select("id, unit, category:catalog_categories!inner(name)")
+        .eq("company_id", s.companyId)
+        .eq("category.name", "Countertop"),
+    ).filter((i) => /sq\s*ft/i.test(i.unit));
+    const cur = maybe(
+      await s.db
+        .from("quote_line_items")
+        .select("id, catalog_item_id, note")
+        .eq("quote_id", q.id)
+        .in("catalog_item_id", levels.map((l) => l.id))
+        .order("sort_order")
+        .limit(1)
+        .maybeSingle(),
+    );
+    if (v.sqft <= 0) {
+      if (cur) ok(await s.db.from("quote_line_items").delete().eq("id", cur.id));
+    } else if (cur) {
+      if (cur.catalog_item_id !== level.id) ok(await s.db.rpc("swap_line_item", { p_line_id: cur.id, p_catalog_item_id: level.id }));
+      ok(
+        await s.db
+          .from("quote_line_items")
+          .update({ qty: Math.round(v.sqft * 10) / 10, note: noteWithSinkType(cur.note, v.sink_type) })
+          .eq("id", cur.id),
+      );
+    } else {
+      await insertCatalogLine(s, q.id, level.id, Math.round(v.sqft * 10) / 10, noteWithSinkType(null, v.sink_type));
+    }
+    revalidateQuote(q.number, q.id);
+    return { ok: true, message: "Countertop saved" };
+  });
+}
+
+/**
+ * Special work (electrical, gas, plumbing, flooring, other): one line with the client price. Your cost is
+ * optional; without it the line is costed at the target margin so profit isn't overstated.
+ */
+export async function addSpecialWork(_: ActionState, fd: FormData): Promise<ActionState> {
+  return run(async () => {
+    const money = z
+      .string()
+      .trim()
+      .regex(/^\$?\d{1,7}(\.\d{1,2})?$/, "enter a dollar amount like 1250");
+    const v = z
+      .object({
+        quote_id: z.uuid(),
+        type: z.string().regex(/^[a-z0-9_]{2,30}$/),
+        description: z.string().trim().max(160).optional().default(""),
+        price: money,
+        cost: z.preprocess((x) => (x === "" ? undefined : x), money.optional()),
+      })
+      .parse(formToObject(fd));
+    const s = await requireRole("owner", "team", "partner");
+    const q = await quoteRef(s, v.quote_id);
+    const type = must(
+      await s.db
+        .from("estimate_special_types")
+        .select("key, label, section_sort")
+        .eq("company_id", s.companyId)
+        .eq("key", v.type)
+        .single(),
+    );
+    const sections = must(await s.db.from("quote_sections").select("id, sort_order").eq("company_id", s.companyId).order("sort_order"));
+    const section = sections.find((x) => x.sort_order === type.section_sort) ?? sections[sections.length - 1];
+    if (!section) throw new Error("No estimate sections are set up");
+    const sub = maybe(
+      await s.db
+        .from("catalog_categories")
+        .select("id")
+        .eq("company_id", s.companyId)
+        .eq("cost_category", "subcontractor")
+        .order("sort_order", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    );
+    const settings = maybe(await s.db.from("estimating_settings").select("target_margin").eq("company_id", s.companyId).maybeSingle());
+    const cents = (x: string) => Math.round(Number(x.replace("$", "")) * 100);
+    const price = cents(v.price);
+    const cost = v.cost !== undefined ? cents(v.cost) : Math.round(price * (1 - Number(settings?.target_margin ?? 0.35)));
+    ok(
+      await s.db.from("quote_line_items").insert({
+        company_id: s.companyId,
+        quote_id: q.id,
+        section_id: section.id,
+        category_id: sub?.id ?? null,
+        cost_category: "subcontractor",
+        code: `${SPECIAL_PREFIX}${type.key}`,
+        name: v.description ? `${type.label}: ${v.description}` : type.label,
+        qty: 1,
+        unit: "job",
+        unit_cost_cents: cost,
+        pricing_mode: "fixed",
+        unit_price_cents: price,
+        taxable: false,
+        sort_order: 900,
+      }),
+    );
+    revalidateQuote(q.number, q.id);
+    return { ok: true, message: `${type.label} added` };
+  });
+}
+
+/** Bulk-add sheet: the estimate's color-group items in one cabinet group (Wall, Base, …). */
+export async function listGroupItems(input: { quote_id: string; group: string }) {
+  const v = z.object({ quote_id: z.uuid(), group: z.string().regex(/^[a-z0-9_]{2,30}$/) }).parse(input);
+  const s = await requireRole("owner", "team", "partner");
+  const quote = must(await s.db.from("quotes").select("collection_id").eq("id", v.quote_id).eq("company_id", s.companyId).single());
+  if (!quote.collection_id) return [];
+  return must(
+    await s.db
+      .from("catalog_items_grouped")
+      .select("id, code, name, list_price_cents")
+      .eq("company_id", s.companyId)
+      .eq("collection_id", quote.collection_id)
+      .eq("group_key", v.group)
+      .eq("active", true)
+      .order("code")
+      .limit(600),
+  ).map((r) => ({ id: r.id!, code: r.code ?? "", name: r.name ?? "", list_price_cents: Number(r.list_price_cents ?? 0) }));
 }

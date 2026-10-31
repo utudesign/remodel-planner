@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth/require-role";
 import { companySchema, followUpRulesSchema, lookupRowsSchema, slugify, textTemplateSchema } from "@/lib/validation/settings";
 import { formToObject, must, ok, run, type ActionState } from "@/server/action-utils";
+import { importSkyline } from "@/server/onboarding";
 
 /** Stages the app's logic relies on (new lead, booking, visit done, contract + deposit, sold, lost). */
 const SYSTEM_STAGES = ["new", "visit_booked", "visit_done", "ready", "handed_off", "lost"];
@@ -112,5 +113,18 @@ export async function saveTextTemplate(_: ActionState, fd: FormData): Promise<Ac
     }
     revalidatePath("/deals", "layout");
     return done("/settings/texts", "Text saved");
+  });
+}
+
+/**
+ * Settings → Price lists: load (or refresh) the Skyline / Spring Forest 2026 price list for this company
+ * (change request v3 batch C). Owner only; the database checks it again.
+ */
+export async function importSkylinePriceList(): Promise<ActionState> {
+  return run(async () => {
+    const s = await requireRole("owner");
+    const r = await importSkyline(s.companyId, s.db);
+    revalidatePath("/settings");
+    return { ok: true, message: `Skyline loaded: ${r.items.toLocaleString("en-US")} items in ${r.colors} colors` };
   });
 }

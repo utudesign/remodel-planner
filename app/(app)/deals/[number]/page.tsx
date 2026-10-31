@@ -22,7 +22,7 @@ import { ShareCard } from "@/components/deals/share-card";
 import { JobTab } from "@/components/jobs/job-tab";
 import { MarkSoldForm } from "@/components/jobs/sale-forms";
 import { NewEstimateForm } from "@/components/estimates/builder";
-import { getTemplates, listQuotes } from "@/server/queries/estimates";
+import { listQuotes } from "@/server/queries/estimates";
 import { CopyButton } from "@/components/shared/copy-button";
 import { appUrl } from "@/lib/app-url";
 import { fillAutoReply } from "@/lib/leads/auto-reply";
@@ -861,7 +861,7 @@ async function HistoryTab({ dealId, tz }: { dealId: string; tz: string }) {
 
 async function EstimateTab({ dealId, number, sold }: { dealId: string; number: string; sold: boolean }) {
   const s = await requireStaff();
-  const [all, templates] = await Promise.all([listQuotes(s, dealId), getTemplates(s)]);
+  const all = await listQuotes(s, dealId);
   // v3 item 6: deleted drafts are gone (listQuotes skips them); archived ones sit in a closed list.
   const quotes = all.filter((q) => !q.archived_at);
   const archived = all.filter((q) => q.archived_at);
@@ -901,10 +901,10 @@ async function EstimateTab({ dealId, number, sold }: { dealId: string; number: s
       ) : null}
       <Card>
         <CardHeader>
-          <CardTitle>{quotes.length ? "Another estimate" : "Quick estimate"}</CardTitle>
+          <CardTitle>{quotes.length ? "Another estimate" : "Estimate"}</CardTitle>
         </CardHeader>
         <CardContent>
-          <NewEstimateForm dealId={dealId} templates={templates} />
+          <NewEstimateForm dealId={dealId} />
         </CardContent>
       </Card>
     </>

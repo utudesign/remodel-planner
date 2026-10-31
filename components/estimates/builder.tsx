@@ -13,13 +13,9 @@ import {
   duplicateQuote,
   newQuickEstimate,
   removeLine,
-  saveMeasurements,
-  setColorGroup,
   setLineQty,
-  setQuartzLevel,
   shareQuote,
 } from "@/server/actions/estimates";
-import type { MeasureForm } from "@/lib/quick-estimate";
 import type { ActionState } from "@/server/action-utils";
 
 function useAct() {
@@ -35,126 +31,21 @@ function useAct() {
   return { pending, msg, go };
 }
 
-export function NewEstimateForm({ dealId, templates }: { dealId: string; templates: { id: string; name: string; description: string | null }[] }) {
+/**
+ * New estimate (change request v3 item 10): starts empty. Brand + color first, then cabinets from the bulk-add
+ * sheet; labor, countertop and accessories are one-tap suggestions, never pre-filled lines.
+ */
+export function NewEstimateForm({ dealId }: { dealId: string }) {
   const [state, action] = useActionState(newQuickEstimate, null);
-  if (!templates.length) return <p className="text-sm text-muted-foreground">No templates yet.</p>;
   return (
-    <form action={action} className="flex flex-col gap-3">
+    <form action={action} className="flex flex-col gap-2">
       <input type="hidden" name="deal_id" value={dealId} />
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 text-sm font-medium">Start from a layout</legend>
-        {templates.map((t, i) => (
-          <label key={t.id} className="flex items-start gap-3 rounded-xl p-3 ring-1 ring-border has-checked:bg-accent has-checked:ring-primary">
-            <input type="radio" name="template_id" value={t.id} defaultChecked={i === 0} className="mt-1 size-4" />
-            <span>
-              <span className="block font-semibold">{t.name}</span>
-              {t.description ? <span className="block text-xs text-muted-foreground">{t.description}</span> : null}
-            </span>
-          </label>
-        ))}
-      </fieldset>
       <FormMessage state={state} />
       <SubmitButton size="lg" className="w-full">
-        New quick estimate
+        New estimate
       </SubmitButton>
-      <p className="text-xs text-muted-foreground">Walls from the site visit fill in the measurements automatically.</p>
+      <p className="text-xs text-muted-foreground">Starts empty: pick the brand and color, then add cabinets.</p>
     </form>
-  );
-}
-
-export function MeasureCard({ quoteId, m, locked }: { quoteId: string; m: MeasureForm; locked: boolean }) {
-  const [state, action] = useActionState(saveMeasurements, null);
-  const n = (v: number) => (v ? String(v) : "0");
-  return (
-    <form action={action} className="flex flex-col gap-3">
-      <input type="hidden" name="quote_id" value={quoteId} />
-      <fieldset disabled={locked} className="grid grid-cols-2 gap-3">
-        <Field label="Walls with cabinets (ft)" htmlFor="walls" hint="e.g. 10, 12 6" className="col-span-2">
-          <Input id="walls" name="walls" defaultValue={m.walls_ft.join(", ")} inputMode="text" />
-        </Field>
-        <Field label="Corners" htmlFor="corners">
-          <Input id="corners" name="corners" inputMode="numeric" defaultValue={n(m.corners)} />
-        </Field>
-        <Field label="Openings (in)" htmlFor="openings" hint="range, fridge…">
-          <Input id="openings" name="openings" defaultValue={m.openings_in.join(", ")} />
-        </Field>
-        <Field label="Cabinet run (ft)" htmlFor="cabinet_lf" hint="base + wall">
-          <Input id="cabinet_lf" name="cabinet_lf" inputMode="decimal" defaultValue={n(m.cabinet_lf)} />
-        </Field>
-        <Field label="Doors" htmlFor="doors">
-          <Input id="doors" name="doors" inputMode="numeric" defaultValue={n(m.doors)} />
-        </Field>
-        <Field label="Drawers" htmlFor="drawers">
-          <Input id="drawers" name="drawers" inputMode="numeric" defaultValue={n(m.drawers)} />
-        </Field>
-        <Field label="Crown (ft)" htmlFor="crown_lf">
-          <Input id="crown_lf" name="crown_lf" inputMode="decimal" defaultValue={n(m.crown_lf)} />
-        </Field>
-        <Field label="Light rail (ft)" htmlFor="light_rail_lf">
-          <Input id="light_rail_lf" name="light_rail_lf" inputMode="decimal" defaultValue={n(m.light_rail_lf)} />
-        </Field>
-        <Field label="Toe kick (ft)" htmlFor="toe_kick_lf">
-          <Input id="toe_kick_lf" name="toe_kick_lf" inputMode="decimal" defaultValue={n(m.toe_kick_lf)} />
-        </Field>
-        <Field label="Scribe (ft)" htmlFor="scribe_lf">
-          <Input id="scribe_lf" name="scribe_lf" inputMode="decimal" defaultValue={n(m.scribe_lf)} />
-        </Field>
-        <Field label="Under-cabinet LED (ft)" htmlFor="led_ft">
-          <Input id="led_ft" name="led_ft" inputMode="decimal" defaultValue={n(m.led_ft)} />
-        </Field>
-        <Field label="Counter outlets" htmlFor="countertop_outlets">
-          <Input id="countertop_outlets" name="countertop_outlets" inputMode="numeric" defaultValue={n(m.countertop_outlets)} />
-        </Field>
-      </fieldset>
-      <FormMessage state={state} />
-      {!locked ? <SubmitButton className="w-full">Update quantities</SubmitButton> : null}
-    </form>
-  );
-}
-
-export function ChoiceRow({
-  quoteId,
-  kind,
-  options,
-  current,
-  locked,
-}: {
-  quoteId: string;
-  kind: "color" | "quartz";
-  options: { id: string; label: string; hint?: string }[];
-  current: string | null;
-  locked: boolean;
-}) {
-  const { pending, msg, go } = useAct();
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="grid grid-cols-4 gap-1.5">
-        {options.map((o) => (
-          <button
-            key={o.id}
-            type="button"
-            disabled={pending || locked}
-            aria-pressed={current === o.id}
-            onClick={() =>
-              go(() =>
-                kind === "color"
-                  ? setColorGroup({ quote_id: quoteId, collection_id: o.id })
-                  : setQuartzLevel({ quote_id: quoteId, catalog_item_id: o.id }),
-              )
-            }
-            className={cn(
-              "flex h-14 flex-col items-center justify-center rounded-xl text-sm font-bold ring-1 ring-border disabled:opacity-60",
-              current === o.id ? "bg-foreground text-background ring-foreground" : "bg-card",
-            )}
-          >
-            {o.label}
-            {o.hint ? <span className="text-[10px] font-medium opacity-70">{o.hint}</span> : null}
-          </button>
-        ))}
-      </div>
-      {pending ? <Loader2 className="size-4 animate-spin text-muted-foreground" /> : null}
-      <FormMessage state={msg} />
-    </div>
   );
 }
 
@@ -162,12 +53,12 @@ export function LineRow({
   line,
   locked,
 }: {
-  line: { id: string; code: string; name: string; qty: number; unit: string; price_cents: number; qty_source: string | null };
+  line: { id: string; code: string; name: string; qty: number; unit: string; price_cents: number; note?: string | null };
   locked: boolean;
 }) {
   const { pending, go } = useAct();
   const [qty, setQty] = useState(Number(line.qty));
-  const step = line.unit === "sq ft" || line.unit === "ft" ? 1 : 1;
+  const step = 1;
   const change = (next: number) => {
     const v = Math.max(0, Math.round(next * 100) / 100);
     setQty(v);
@@ -182,7 +73,7 @@ export function LineRow({
         </p>
         <p className="text-xs text-muted-foreground tabular-nums">
           {qty} {line.unit}
-          {line.qty_source ? " · from measurements" : ""} · {formatCents(line.price_cents)}
+          · {formatCents(line.price_cents)}
         </p>
       </div>
       {!locked ? (

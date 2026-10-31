@@ -292,3 +292,33 @@ job PM, daily reports and site rules come back (PLAN v3 §0a lists what this rev
 | **Mark as visited** closes the booked visit closest to now (or records a done visit now), moves the deal to `visit_done` when it's earlier **by stage order** (no hard-coded list), and logs "Site visit done" so the follow-up resets from `follow_up_rules` in the database. The ✓ on a booked visit uses the same code | Item 5 |
 | **Edit visit** moves the booked visit (and its "On my way" follow-up) instead of booking a second one; cancel asks first | Item 5 "book or edit" |
 | Old `StageForm` / `FollowUpForm` removed | Replaced |
+
+### Batch C: estimate rebuild + Skyline price list (0019)
+
+"Skyline" = the **Spring Forest 2026** price lists (Tugu, Oct 31). Tugu OK'd: each brand has its own colors,
+grouped by line; picking a color picks the price column. Source files: the 5 price-list PDFs, the 2026 order form
+(.xlsm, hidden "Price List" sheet), the 2026 brochure.
+
+| Decision | Why |
+| --- | --- |
+| Brand = `price_lists.vendor` ("TimberPeak", "Skyline"); one import path for both (`import_price_list()`, 0002) | Item 10: "brand is a column, not separate code" |
+| Skyline items, descriptions and availability come from the **PDF tables** (pdfplumber); every price is cross-checked against the order-form grid. Where they disagree the **higher list price** is used (only the touch-up kit: $15 vs $22); the PDF decides what's offered in a color | 1 of ~10,000 price cells differ; higher = safer margin. A frameless B36 isn't a framed B36, so descriptions are per line |
+| Cost = **list × 0.35**. "65%" on the order form means 65% off: checked on the form itself (B12 High Glossy White $456 list → $159.60). Waste bin + touch-up kit are "excluded from discount" → cost = list | Order form B8 "Multiplier: 0.35" |
+| 17 color groups = the shared price columns (e.g. Essential & Charm SW/GR); 32 colors with brochure names, series (Essential, Charm, Classic, Double Shaker, Slim Shaker, Frameless, Builder Grade) and door swatches cropped from the brochure (`public/swatches/skyline/*.jpg`, 180 KB) | Item 10 "show its colors"; Tugu asked to use the pictures |
+| Samples (SD, MINI, SB15MINI) skipped; 3,503 priced items | Not sold to clients |
+| Not imported: assembly ($15 / $25 frameless per cabinet), handle price list (a Slack link), spec books (no readable text) | Open question to Tugu: add assembly as a line? |
+| Generator kept in the repo: `scripts/skyline/parse_springforest.py` → `build_payload.py` → `supabase/seed/skyline-springforest-2026.json` (+ `payload_to_sql.py` for the SQL seeds). Dev-only Python (pdfplumber, openpyxl); the app reads the JSON | Repeatable when Spring Forest sends a new list |
+| Production accounts load it from **Settings → Price lists → Load Skyline** (owner; refresh updates in place); new accounts get it at first sign-in | No psql step; data import is a deliberate owner action |
+| `catalog_colors` (name, series, swatch, color group) per brand. TimberPeak colors are created from its color groups, named by code (`sync_collection_colors`) | TimberPeak's list has codes only |
+| Bulk-add groups (Wall, Base, Corner, Pantry, Vanity, Accessories) = `cabinet_groups` + ordered regex rules on code or category (`cabinet_group_rules`, first match wins, owner-editable). Checked against the PDF sections: the only differences are deliberate (trays/waste bin → Accessories, corner sinks → Corner, ovens → Pantry) | PLAN v3 Q6 (rules by code prefix, editable) |
+| **Takeoff removed** from the estimate (corners, openings, cabinet run, doors, drawers, trim feet). Old estimates keep their saved takeoff; nothing reads it any more | Item 9 |
+| **New estimate starts empty** (no 10×10 template). A second estimate on the same deal starts with the last brand + color. Templates stay in the DB, unused by the app | Item 10 |
+| Steps: Brand + color → 3 Cabinets (bulk-add sheet, accessories list, "Add item" = add-by-code + custom item) → 4 Labor → 5 Countertop → 6 Special work → "Other items" (old template lines). Lines are placed by `lib/estimating/builder-steps.ts` (vendor/cabinetry → cabinets, labor cost category → labor, countertop section → countertop, `SPECIAL-*` code → special) | Item 10 order |
+| Accessories (`estimate_accessories`, per brand; vendor null = every brand): fillers, toe kick, under-cabinet lights (generic LED tape, ft), scribe, crown, panels (BSV), DW end panel (DWR3). Each resolves to the code **in the estimate's color group**, else a generic item. Switching brand moves accessory quantities to the new brand's item (TimberPeak WF342 ↔ Skyline F342) | Item 9 "DB-driven per brand" |
+| Picking a color = `set_quote_collection()` (re-prices every line with the same code) + `quotes.color_code` | Reuses the tested 0002 function |
+| Countertop: level chips (per-sq-ft Countertop items), square feet, sink type saved on the countertop line's note ("Sink: Undermount"), extras (backsplash, cutouts, edge) and sink items as steppers | Item 10 "material/level, sq ft, sink info (type, cutouts)" without a new table |
+| Special work types (`estimate_special_types`: electrical, gas, plumbing, flooring, other) each print under a client section by its order (electrical → Lighting & electrical, gas/plumbing → Sink & plumbing, flooring/other → Installation). Line = client price (fixed); cost optional, else costed at the target margin | Item 10; profit isn't overstated when the cost is unknown |
+| Suggested chips (labor items) instead of pre-filled lines; accessories show as a list with 0 qty | Item 10 |
+| Quantities are typeable (feet, sq ft) as well as − / + | 20 ft of backsplash shouldn't be 20 taps |
+| Client view unchanged | Item 10 |
+| Not built (follow-up): a Settings editor for accessories / groups / special types (rows are owner-editable in the DB now) | Scope |

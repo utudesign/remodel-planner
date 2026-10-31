@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, CalendarCheck, FolderKanban, GanttChart, Menu, Wallet, type LucideIcon } from "lucide-react";
+import { BarChart3, Bell, CalendarCheck, ClipboardCheck, FolderKanban, GanttChart, HardHat, Home, Menu, Wallet, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { NavIcon, NavItem } from "@/lib/nav";
 
@@ -13,9 +13,20 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   more: Menu,
   jobs: GanttChart,
   kpis: BarChart3,
+  work: HardHat,
+  report: ClipboardCheck,
+  home: Home,
+  bell: Bell,
 };
 
 const MORE_PATHS = ["/more", "/settings", "/notifications", "/team", "/feedback"];
+
+/** The longest matching tab wins (/work/report highlights Daily report, not My work). */
+function activeHref(pathname: string, items: NavItem[]) {
+  return items
+    .filter((i) => isActive(pathname, i.href))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+}
 
 function isActive(pathname: string, href: string) {
   if (href === "/more")
@@ -42,7 +53,7 @@ export function SidebarNav({
             href={item.href}
             className={cn(
               "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-              isActive(pathname, item.href) && "bg-accent text-foreground",
+              activeHref(pathname, items) === item.href && "bg-accent text-foreground",
             )}
           >
             <Icon className="size-4" />
@@ -75,7 +86,7 @@ export function BottomNav({
       >
         {items.map((item) => {
           const Icon = ICONS[item.icon];
-          const active = isActive(pathname, item.href);
+          const active = activeHref(pathname, items) === item.href;
           const n = badges?.[item.href];
           return (
             <li key={item.href}>

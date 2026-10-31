@@ -1,4 +1,5 @@
-export type NavIcon = "today" | "deals" | "money" | "more" | "jobs" | "kpis";
+export type NavIcon = "today" | "deals" | "money" | "more" | "jobs" | "kpis" | "work" | "report" | "home" | "bell";
+import type { Role } from "@/lib/auth/roles";
 
 export type NavItem = { href: string; label: string; icon: NavIcon };
 
@@ -11,4 +12,11 @@ export const TAB_ITEMS: NavItem[] = [
   { href: "/more", label: "More", icon: "more" },
 ];
 
-export const tabsFor = (): NavItem[] => TAB_ITEMS;
+/** Workers (v3 F1): their jobs + the daily report. Customers: one page, no tab bar. */
+export const CREW_TABS: NavItem[] = [
+  { href: "/work", label: "My work", icon: "work" },
+  { href: "/work/report", label: "Daily report", icon: "report" },
+  { href: "/notifications", label: "Alerts", icon: "bell" },
+];
+
+export const tabsFor = (role?: Role): NavItem[] => (role === "crew" ? CREW_TABS : role === "customer" ? [] : TAB_ITEMS);

@@ -6,6 +6,7 @@ import { Fab } from "@/components/shared/fab";
 import { PhotoQueueRunner } from "@/components/photos/photo-queue-runner";
 import { tabsFor } from "@/lib/nav";
 import { getSession, isStaff } from "@/lib/auth/require-role";
+import { homeFor } from "@/lib/auth/roles";
 
 function BellLink({ count }: { count: number }) {
   return (
@@ -24,7 +25,7 @@ function BellLink({ count }: { count: number }) {
   );
 }
 
-/** App shell: the same five tabs for the whole RenoDesign team (0015). */
+/** App shell: five tabs for the team (0015); workers get My work · Daily report · Alerts; customers one page (v3 F1). */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const s = await getSession();
   const { count } = await s.db
@@ -37,12 +38,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="min-h-dvh lg:grid lg:grid-cols-[232px_1fr]">
       <aside className="sticky top-0 hidden h-dvh flex-col gap-6 border-r bg-card px-3 py-5 lg:flex">
         <div className="flex items-center justify-between px-3">
-          <Link href="/today" className="truncate text-base font-semibold tracking-tight">
+          <Link href={homeFor(s.role)} className="truncate text-base font-semibold tracking-tight">
             {s.workspaceName && s.workspaceName !== s.companyName ? `${s.companyName} · ${s.workspaceName}` : s.companyName || "RenoDesign"}
           </Link>
           <BellLink count={unread} />
         </div>
-        <SidebarNav items={tabsFor()} />
+        <SidebarNav items={tabsFor(s.role)} />
         <div className="mt-auto flex items-center gap-2 px-3 text-sm">
           <UserButton />
           <p className="truncate font-medium">{s.name || "You"}</p>
@@ -50,7 +51,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </aside>
       <div className="flex min-w-0 flex-col">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b bg-card/95 px-4 backdrop-blur lg:hidden">
-          <Link href="/today" className="truncate font-semibold tracking-tight">
+          <Link href={homeFor(s.role)} className="truncate font-semibold tracking-tight">
             {s.workspaceName && s.workspaceName !== s.companyName ? `${s.companyName} · ${s.workspaceName}` : s.companyName || "RenoDesign"}
           </Link>
           <div className="flex items-center gap-1">
@@ -62,7 +63,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </div>
       {isStaff(s.role) ? <Fab /> : null}
       {isStaff(s.role) ? <PhotoQueueRunner /> : null}
-      <BottomNav items={tabsFor()} />
+      {s.role === "crew" ? <PhotoQueueRunner /> : null}
+      {tabsFor(s.role).length ? <BottomNav items={tabsFor(s.role)} /> : null}
     </div>
   );
 }

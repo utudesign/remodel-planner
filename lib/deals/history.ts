@@ -281,6 +281,22 @@ function fromAudit(r: AuditRow, L: HistoryLookups): HistoryEntry[] {
     }
     case "site_rules":
       return [{ ...base, id, kind: "change", title: r.action === "insert" ? "Site rules added" : "Site rules edited", lines: changes(r, L, ["hours"]).concat("hours" in a && r.action === "update" ? ["Work hours changed"] : []) }];
+    case "daily_reports": {
+      const row = { ...b, ...a };
+      const prog = Array.isArray(row.progress) ? (row.progress as { title?: string; pct_before?: number; pct_after?: number }[]) : [];
+      const lines = prog
+        .filter((p) => p.pct_before !== p.pct_after)
+        .map((p) => `${p.title ?? "Task"}: ${p.pct_before ?? 0}% → ${p.pct_after ?? 0}%`);
+      if (row.tomorrow_plan) lines.push(`Tomorrow: ${str(row.tomorrow_plan)}`);
+      return [{ ...base, id, kind: "job", title: r.action === "insert" ? "Daily report" : "Daily report updated", lines }];
+    }
+    case "daily_report_issues": {
+      const row = { ...b, ...a };
+      if (r.action === "update" && "resolved_at" in a) {
+        return [{ ...base, id, kind: "job", title: a.resolved_at ? "Job issue fixed" : "Job issue reopened", lines: row.note ? [str(row.note)] : [] }];
+      }
+      return [{ ...base, id, kind: "job", title: row.needs_reorder ? "Job issue · needs re-order" : "Job issue", lines: row.note ? [str(row.note)] : [] }];
+    }
     case "costs":
     case "payments":
     case "change_orders": {

@@ -944,5 +944,162 @@ do $$ begin
 end $$;
 reset role;
 
+-- 0022 worker + customer logins: money-free views only ----------------------------------------------
+reset role;
+do $$
+declare j uuid := (select id from public.projects where deal_id = '00000000-0000-0000-0000-0000000000d2');
+        crew uuid := (select id from public.users where clerk_id = 'seed_crew');
+        other_deal uuid; contact uuid;
+begin
+  update public.users set trade_key = 'installer' where id = crew;
+  update public.tasks set assignee_id = crew where project_id = j and phase_key = 'cabinet_install';
+  -- a second job the worker is not on
+  select id into other_deal from public.deals where company_id = '00000000-0000-0000-0000-0000000000c1'
+     and id <> '00000000-0000-0000-0000-0000000000d2' and contact_id is not null and deleted_at is null
+     and contact_id <> (select contact_id from public.deals where id = '00000000-0000-0000-0000-0000000000d2') limit 1;
+  insert into public.projects (company_id, deal_id, name, contract_value) values ('00000000-0000-0000-0000-0000000000c1', other_deal, 'Other job', 4000000);
+  select contact_id into contact from public.deals where id = '00000000-0000-0000-0000-0000000000d2';
+  insert into public.users (company_id, clerk_id, name, role, contact_id)
+  values ('00000000-0000-0000-0000-0000000000c1', 'seed_customer', 'Client', 'customer', contact);
+  insert into public.users (company_id, clerk_id, name, role, contact_id)
+  values ('00000000-0000-0000-0000-0000000000c1', 'seed_customer2', 'Other client', 'customer',
+          (select contact_id from public.deals where id = other_deal));
+  begin
+    insert into public.users (company_id, clerk_id, name, role) values ('00000000-0000-0000-0000-0000000000c1', 'x_cust', 'X', 'customer');
+    raise exception 'customer needs a contact';
+  exception when check_violation then null; end;
+  if exists (select 1 from information_schema.columns where table_schema = 'public'
+              and table_name in ('job_worker_view', 'job_worker_tasks', 'job_worker_visit', 'job_customer_view', 'job_customer_tasks')
+              and column_name ~ '(cent|price|cost|value|amount|ballpark|margin)') then
+    raise exception 'a worker/customer view has a money column'; end if;
+  raise notice 'OK: worker/customer views carry no money columns; a customer login needs its contact';
+end $$;
+set role authenticated;
+select pg_temp.act_as('seed_crew');
+do $$
+declare j uuid; my_task uuid; other uuid;
+begin
+  if (select count(*) from public.deals) + (select count(*) from public.projects) + (select count(*) from public.tasks)
+     + (select count(*) from public.payments) + (select count(*) from public.costs) + (select count(*) from public.quotes)
+     + (select count(*) from public.site_visits) + (select count(*) from public.contacts) <> 0 then
+    raise exception 'crew reads a base table with money'; end if;
+  if (select count(*) from public.job_worker_view) <> 1 then raise exception 'worker sees exactly their one job, got %', (select count(*) from public.job_worker_view); end if;
+  select project_id into j from public.job_worker_view;
+  if (select deal_id from public.job_worker_view) <> '00000000-0000-0000-0000-0000000000d2' then raise exception 'the right job'; end if;
+  if exists (select 1 from public.job_worker_tasks where project_id <> j) then raise exception 'tasks of other jobs'; end if;
+  select id into my_task from public.job_worker_tasks w where w.mine;
+  select id into other from public.job_worker_tasks w where not w.mine limit 1;
+  if other is null then raise exception 'test needs a task that is not mine'; end if;
+  perform public.worker_update_task(my_task, 60, null);
+  if (select pct from public.job_worker_tasks where id = my_task) <> 60 then raise exception 'worker set %%'; end if;
+  begin perform public.worker_update_task(other, 50, null); raise exception 'worker changed someone else''s task';
+  exception when insufficient_privilege then null; end;
+  if (select count(*) from public.site_rules) <> 1 then raise exception 'worker reads the job''s site rules'; end if;
+  insert into public.task_comments (task_id, body) values (my_task, 'Uppers hung');
+  if (select count(*) from public.task_comments) < 2 then raise exception 'worker reads the job''s comments'; end if;
+  raise notice 'OK: crew reads only job_worker_* views (1 job, its tasks, rules, comments), changes only own task %%';
+end $$;
+reset role;
+do $$
+declare y text; n text;
+begin
+  select deal_year::text, deal_number into y, n from public.deals where id = '00000000-0000-0000-0000-0000000000d2';
+  perform set_config('t.path_ok', '00000000-0000-0000-0000-0000000000c1/' || y || '/' || n || '/photos/a.jpg', false);
+  perform set_config('t.path_bad', '00000000-0000-0000-0000-0000000000c1/' || y || '/' || n || '/contract/a.pdf', false);
+end $$;
+set role authenticated;
+do $$ begin
+  if not public.can_upload_deal_path(current_setting('t.path_ok')) then raise exception 'worker uploads job photos'; end if;
+  if public.can_upload_deal_path(current_setting('t.path_bad')) then raise exception 'worker uploads into contract folder'; end if;
+  insert into public.deal_files (deal_id, folder, photo_tag, title, storage_path, mime_type, size_bytes)
+  values ('00000000-0000-0000-0000-0000000000d2', 'photos', 'progress', 'Uppers', current_setting('t.path_ok'), 'image/jpeg', 1000);
+  if not exists (select 1 from public.deal_files where storage_path = current_setting('t.path_ok')) then raise exception 'worker sees own photo'; end if;
+  begin
+    insert into public.deal_files (deal_id, folder, title, storage_path, mime_type, size_bytes)
+    values ('00000000-0000-0000-0000-0000000000d2', 'contract', 'x', current_setting('t.path_bad'), 'application/pdf', 1000);
+    raise exception 'worker added a contract file';
+  exception when insufficient_privilege then null; end;
+  raise notice 'OK: worker uploads photos to their job only';
+end $$;
+select pg_temp.act_as('seed_customer');
+do $$ begin
+  if (select count(*) from public.deals) + (select count(*) from public.projects) + (select count(*) from public.tasks)
+     + (select count(*) from public.payments) + (select count(*) from public.contacts) + (select count(*) from public.task_comments)
+     + (select count(*) from public.site_rules) + (select count(*) from public.job_worker_view) <> 0 then
+    raise exception 'customer reads team data'; end if;
+  if (select count(*) from public.job_customer_view) <> 1 then raise exception 'customer sees their job'; end if;
+  if (select count(*) from public.job_customer_tasks) < 9 then raise exception 'customer sees the schedule'; end if;
+  begin perform public.worker_update_task((select id from public.job_customer_tasks limit 1), 10, null); raise exception 'customer edits tasks';
+  exception when insufficient_privilege then null; end;
+  if public.can_upload_deal_path(current_setting('t.path_ok')) then raise exception 'customer uploads'; end if;
+  raise notice 'OK: customer sees only their own job + schedule (no team data, no edits)';
+end $$;
+select pg_temp.act_as('seed_customer2');
+do $$ begin
+  if exists (select 1 from public.job_customer_view where name <> 'Other job') or (select count(*) from public.job_customer_view) <> 1 then
+    raise exception 'customer 2 sees only the other job'; end if;
+  raise notice 'OK: one customer never sees another customer''s job';
+end $$;
+reset role;
+
+-- 0023 daily reports ---------------------------------------------------------------------------------
+set role authenticated;
+select pg_temp.act_as('seed_crew');
+do $$
+declare j uuid := (select project_id from public.job_worker_view limit 1);
+        my_t uuid := (select id from public.job_worker_tasks w where w.mine limit 1);
+        other uuid := (select id from public.job_worker_tasks w where not w.mine limit 1);
+        r uuid; r2 uuid;
+begin
+  r := public.submit_daily_report(j, jsonb_build_array(jsonb_build_object('task_id', my_t, 'pct', 80)),
+         jsonb_build_array(jsonb_build_object('type', 'missing_material', 'note', 'Short 2 fillers', 'needs_reorder', true)),
+         'Finish uppers, start crown');
+  if (select pct from public.job_worker_tasks where id = my_t) <> 80 then raise exception 'report set task %%'; end if;
+  if (select count(*) from public.daily_report_issues where report_id = r and needs_reorder) <> 1 then raise exception 'issue saved'; end if;
+  r2 := public.submit_daily_report(j, jsonb_build_array(jsonb_build_object('task_id', my_t, 'pct', 90)),
+         jsonb_build_array(jsonb_build_object('type', 'missing_material', 'note', 'Short 2 fillers', 'needs_reorder', true)), 'Crown');
+  if r2 <> r or (select count(*) from public.daily_reports) <> 1 or (select count(*) from public.daily_report_issues) <> 1 then
+    raise exception 'one report per job, person and day (resubmit replaces)'; end if;
+  begin perform public.submit_daily_report(j, jsonb_build_array(jsonb_build_object('task_id', other, 'pct', 50)), '[]', null);
+        raise exception 'worker reported on someone else''s task';
+  exception when insufficient_privilege then null; end;
+  begin perform public.submit_daily_report(j, '[]', jsonb_build_array(jsonb_build_object('type', 'nope', 'note', 'x')), null);
+        raise exception 'unknown issue type';
+  exception when check_violation then null; end;
+  begin perform public.submit_daily_report((select id from public.projects limit 0), '[]', '[]', null); raise exception 'no job';
+  exception when insufficient_privilege then null; end;
+  begin insert into public.daily_reports (company_id, project_id, author_id, report_date) values (public.current_company_id(), j, public.current_user_id(), current_date);
+        raise exception 'direct insert';
+  exception when insufficient_privilege then null; end;
+  raise notice 'OK: daily report updates own task %%, saves issues, one per day; no other tasks, types or direct writes';
+end $$;
+select pg_temp.act_as('seed_customer');
+do $$ begin
+  if exists (select 1 from public.daily_reports) or exists (select 1 from public.daily_report_issues) then raise exception 'customer reads reports'; end if;
+  begin perform public.submit_daily_report((select project_id from public.job_customer_view limit 1), '[]', '[]', null); raise exception 'customer reported';
+  exception when insufficient_privilege then null; end;
+  raise notice 'OK: customers neither read nor submit daily reports';
+end $$;
+select pg_temp.act_as('seed_ahn');
+do $$ begin
+  if exists (select 1 from public.daily_reports) then raise exception 'other workspace reads reports'; end if;
+end $$;
+select pg_temp.act_as('seed_tugu');
+do $$
+declare d uuid := '00000000-0000-0000-0000-0000000000d2'; i uuid;
+begin
+  if (select count(*) from public.daily_reports) <> 1 then raise exception 'team reads the report'; end if;
+  if not exists (select 1 from public.audit_log where deal_id = d and table_name = 'daily_reports') then raise exception 'report in History'; end if;
+  if (select owner_id from public.deals where id = d) is not null
+     and not exists (select 1 from public.notifications where kind = 'job_issue' and deal_id = d) then raise exception 'owner told about the re-order'; end if;
+  select id into i from public.daily_report_issues limit 1;
+  update public.daily_report_issues set resolved_at = now() where id = i;
+  if (select resolved_by from public.daily_report_issues where id = i) is distinct from public.current_user_id() then raise exception 'resolved by me'; end if;
+  begin update public.daily_report_issues set note = 'edited' where id = i; raise exception 'team edited the worker''s issue';
+  exception when check_violation then null; end;
+  raise notice 'OK: team reads reports, gets notified, resolves issues (can''t rewrite them); report in History';
+end $$;
+reset role;
+
 reset role;
 \echo ALL RULE TESTS PASSED

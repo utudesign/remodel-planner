@@ -12,6 +12,9 @@ import { formatCentsWhole } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { SaleForm } from "@/components/jobs/sale-forms";
 import { getJob } from "@/server/queries/jobs";
+import { DailyReportFeed } from "@/components/jobs/daily-reports";
+import { listJobReports } from "@/server/queries/daily-reports";
+import { formatDate } from "@/lib/dates";
 
 /** Deal → Job tab once sold: money, sale + payments, timeline (milestones), tasks, costs. */
 export async function JobTab({ dealId }: { dealId: string; number: string }) {
@@ -43,7 +46,14 @@ export async function JobTab({ dealId }: { dealId: string; number: string }) {
   }
   const today = todayIn(s.timezone);
   // Tasks by phase (v3 item 13): this job's tasks + comments; crew conflicts are checked against every job.
-  const [pm, setup, rules, allJobs] = await Promise.all([getJobPm(s, dealId), getPmSetup(s), getSiteRules(s, dealId), listPmJobs(s)]);
+  const [pm, setup, rules, allJobs, reports] = await Promise.all([
+    getJobPm(s, dealId),
+    getPmSetup(s),
+    getSiteRules(s, dealId),
+    listPmJobs(s),
+    listJobReports(s, job.project.id),
+  ]);
+  const dateLabel = Object.fromEntries(reports.map((r) => [r.date, formatDate(r.date)]));
   const photoUrls = pm ? await signedUrls(pm.comments.map((c) => c.photo_path).filter((x): x is string => !!x), s.companyId) : {};
   const conflictMap = crewConflicts(allJobs.flatMap((j) => j.tasks));
   const numberOf = new Map(allJobs.map((j) => [j.projectId, j.number]));
@@ -147,6 +157,16 @@ export async function JobTab({ dealId }: { dealId: string; number: string }) {
               conflicts={conflictText}
             />
           ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Daily reports</CardTitle>
+          <CardDescription>From the workers&apos; phones: progress, problems, re-orders, tomorrow&apos;s plan.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DailyReportFeed reports={reports} dateLabel={dateLabel} />
         </CardContent>
       </Card>
 

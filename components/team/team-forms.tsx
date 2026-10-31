@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Field, FormMessage, SubmitButton } from "@/components/shared/form";
@@ -13,10 +13,64 @@ import {
   setTeammateActive,
 } from "@/server/actions/team";
 
-export function InviteTeammateForm() {
+export function InviteTeammateForm({
+  trades = [],
+  deals = [],
+}: {
+  trades?: { key: string; label: string }[];
+  deals?: { id: string; label: string }[];
+}) {
   const [state, action] = useActionState(inviteTeammate, null);
+  const [role, setRole] = useState<"team" | "crew" | "customer">("team");
   return (
     <form action={action} className="flex flex-col gap-3">
+      <div className="grid grid-cols-3 gap-1 rounded-xl bg-secondary p-1" role="radiogroup" aria-label="Who">
+        {(
+          [
+            ["team", "Team"],
+            ["crew", "Worker"],
+            ["customer", "Customer"],
+          ] as const
+        ).map(([k, label]) => (
+          <label
+            key={k}
+            className={`flex min-h-11 cursor-pointer items-center justify-center rounded-lg text-sm font-semibold ${role === k ? "bg-card shadow-xs" : "text-muted-foreground"}`}
+          >
+            <input type="radio" name="role" value={k} checked={role === k} onChange={() => setRole(k)} className="sr-only" />
+            {label}
+          </label>
+        ))}
+      </div>
+      {role === "crew" ? (
+        <Field label="Trade" htmlFor="t_trade">
+          <select id="t_trade" name="trade_key" className="h-11 rounded-xl border bg-card px-3 text-base">
+            {trades.map((t) => (
+              <option key={t.key} value={t.key}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      ) : null}
+      {role === "customer" ? (
+        <Field label="Their job" htmlFor="t_deal">
+          <select id="t_deal" name="deal_id" required className="h-11 rounded-xl border bg-card px-3 text-base">
+            <option value="">Pick a sold deal…</option>
+            {deals.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      ) : null}
+      <p className="text-xs text-muted-foreground">
+        {role === "crew"
+          ? "Workers see only the jobs they have tasks on: address, site rules, tasks, measurements, photos. Never prices or payments."
+          : role === "customer"
+            ? "Customers see only their own job: progress and schedule."
+            : "Team members see every deal, estimate and job in this workspace."}
+      </p>
       <div className="grid grid-cols-2 gap-2">
         <Field label="Name" htmlFor="t_name">
           <Input id="t_name" name="name" placeholder="Ahn" />

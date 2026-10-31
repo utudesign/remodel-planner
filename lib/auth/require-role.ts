@@ -2,7 +2,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { createServerSupabase, type Db } from "@/lib/supabase/server";
-import { isRole, type Role } from "@/lib/auth/roles";
+import { homeFor, isRole, type Role } from "@/lib/auth/roles";
 
 export type CompanySettings = {
   mileageRateCents: number;
@@ -139,22 +139,35 @@ export async function requireRole(...roles: Role[]): Promise<Session> {
 /** Owner-only pages (Settings, Team): everyone else goes to Today. */
 export async function requireOwner(): Promise<Session> {
   const session = await getSession();
-  if (session.role === "team" || session.role === "partner") redirect("/today");
-  if (session.role !== "owner") redirect("/no-access");
+  if (session.role !== "owner") redirect(homeFor(session.role));
   return session;
 }
 
 /** Team page: whoever runs a workspace (the owner, Crystal) manages its people (0016). */
 export async function requireWsAdmin(): Promise<Session> {
   const session = await getSession();
-  if (!session.isWsAdmin) redirect("/today");
+  if (!session.isWsAdmin || !isStaff(session.role)) redirect(homeFor(session.role));
   return session;
 }
 
 /** Work pages (Today, deals, estimates, visits, jobs, KPIs): the whole team (0015). */
 export async function requireStaff(): Promise<Session> {
   const session = await getSession();
-  if (!isStaff(session.role)) redirect("/no-access");
+  if (!isStaff(session.role)) redirect(homeFor(session.role));
+  return session;
+}
+
+/** Worker pages (/work): crew only. Staff go to their own Jobs screen. */
+export async function requireCrew(): Promise<Session> {
+  const session = await getSession();
+  if (session.role !== "crew") redirect(homeFor(session.role));
+  return session;
+}
+
+/** Customer page (/my-job). */
+export async function requireCustomer(): Promise<Session> {
+  const session = await getSession();
+  if (session.role !== "customer") redirect(homeFor(session.role));
   return session;
 }
 

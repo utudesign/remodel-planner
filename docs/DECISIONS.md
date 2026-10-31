@@ -351,3 +351,26 @@ An independent review of batch C found these; all fixed with SQL tests (rules 45
   parking, debris, gate code, pets, notes. Shown on the deal Overview and the Job tab; workers will read them in F1.
 - Old job milestones stay as "Checkpoints" (payments/inspections still key off them).
 - Comments, site rules and task changes appear in the deal's History (0018 audit trigger).
+
+## 2026-10-31 — v3 batches F1 (worker + customer logins, 0022) and F3 (daily reports, 0023)
+
+- Roles: `crew` (shown as **Worker**, with a trade from `trades`) and `customer` (tied to one contact; sees only jobs of
+  deals for that contact). Invites from Team carry the role (Team / Worker + trade / Customer + their sold deal).
+- **Workers never see money:** crew lost direct SELECT on `deals` and `projects` (sold price, value, contract value, notes).
+  They read only `job_worker_view`, `job_worker_tasks`, `job_worker_visit` (no ballpark); customers only
+  `job_customer_view` / `job_customer_tasks` (no assignees, no internal notes). Views are security-barrier and filter by
+  the signed-in person; SQL tests assert 0 money columns and 0 rows from other jobs / customers / workspaces.
+- Plan said `job_worker_files`: not needed — the existing `deal_files_crew_read` RLS already limits crew to
+  crew-visible files (photos, design) of their jobs. Crew may add photos only (`deal_files_crew_insert`, storage policy via
+  `can_upload_deal_path()`).
+- Known: `companies.settings_json` (mileage rate, tax set-aside %) stays readable by every login of the company — it's
+  company config, not job money. Revisit if that's a concern.
+- Crew change only % / status of their own tasks (`worker_update_task`), comment + photo on their jobs.
+- Homes: team `/` → Deals (E1 makes it the board), workers `/work` (My work · Daily report · Alerts tabs), customers `/my-job`.
+- Daily report (`/work/report`): job → % on my tasks → problems (type from `job_issue_types`, note, photo, needs re-order)
+  → tomorrow → Send. `submit_daily_report()` does it in one transaction, one report per job/person/day (resend replaces),
+  notifies the deal owner + job manager (`job_issue` when a re-order is needed). Job tab shows the feed; the team marks
+  issues Fixed (can't rewrite them). Reports and issues land in History.
+- Evening reminder: `/api/cron/evening` at 23:00 and 00:00 UTC; the run that is 7 PM ET pushes workers with an open task
+  today and no report for that job.
+- Reminder from PLAN v3: move hosting to paid plans before any worker or customer logs in.

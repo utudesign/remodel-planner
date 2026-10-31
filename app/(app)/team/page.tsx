@@ -22,26 +22,37 @@ export const metadata = { title: "Team" };
 export default async function TeamPage() {
   const s = await requireWsAdmin();
   const isOwner = s.role === "owner";
-  const [people, invites, workspaces] = await Promise.all([
+  const [people, invites, workspaces, trades, soldDeals] = await Promise.all([
     s.db
       .from("users")
-      .select("id, name, email, role, active, workspace_id, workspace_admin")
+      .select("id, name, email, role, active, workspace_id, workspace_admin, trade_key")
       .eq("company_id", s.companyId)
       .order("created_at")
       .then(must),
     s.db
       .from("team_invites")
-      .select("id, email, name, invited_at")
+      .select("id, email, name, invited_at, role")
       .eq("company_id", s.companyId)
       .eq("workspace_id", s.workspaceId)
       .is("accepted_at", null)
       .order("invited_at")
       .then(must),
     s.db.from("workspaces").select("id, name").eq("company_id", s.companyId).order("created_at").then(must),
+    s.db.from("trades").select("key, label").eq("company_id", s.companyId).eq("active", true).order("sort_order").then(must),
+    s.db
+      .from("deals")
+      .select("id, deal_number, title, contact:contacts(name)")
+      .eq("company_id", s.companyId)
+      .not("sold_at", "is", null)
+      .is("deleted_at", null)
+      .order("sold_at", { ascending: false })
+      .limit(60)
+      .then(must),
   ]);
-  const mine = people.filter((p) => p.role !== "crew" && p.workspace_id === s.workspaceId);
+  const tradeLabel = new Map(trades.map((t) => [t.key, t.label]));
+  const mine = people.filter((p) => p.workspace_id === s.workspaceId);
   const others = workspaces.filter((w) => w.id !== s.workspaceId);
-  const movable = isOwner ? mine.filter((p) => p.role !== "owner" && p.active) : [];
+  const movable = isOwner ? mine.filter((p) => p.role !== "owner" && p.role !== "crew" && p.role !== "customer" && p.active) : [];
   return (
     <>
       <PageHeader
@@ -67,7 +78,7 @@ export default async function TeamPage() {
                         : p.workspace_admin
                           ? "Workspace admin"
                           : isRole(p.role)
-                            ? ROLE_LABELS[p.role]
+                            ? `${ROLE_LABELS[p.role]}${p.role === "crew" && p.trade_key ? ` · ${tradeLabel.get(p.trade_key) ?? p.trade_key}` : ""}`
                             : p.role}
                       {p.email ? ` · ${p.email}` : ""}
                     </span>
@@ -83,11 +94,17 @@ export default async function TeamPage() {
           <CardHeader>
             <CardTitle>Invite someone</CardTitle>
             <CardDescription>
-              They get an email. When they sign in with that email, they land on Today in {s.workspaceName}.
+              They get an email. When they sign in with that email they land on their own home: Today (team), My work (workers) or their job page (customers).
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <InviteTeammateForm />
+            <InviteTeammateForm
+              trades={trades}
+              deals={soldDeals.map((d) => ({
+                id: d.id,
+                label: `#${d.deal_number} · ${(d.contact as { name: string | null } | null)?.name ?? d.title ?? "Client"}`,
+              }))}
+            />
             {invites.length ? (
               <ul className="flex flex-col">
                 {invites.map((i) => (
@@ -95,7 +112,7 @@ export default async function TeamPage() {
                     <span className="min-w-0 flex-1 text-sm">
                       <span className="block font-medium">{i.name || i.email}</span>
                       <span className="block truncate text-xs text-muted-foreground">
-                        Invited {formatDateTime(i.invited_at, s.timezone)} · not signed in yet
+                        {i.role === "crew" ? "Worker · " : i.role === "customer" ? "Customer · " : ""}Invited {formatDateTime(i.invited_at, s.timezone)} · not signed in yet
                       </span>
                     </span>
                     <CancelInviteButton id={i.id} />

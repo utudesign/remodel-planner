@@ -173,3 +173,11 @@ export function bucketOf(t: Pick<PmTask, "start_on" | "end_on" | "status">, toda
   if (t.start_on <= addDays(today, 7)) return "week";
   return "later";
 }
+
+/** "Mon, Nov 3 – Wed, Nov 5 · 8 AM–4 PM" for task lists. */
+export function whenText(t: { start_on: string | null; end_on: string | null; start_time: string | null; end_time: string | null }) {
+  const d = (x: string) => new Date(`${x}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  const days = t.start_on ? (t.end_on && t.end_on !== t.start_on ? `${d(t.start_on)} – ${d(t.end_on)}` : d(t.start_on)) : "No date";
+  const time = t.start_time ? ` · ${fmt12(t.start_time)}${t.end_time ? `–${fmt12(t.end_time)}` : ""}` : "";
+  return days + time;
+}

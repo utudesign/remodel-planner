@@ -5,7 +5,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { ForbiddenError, requireRole } from "@/lib/auth/require-role";
 import { appUrl } from "@/lib/app-url";
-import { formToObject, ok, run, type ActionState } from "@/server/action-utils";
+import { formToObject, must, ok, run, type ActionState } from "@/server/action-utils";
 
 /** The owner or a workspace admin (Crystal) manages the people in their own workspace (0016). */
 async function requireWsAdmin() {
@@ -18,17 +18,38 @@ async function requireWsAdmin() {
 export async function inviteTeammate(_: ActionState, fd: FormData): Promise<ActionState> {
   return run(async () => {
     const v = z
-      .object({ email: z.email().max(200), name: z.string().trim().max(120).optional().default("") })
+      .object({
+        email: z.email().max(200),
+        name: z.string().trim().max(120).optional().default(""),
+        role: z.enum(["team", "crew", "customer"]).default("team"),
+        trade_key: z.string().regex(/^[a-z0-9_]{2,40}$/).optional().or(z.literal("")),
+        deal_id: z.uuid().optional().or(z.literal("")),
+      })
       .parse(formToObject(fd));
     const s = await requireWsAdmin();
     const email = v.email.toLowerCase();
+    // v3 F1: a worker login carries a trade; a customer login is tied to the deal's client (their job only).
+    let contactId: string | null = null;
+    if (v.role === "customer") {
+      if (!v.deal_id) throw new Error("Pick the customer's job");
+      const d = must(await s.db.from("deals").select("contact_id").eq("id", v.deal_id).eq("company_id", s.companyId).single());
+      if (!d.contact_id) throw new Error("That deal has no client contact yet");
+      contactId = d.contact_id;
+    }
     ok(
-      await s.db
-        .from("team_invites")
-        .upsert(
-          { company_id: s.companyId, workspace_id: s.workspaceId, email, name: v.name || null, accepted_at: null },
-          { onConflict: "company_id,email" },
-        ),
+      await s.db.from("team_invites").upsert(
+        {
+          company_id: s.companyId,
+          workspace_id: s.workspaceId,
+          email,
+          name: v.name || null,
+          accepted_at: null,
+          role: v.role,
+          trade_key: v.role === "crew" ? v.trade_key || null : null,
+          contact_id: contactId,
+        },
+        { onConflict: "company_id,email" },
+      ),
     );
     let sent = false;
     try {
@@ -45,7 +66,9 @@ export async function inviteTeammate(_: ActionState, fd: FormData): Promise<Acti
     return {
       ok: true,
       message: sent
-        ? `Invite emailed to ${email}. They sign in with that email and see this workspace's deals.`
+        ? `Invite emailed to ${email}. They sign in with that email${
+            v.role === "crew" ? " and see only their jobs (no prices)" : v.role === "customer" ? " and see only their own job" : " and see this workspace's deals"
+          }.`
         : `Invite saved. Send ${await appUrl()}/sign-in and have them sign in with ${email}.`,
     };
   });

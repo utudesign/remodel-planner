@@ -100,3 +100,20 @@ describe("My work buckets", () => {
     expect(bucketOf({ start_on: null, end_on: null, status: "todo" }, today)).toBe("nodate");
   });
 });
+
+import { whenText } from "@/lib/jobs/pm";
+import { homeFor } from "@/lib/auth/roles";
+
+describe("v3 F1/F3 helpers", () => {
+  it("whenText shows the day range and times", () => {
+    expect(whenText({ start_on: "2026-11-02", end_on: "2026-11-04", start_time: "08:00", end_time: "16:30" })).toBe(
+      "Mon, Nov 2 – Wed, Nov 4 · 8:00 AM–4:30 PM",
+    );
+    expect(whenText({ start_on: null, end_on: null, start_time: null, end_time: null })).toBe("No date");
+  });
+  it("each role lands on its own home", () => {
+    expect(homeFor("crew")).toBe("/work");
+    expect(homeFor("customer")).toBe("/my-job");
+    expect(homeFor("team")).toBe("/today");
+  });
+});

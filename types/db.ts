@@ -9,6 +9,144 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      daily_report_issues: {
+        Row: {
+          company_id: string
+          created_at: string
+          file_id: string | null
+          id: string
+          needs_reorder: boolean
+          note: string
+          project_id: string
+          report_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          type_key: string
+        }
+        ComputedFields: never
+        Insert: {
+          company_id: string
+          created_at?: string
+          file_id?: string | null
+          id?: string
+          needs_reorder?: boolean
+          note?: string
+          project_id: string
+          report_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          type_key: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          file_id?: string | null
+          id?: string
+          needs_reorder?: boolean
+          note?: string
+          project_id?: string
+          report_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          type_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_report_issues_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "deal_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_report_issues_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_report_issues_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "daily_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_reports: {
+        Row: {
+          author_id: string
+          company_id: string
+          created_at: string
+          id: string
+          note: string | null
+          progress: Json
+          project_id: string
+          report_date: string
+          tomorrow_plan: string | null
+          updated_at: string
+        }
+        ComputedFields: never
+        Insert: {
+          author_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          progress?: Json
+          project_id: string
+          report_date: string
+          tomorrow_plan?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          progress?: Json
+          project_id?: string
+          report_date?: string
+          tomorrow_plan?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_reports_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_issue_types: {
+        Row: {
+          active: boolean
+          company_id: string
+          key: string
+          label: string
+          sort_order: number
+        }
+        ComputedFields: never
+        Insert: {
+          active?: boolean
+          company_id: string
+          key: string
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          key?: string
+          label?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       app_feedback: {
         Row: {
           area: string
@@ -4012,6 +4150,9 @@ export type Database = {
       }
       team_invites: {
         Row: {
+          contact_id: string | null
+          role: string
+          trade_key: string | null
           accepted_at: string | null
           accepted_by: string | null
           company_id: string
@@ -4023,6 +4164,9 @@ export type Database = {
         }
         ComputedFields: never
         Insert: {
+          contact_id?: string | null
+          role?: string
+          trade_key?: string | null
           accepted_at?: string | null
           accepted_by?: string | null
           company_id: string
@@ -4033,6 +4177,9 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          contact_id?: string | null
+          role?: string
+          trade_key?: string | null
           accepted_at?: string | null
           accepted_by?: string | null
           company_id?: string
@@ -4162,6 +4309,8 @@ export type Database = {
       }
       users: {
         Row: {
+          contact_id: string | null
+          trade_key: string | null
           active: boolean
           clerk_id: string
           company_id: string
@@ -4178,6 +4327,8 @@ export type Database = {
         }
         ComputedFields: never
         Insert: {
+          contact_id?: string | null
+          trade_key?: string | null
           active?: boolean
           clerk_id: string
           company_id: string
@@ -4193,6 +4344,8 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          contact_id?: string | null
+          trade_key?: string | null
           active?: boolean
           clerk_id?: string
           company_id?: string
@@ -4263,6 +4416,91 @@ export type Database = {
       }
     }
     Views: {
+      job_customer_tasks: {
+        Row: {
+          id: string | null
+          project_id: string | null
+          title: string | null
+          phase_key: string | null
+          status: string | null
+          pct: number | null
+          start_on: string | null
+          end_on: string | null
+          sort_order: number | null
+        }
+        Relationships: []
+      }
+      job_customer_view: {
+        Row: {
+          project_id: string | null
+          deal_number: string | null
+          name: string | null
+          address: string | null
+          city: string | null
+          start_date: string | null
+          status: string | null
+          closed_at: string | null
+          pct: number | null
+          current_step: string | null
+          manager_name: string | null
+          manager_phone: string | null
+        }
+        Relationships: []
+      }
+      job_worker_tasks: {
+        Row: {
+          id: string | null
+          project_id: string | null
+          title: string | null
+          phase_key: string | null
+          trade_key: string | null
+          status: string | null
+          pct: number | null
+          start_on: string | null
+          end_on: string | null
+          start_time: string | null
+          end_time: string | null
+          sort_order: number | null
+          notes: string | null
+          done_at: string | null
+          assignee_id: string | null
+          assignee_name: string | null
+          mine: boolean | null
+        }
+        Relationships: []
+      }
+      job_worker_view: {
+        Row: {
+          project_id: string | null
+          deal_id: string | null
+          deal_number: string | null
+          deal_year: number | null
+          name: string | null
+          client_name: string | null
+          client_phone: string | null
+          address: string | null
+          city: string | null
+          zip: string | null
+          start_date: string | null
+          status: string | null
+          pct: number | null
+          current_phase: string | null
+          manager_name: string | null
+        }
+        Relationships: []
+      }
+      job_worker_visit: {
+        Row: {
+          project_id: string | null
+          visit_id: string | null
+          visited_at: string | null
+          walls: Json | null
+          appliances: Json | null
+          ceiling_in: number | null
+          notes: string | null
+        }
+        Relationships: []
+      }
       catalog_items_grouped: {
         Row: {
           active: boolean | null
@@ -4788,6 +5026,12 @@ export type Database = {
       accessory_item: { Args: { p_collection: string; p_company: string; p_key: string; p_vendor: string }; Returns: string }
       add_quote_item: { Args: { p_item: string; p_qty: number; p_quote: string }; Returns: string }
       import_brand_colors: { Args: { p_colors: Json; p_company_id: string; p_list_name: string }; Returns: number }
+      submit_daily_report: {
+        Args: { p_issues: Json; p_note?: string; p_progress: Json; p_project: string; p_tomorrow: string | null }
+        Returns: string
+      }
+      worker_update_task: { Args: { p_task: string; p_pct?: number; p_status?: string }; Returns: undefined }
+      can_upload_deal_path: { Args: { p_name: string }; Returns: boolean }
       move_job_to_phase: { Args: { p_phase: string; p_project: string }; Returns: undefined }
       pick_quote_color: { Args: { p_color_id: string; p_quote_id: string }; Returns: { code: string; status: string }[] }
       share_deal: { Args: { p_deal: string; p_workspace: string }; Returns: undefined }

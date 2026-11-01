@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -569,10 +569,15 @@ function TimelineView(c: Ctx) {
     else months.push({ label, span: 1 });
   }
   const width = days.length * DAY_W;
+  // Open at today (a day of context on the left), like Asana — not at the first task weeks ago.
+  const scroller = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (scroller.current && todayIdx > 0) scroller.current.scrollLeft = Math.max(0, (todayIdx - 1) * DAY_W);
+  }, [todayIdx]);
   return (
     <div className="overflow-hidden rounded-xl bg-card ring-1 ring-border">
       <div className="flex">
-        <div className="w-44 shrink-0 border-r sm:w-56">
+        <div className="w-28 shrink-0 border-r sm:w-56">
           <div className="h-[52px] border-b" />
           {c.sections.map((s) =>
             s.items.length ? (
@@ -589,7 +594,7 @@ function TimelineView(c: Ctx) {
             ) : null,
           )}
         </div>
-        <div className="min-w-0 flex-1 overflow-x-auto">
+        <div ref={scroller} className="min-w-0 flex-1 overflow-x-auto">
           <div className="relative" style={{ width }}>
             <div className="flex h-[26px] border-b text-xs font-semibold">
               {months.map((m, i) => (
@@ -771,8 +776,9 @@ function CalendarView(c: Ctx) {
         </button>
         <span className="ml-2 font-semibold">{label}</span>
       </div>
-      <div className="overflow-x-auto">
-        <div className="min-w-[760px]">
+      <Agenda c={c} month={month} />
+      <div className="hidden md:block">
+        <div>
           <div className="grid grid-cols-7 border-b text-xs font-semibold text-muted-foreground">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
               <div key={d} className="px-2 py-1.5">
@@ -1013,5 +1019,48 @@ export function WorkspaceTabs({ base, view }: { base: string; view: WorkspaceVie
         </Link>
       ))}
     </nav>
+  );
+}
+
+/** Calendar on a phone: the month as a day-by-day list (a 7-column grid is unreadable at 375 px). */
+function Agenda({ c, month }: { c: Ctx; month: string }) {
+  const inMonth = c.tasks
+    .filter((t) => t.start_on && (t.start_on.slice(0, 7) === month || (t.end_on ?? t.start_on).slice(0, 7) === month))
+    .sort((a, b) => (a.start_on! < b.start_on! ? -1 : 1));
+  const days = [...new Set(inMonth.map((t) => (t.start_on!.slice(0, 7) === month ? t.start_on! : `${month}-01`)))];
+  if (!inMonth.length) return <p className="p-4 text-sm text-muted-foreground md:hidden">Nothing scheduled this month.</p>;
+  return (
+    <div className="flex flex-col md:hidden">
+      {days.map((d) => (
+        <section key={d} className="border-b px-3 py-2 last:border-0">
+          <p className={cn("mb-1.5 text-sm font-bold", d === c.today && "text-primary")}>
+            {new Date(`${d}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+            {d === c.today ? " · Today" : ""}
+          </p>
+          <ul className="flex flex-col gap-1.5">
+            {inMonth
+              .filter((t) => (t.start_on!.slice(0, 7) === month ? t.start_on! : `${month}-01`) === d)
+              .map((t) => {
+                const sw = swatchFor(t.trade_key, c.trades);
+                return (
+                  <li key={t.id}>
+                    <button
+                      type="button"
+                      onClick={() => c.open(t.id)}
+                      className={cn(
+                        "flex min-h-11 w-full items-center justify-between gap-2 rounded-md px-3 text-left text-sm font-semibold",
+                        t.status === "done" ? "bg-zinc-200 text-zinc-600 line-through" : (sw?.bar ?? "bg-sky-300 text-sky-950"),
+                      )}
+                    >
+                      <span className="truncate">{t.title}</span>
+                      <span className="shrink-0 text-xs font-medium opacity-80">{range(t)}</span>
+                    </button>
+                  </li>
+                );
+              })}
+          </ul>
+        </section>
+      ))}
+    </div>
   );
 }

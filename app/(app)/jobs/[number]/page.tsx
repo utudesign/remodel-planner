@@ -24,9 +24,9 @@ export default async function JobWorkspacePage({
   searchParams,
 }: {
   params: Promise<{ number: string }>;
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; task?: string }>;
 }) {
-  const [{ number }, { view: v }] = await Promise.all([params, searchParams]);
+  const [{ number }, { view: v, task }] = await Promise.all([params, searchParams]);
   const view = parseView(v);
   const s = await requireStaff();
   const deal = await getDealByNumber(s, number);
@@ -180,6 +180,7 @@ export default async function JobWorkspacePage({
         today={today}
         conflicts={conflicts}
         overview={overview}
+        initialTaskId={task && pm.tasks.some((t) => t.id === task) ? task : null}
       />
     </div>
   );

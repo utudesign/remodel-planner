@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { AlertTriangle } from "lucide-react";
 import { PmBoard, type BoardCard } from "@/components/jobs/pm-board";
 import { TaskCheck } from "@/components/jobs/task-check";
+import { TaskTimeline } from "@/components/jobs/job-workspace";
 import { EmptyState, PageHeader } from "@/components/shared/states";
 import { requireStaff } from "@/lib/auth/require-role";
 import { todayIn } from "@/lib/dates";
 import {
-  addDays,
   bucketOf,
   crewConflicts,
   currentPhase,
@@ -38,8 +37,6 @@ const initials = (n: string) =>
     .join("")
     .slice(0, 2)
     .toUpperCase();
-// Phase colors for the Timeline bars (cycled by phase order).
-const PHASE_COLORS = ["bg-sky-500", "bg-amber-500", "bg-emerald-600", "bg-blue-600", "bg-yellow-500", "bg-violet-500", "bg-fuchsia-600", "bg-teal-500", "bg-rose-500"];
 
 /**
  * Jobs, Asana-style (change request v3 item 13): Board (columns = phase), Timeline (Gantt of every active job
@@ -60,14 +57,15 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
   return (
     <>
       <PageHeader title="Jobs" description="Every sold job: phases, tasks, who's on site and when." />
-      <nav className="mb-4 flex gap-1.5 overflow-x-auto [scrollbar-width:none]" aria-label="View">
+      <nav className="-mx-4 mb-4 flex gap-1 overflow-x-auto border-b px-4 [scrollbar-width:none] lg:mx-0 lg:px-0" aria-label="View">
         {VIEWS.map((x) => (
           <Link
             key={x.key}
             href={`/jobs?view=${x.key}`}
+            aria-current={view === x.key ? "page" : undefined}
             className={cn(
-              "flex h-10 shrink-0 items-center rounded-full px-4 text-sm font-semibold",
-              view === x.key ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground",
+              "relative flex h-11 shrink-0 items-center px-3 text-sm font-medium text-muted-foreground hover:text-foreground",
+              view === x.key && "text-foreground after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-primary",
             )}
           >
             {x.label}
@@ -97,7 +95,26 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
           })}
         />
       ) : view === "timeline" ? (
-        <Timeline jobs={active} phases={setup.phases} today={today} conflicts={conflicts} />
+        active.length === 0 ? (
+          <EmptyState title="No active jobs" description="Finished jobs are on the List view." />
+        ) : (
+          <TaskTimeline
+            sections={active.map((j) => ({
+              key: j.projectId,
+              label: j.name,
+              sub: `#${j.number} · ${progress(j.tasks)}% done`,
+              href: `/jobs/${j.number}`,
+              items: j.tasks,
+            }))}
+            trades={setup.trades}
+            today={today}
+            names={Object.fromEntries(nameOf)}
+            warn={Object.fromEntries(
+              active.flatMap((j) => j.tasks.map((t) => [t.id, hoursWarnings(t, j.rules).length + (conflicts.get(t.id)?.length ?? 0)])),
+            )}
+            taskHref={Object.fromEntries(active.flatMap((j) => j.tasks.map((t) => [t.id, `/jobs/${j.number}?view=list&task=${t.id}`])))}
+          />
+        )
       ) : view === "list" ? (
         <ul className="flex flex-col divide-y overflow-hidden rounded-2xl bg-card ring-1 ring-border">
           {jobs.map((j) => {
@@ -135,105 +152,6 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
         />
       )}
     </>
-  );
-}
-
-function Timeline({
-  jobs,
-  phases,
-  today,
-  conflicts,
-}: {
-  jobs: Awaited<ReturnType<typeof listPmJobs>>;
-  phases: { key: string; label: string; sort_order: number }[];
-  today: string;
-  conflicts: ReturnType<typeof crewConflicts>;
-}) {
-  if (!jobs.length) return <EmptyState title="No active jobs" description="Finished jobs are on the List view." />;
-  const dated = jobs.flatMap((j) => j.tasks).filter((t) => t.start_on);
-  const from = [addDays(today, -7), ...dated.map((t) => t.start_on!)].sort()[0];
-  const to = [addDays(today, 35), ...dated.map((t) => t.end_on ?? t.start_on!)].sort().at(-1)!;
-  const days = Math.max(14, (Date.parse(to) - Date.parse(from)) / 86_400_000 + 1);
-  const x = (d: string) => ((Date.parse(d) - Date.parse(from)) / 86_400_000 / days) * 100;
-  const color = new Map(phases.map((p, i) => [p.key, PHASE_COLORS[i % PHASE_COLORS.length]]));
-  const weeks: string[] = [];
-  for (let d = from; d <= to; d = addDays(d, 7)) weeks.push(d);
-  return (
-    <section className="flex flex-col gap-2">
-      <div className="-mx-4 overflow-x-auto px-4 lg:mx-0 lg:px-0">
-        <div className="min-w-[720px] overflow-hidden rounded-2xl bg-card ring-1 ring-border">
-          <div className="relative ml-40 h-6 border-b text-[10px] font-semibold text-muted-foreground">
-            {weeks.map((w) => (
-              <span key={w} className="absolute top-1 -translate-x-1/2" style={{ left: `${x(w)}%` }}>
-                {short(w)}
-              </span>
-            ))}
-          </div>
-          <ul className="divide-y">
-            {jobs.map((j) => {
-              const issues = j.tasks.filter((t) => conflicts.has(t.id) || hoursWarnings(t, j.rules).length);
-              return (
-                <li key={j.projectId} className="flex min-h-14 items-stretch">
-                  <Link href={`/jobs/${j.number}`} className="flex w-40 shrink-0 flex-col justify-center border-r px-2.5 py-1.5">
-                    <span className="truncate text-sm font-semibold">{j.name}</span>
-                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                      #{j.number} · {progress(j.tasks)}%
-                      {issues.length ? (
-                        <span className="inline-flex items-center gap-0.5 font-semibold text-amber-600">
-                          <AlertTriangle className="size-3" /> {issues.length}
-                        </span>
-                      ) : null}
-                    </span>
-                  </Link>
-                  <div className="relative flex-1">
-                    <span className="absolute inset-y-0 w-px bg-destructive/70" style={{ left: `${x(today)}%` }} aria-hidden />
-                    {j.tasks
-                      .filter((t) => t.start_on)
-                      .map((t, i) => {
-                        const warn = conflicts.has(t.id) || hoursWarnings(t, j.rules).length > 0;
-                        const end = addDays(t.end_on ?? t.start_on!, 1);
-                        return (
-                          <span
-                            key={t.id}
-                            title={`${t.title} · ${short(t.start_on)}${t.end_on && t.end_on !== t.start_on ? `–${short(t.end_on)}` : ""}${
-                              conflicts.has(t.id) ? " · crew conflict" : ""
-                            }`}
-                            className={cn(
-                              "absolute h-3 rounded-sm",
-                              t.phase_key ? color.get(t.phase_key) : "bg-slate-400",
-                              t.status === "done" && "opacity-40",
-                              warn && "ring-2 ring-amber-500 ring-offset-1",
-                              isLate(t, today) && "ring-2 ring-destructive ring-offset-1",
-                            )}
-                            style={{
-                              left: `${x(t.start_on!)}%`,
-                              width: `${Math.max(0.8, x(end) - x(t.start_on!))}%`,
-                              top: `${8 + (i % 3) * 14}px`,
-                            }}
-                          />
-                        );
-                      })}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      </div>
-      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-        {phases.map((p) => (
-          <span key={p.key} className="inline-flex items-center gap-1">
-            <span className={cn("size-2.5 rounded-sm", color.get(p.key))} /> {p.label}
-          </span>
-        ))}
-        <span className="inline-flex items-center gap-1">
-          <span className="size-2.5 rounded-sm ring-2 ring-amber-500" /> crew conflict / outside site hours
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <span className="h-2.5 w-px bg-destructive" /> today
-        </span>
-      </div>
-    </section>
   );
 }
 

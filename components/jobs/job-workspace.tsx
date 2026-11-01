@@ -61,6 +61,8 @@ type Props = {
   today: string;
   conflicts: Record<string, string[]>;
   overview: React.ReactNode;
+  /** ?task=<id>: open that task's side panel (from the all-jobs timeline). */
+  initialTaskId?: string | null;
 };
 
 const short = (d: string | null) =>
@@ -82,7 +84,7 @@ const range = (t: { start_on: string | null; end_on: string | null }) =>
     : "";
 
 export function JobWorkspace(p: Props) {
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(p.initialTaskId ?? null);
   const nameOf = useMemo(() => new Map(p.people.map((x) => [x.id, x.name])), [p.people]);
   const sections = useMemo(
     () => [
@@ -553,7 +555,39 @@ function BoardCard({ t, c }: { t: JobTask; c: Ctx }) {
 const DAY_W = 40;
 
 function TimelineView(c: Ctx) {
-  const dated = c.tasks.filter((t) => t.start_on);
+  const warn: Record<string, number> = {};
+  for (const t of c.tasks) warn[t.id] = hoursWarnings(t, c.rules).length + (c.conflicts[t.id]?.length ?? 0);
+  return (
+    <TaskTimeline
+      sections={c.sections}
+      trades={c.trades}
+      today={c.today}
+      names={Object.fromEntries(c.nameOf)}
+      warn={warn}
+      onOpen={c.open}
+    />
+  );
+}
+
+export type TimelineSection = { key: string; label: string; href?: string; sub?: string; items: JobTask[] };
+
+/**
+ * Asana-style timeline: a section per phase (one job) or per job (all jobs), one row per task, a bar per task with
+ * the person and the name (beside short bars), weekends shaded, a line for today. Opens at today.
+ * Tap a task: onOpen (side panel) or taskHref (go to the job and open it there).
+ */
+export function TaskTimeline(c: {
+  sections: TimelineSection[];
+  trades: { key: string; label: string }[];
+  today: string;
+  names: Record<string, string>;
+  warn: Record<string, number>;
+  onOpen?: (id: string) => void;
+  taskHref?: Record<string, string>;
+}) {
+  const router = useRouter();
+  const allTasks = c.sections.flatMap((s) => s.items);
+  const dated = allTasks.filter((t) => t.start_on);
   const starts = dated.map((t) => t.start_on!);
   const ends = dated.map((t) => t.end_on ?? t.start_on!);
   const from = addDays([c.today, ...starts].sort()[0], -3);
@@ -577,7 +611,7 @@ function TimelineView(c: Ctx) {
   return (
     <div className="overflow-hidden rounded-xl bg-card ring-1 ring-border">
       <div className="flex">
-        <div className="w-28 shrink-0 border-r sm:w-56">
+        <div className="w-28 shrink-0 border-r sm:w-60">
           <div className="h-[52px] border-b" />
           {c.sections.map((s) =>
             s.items.length ? (
@@ -586,10 +620,17 @@ function TimelineView(c: Ctx) {
                 className="border-b px-3 py-2"
                 style={{ height: 32 + s.items.length * 40 }}
               >
-                <p className="flex items-center gap-1 text-sm font-bold">
-                  <ChevronDown className="size-4" />
-                  {s.label}
-                </p>
+                {s.href ? (
+                  <Link href={s.href} className="block hover:underline">
+                    <span className="block truncate text-sm font-bold">{s.label}</span>
+                    {s.sub ? <span className="block truncate text-xs text-muted-foreground">{s.sub}</span> : null}
+                  </Link>
+                ) : (
+                  <p className="flex items-center gap-1 text-sm font-bold">
+                    <ChevronDown className="size-4" />
+                    {s.label}
+                  </p>
+                )}
               </div>
             ) : null,
           )}
@@ -660,9 +701,12 @@ function TimelineView(c: Ctx) {
                     const b = idx(t.end_on ?? t.start_on);
                     const sw = swatchFor(t.trade_key, c.trades);
                     const late = isLate(t, c.today);
-                    const warn =
-                      hoursWarnings(t, c.rules).length + (c.conflicts[t.id]?.length ?? 0);
-                    const name = t.assignee_id ? c.nameOf.get(t.assignee_id) : null;
+                    const warn = c.warn[t.id] ?? 0;
+                    const name = t.assignee_id ? c.names[t.assignee_id] : null;
+                    const open = () => {
+                      if (c.onOpen) c.onOpen(t.id);
+                      else if (c.taskHref?.[t.id]) router.push(c.taskHref[t.id]);
+                    };
                     const w = Math.max(1, b - a + 1) * DAY_W - 4;
                     const outside = w < 150; // short bars: name to the right, like Asana
                     return (
@@ -673,7 +717,7 @@ function TimelineView(c: Ctx) {
                       >
                         <button
                           type="button"
-                          onClick={() => c.open(t.id)}
+                          onClick={open}
                           title={`${t.title} · ${range(t)}`}
                           className={cn(
                             "flex h-8 shrink-0 items-center gap-1.5 overflow-hidden rounded-md px-1.5 text-left text-xs font-semibold shadow-xs",
@@ -695,7 +739,7 @@ function TimelineView(c: Ctx) {
                         {outside ? (
                           <button
                             type="button"
-                            onClick={() => c.open(t.id)}
+                            onClick={open}
                             className={cn(
                               "text-xs font-semibold whitespace-nowrap",
                               t.status === "done" && "text-muted-foreground line-through",
@@ -716,9 +760,9 @@ function TimelineView(c: Ctx) {
           </div>
         </div>
       </div>
-      {c.tasks.some((t) => !t.start_on) ? (
+      {allTasks.some((t) => !t.start_on) ? (
         <p className="border-t px-3 py-2 text-xs text-muted-foreground">
-          {c.tasks.filter((t) => !t.start_on).length} task(s) without dates aren&apos;t on the
+          {allTasks.filter((t) => !t.start_on).length} task(s) without dates aren&apos;t on the
           timeline. Open one from the List to set dates.
         </p>
       ) : null}

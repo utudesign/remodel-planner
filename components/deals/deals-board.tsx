@@ -121,7 +121,7 @@ export function DealsBoard({
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-        <div className="flex gap-3 lg:-mx-0 lg:overflow-x-auto lg:pb-3">
+        <div className="flex gap-3 lg:overflow-x-auto lg:pb-3">
           {columns.map((col) => {
             const list = col.kind === "open" ? deals.filter((d) => stageOf(d) === col.key) : [];
             const isDropOnly = col.kind !== "open";
@@ -212,9 +212,9 @@ function Column({
     <section
       ref={setNodeRef}
       className={cn(
-        "flex w-full flex-col gap-2 rounded-2xl bg-secondary/60 p-2 lg:w-72 lg:shrink-0",
+        "flex w-full flex-col gap-2 rounded-2xl bg-secondary/60 p-2 lg:min-h-[60vh] lg:min-w-64 lg:flex-1",
         hiddenOnPhone && "hidden lg:flex",
-        dropOnly && "hidden border-2 border-dashed border-border bg-transparent lg:flex lg:w-40",
+        dropOnly && "hidden border-2 border-dashed border-border bg-transparent lg:flex lg:w-36 lg:min-w-36 lg:flex-none",
         isOver && "ring-2 ring-primary",
       )}
     >

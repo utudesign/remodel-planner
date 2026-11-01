@@ -425,3 +425,17 @@ An independent review of batch C found these; all fixed with SQL tests (rules 45
 - Closed jobs: no phase-task backfill, hidden from worker views. Existing done tasks backfilled to 100 %.
 - Standard payment schedule requires steps that add up to 100 % and locks the job (no double schedule on a double tap).
 - Assignees must be an active worker or teammate; `can_see_task` / `is_customer` not callable by anon; resubmitted-report issue deletes are in History.
+
+## 2026-11-01 — Jobs redesign: Asana-style job workspace, full-width boards
+
+- Deals board and every Jobs page use the full screen width (other pages keep the reading width).
+- `/jobs/<deal number>` = one job as an Asana-style project: **Overview** (description, Directions/Call, site rules,
+  job roles, status, recent activity) · **List** (sections = phases; Name / Assignee / Dates / Trade / Status / % columns,
+  inline Add task; compact rows on a phone) · **Board** (columns = phases, drag cards between them) · **Timeline**
+  (day grid, weekends shaded, today line, colored bars, labels beside short bars) · **Calendar** (month, multi-day bars) ·
+  **Dashboard** (completed / incomplete / overdue / total, by phase, by status, by person, progress by phase).
+- Tap any task → side panel with the full editor (same as the deal's Job tab).
+- Asana-like colors: each trade gets a fixed color by its Settings order; statuses To do / In progress / Blocked / Done.
+- Job status (On track / At risk / Off track) is computed from the tasks, not typed by hand: a late or blocked task → At risk;
+  more than 3 days late or 3+ late tasks → Off track.
+- Jobs list and board cards open the job workspace; the deal's Job tab links to it ("Open job view").

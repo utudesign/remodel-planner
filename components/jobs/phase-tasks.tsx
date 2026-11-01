@@ -22,8 +22,8 @@ export const STATUS: { key: TaskStatus; label: string; tone: string }[] = [
   { key: "done", label: "Done", tone: "bg-primary text-primary-foreground" },
 ];
 
-type Person = { id: string; name: string };
-type Comment = { id: string; task_id: string; body: string; author_id: string | null; created_at: string; photo_url: string | null };
+export type Person = { id: string; name: string };
+export type Comment = { id: string; task_id: string; body: string; author_id: string | null; created_at: string; photo_url: string | null };
 
 const initials = (n: string) =>
   n
@@ -178,13 +178,9 @@ function TaskRow({
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [err, setErr] = useState<string | null>(null);
-  const [pct, setPct] = useState(t.pct);
   const save = (patch: Parameters<typeof updateTask>[0]) =>
     start(async () => {
-      setErr(null);
-      const r = await updateTask(patch);
-      if (r && !r.ok) setErr(r.error ?? "Couldn't save");
+      await updateTask(patch);
       router.refresh();
     });
   const st = STATUS.find((x) => x.key === t.status)!;
@@ -252,7 +248,47 @@ function TaskRow({
       </div>
 
       {open ? (
-        <div className="flex flex-col gap-3 border-t px-3 py-3">
+        <div className="border-t px-3 py-3">
+          <TaskEditor task={t} warnings={warnings} phases={phases} trades={trades} people={people} comments={comments} nameOf={nameOf} />
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
+/** The task's full editor (assignee, trade, status, %, dates, times, phase, notes, comments). Used inline and in the drawer. */
+export function TaskEditor({
+  task: t,
+  warnings,
+  phases,
+  trades,
+  people,
+  comments,
+  nameOf,
+  onDeleted,
+}: {
+  task: JobTask;
+  warnings: string[];
+  phases: { key: string; label: string }[];
+  trades: { key: string; label: string }[];
+  people: Person[];
+  comments: Comment[];
+  nameOf: Map<string, string>;
+  onDeleted?: () => void;
+}) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [err, setErr] = useState<string | null>(null);
+  const [pct, setPct] = useState(t.pct);
+  const save = (patch: Parameters<typeof updateTask>[0]) =>
+    start(async () => {
+      setErr(null);
+      const r = await updateTask(patch);
+      if (r && !r.ok) setErr(r.error ?? "Couldn't save");
+      router.refresh();
+    });
+  return (
+        <div className="flex flex-col gap-3">
           {warnings.length ? (
             <ul className="rounded-lg bg-amber-50 p-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
               {warnings.map((w) => (
@@ -409,6 +445,7 @@ function TaskRow({
                 if (!window.confirm(`Delete "${t.title}"?`)) return;
                 start(async () => {
                   await deleteTask({ id: t.id });
+                  onDeleted?.();
                   router.refresh();
                 });
               }}
@@ -418,8 +455,6 @@ function TaskRow({
           </div>
           {err ? <p className="text-sm text-destructive">{err}</p> : null}
         </div>
-      ) : null}
-    </li>
   );
 }
 

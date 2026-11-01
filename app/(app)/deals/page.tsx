@@ -110,7 +110,7 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
         }
       />
 
-      <form className="mb-3" action="/deals" role="search">
+      <form className="mb-3 max-w-2xl" action="/deals" role="search">
         <input type="hidden" name="seg" value={seg} />
         <label className="relative block">
           <span className="sr-only">Search deals</span>

@@ -106,7 +106,7 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
             const late = j.tasks.filter((t) => isLate(t, today)).length;
             return (
               <li key={j.projectId}>
-                <Link href={`/deals/${j.number}?tab=job`} className="flex min-h-16 items-center gap-3 px-3.5 py-2.5 active:bg-secondary">
+                <Link href={`/jobs/${j.number}`} className="flex min-h-16 items-center gap-3 px-3.5 py-2.5 active:bg-secondary">
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-semibold">
                       #{j.number} {j.name}
@@ -174,7 +174,7 @@ function Timeline({
               const issues = j.tasks.filter((t) => conflicts.has(t.id) || hoursWarnings(t, j.rules).length);
               return (
                 <li key={j.projectId} className="flex min-h-14 items-stretch">
-                  <Link href={`/deals/${j.number}?tab=job`} className="flex w-40 shrink-0 flex-col justify-center border-r px-2.5 py-1.5">
+                  <Link href={`/jobs/${j.number}`} className="flex w-40 shrink-0 flex-col justify-center border-r px-2.5 py-1.5">
                     <span className="truncate text-sm font-semibold">{j.name}</span>
                     <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                       #{j.number} · {progress(j.tasks)}%
@@ -276,7 +276,7 @@ function MyWork({
                 return (
                   <li key={t.id} className="flex items-center gap-1 pr-3">
                     <TaskCheck id={t.id} done={false} label={t.title} />
-                    <Link href={`/deals/${j.number}?tab=job`} className="min-w-0 flex-1 py-2">
+                    <Link href={`/jobs/${j.number}`} className="min-w-0 flex-1 py-2">
                       <span className="block truncate font-medium">{t.title}</span>
                       <span className="block truncate text-xs text-muted-foreground">
                         #{j.number} {j.name}

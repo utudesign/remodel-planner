@@ -3,6 +3,7 @@ import { UserButton } from "@clerk/nextjs";
 import { Bell } from "lucide-react";
 import { BottomNav, SidebarNav } from "@/components/shared/nav";
 import { Fab } from "@/components/shared/fab";
+import { MainFrame } from "@/components/shared/main-frame";
 import { PhotoQueueRunner } from "@/components/photos/photo-queue-runner";
 import { tabsFor } from "@/lib/nav";
 import { getSession, isStaff } from "@/lib/auth/require-role";
@@ -59,7 +60,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <UserButton />
           </div>
         </header>
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-5 pb-40 lg:px-8 lg:pt-8 lg:pb-12">{children}</main>
+        <MainFrame>{children}</MainFrame>
       </div>
       {isStaff(s.role) ? <Fab /> : null}
       {isStaff(s.role) ? <PhotoQueueRunner /> : null}

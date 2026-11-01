@@ -155,8 +155,8 @@ export async function JobTab({ dealId, number }: { dealId: string; number: strin
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle>Tasks by phase</CardTitle>
-          <a href="/jobs?view=board" className="text-sm font-semibold text-primary">
-            All jobs
+          <a href={`/jobs/${number}`} className="text-sm font-semibold text-primary">
+            Open job view →
           </a>
         </CardHeader>
         <CardContent>

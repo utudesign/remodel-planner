@@ -114,7 +114,7 @@ function Column({ id, label, count, children }: { id: string; label: string; cou
     <section
       ref={setNodeRef}
       className={cn(
-        "flex w-[80vw] max-w-72 shrink-0 snap-start flex-col gap-2 rounded-2xl bg-secondary/60 p-2 sm:w-64",
+        "flex w-[80vw] max-w-72 shrink-0 snap-start flex-col gap-2 rounded-2xl bg-secondary/60 p-2 sm:w-64 lg:min-h-[50vh] lg:max-w-none lg:min-w-60 lg:flex-1",
         isOver && "ring-2 ring-primary",
       )}
     >
@@ -160,7 +160,7 @@ function Card({
         >
           <GripVertical className="size-4" />
         </button>
-        <Link href={`/deals/${c.number}?tab=job`} className="min-w-0 flex-1">
+        <Link href={`/jobs/${c.number}`} className="min-w-0 flex-1">
           <p className="text-[11px] font-bold text-muted-foreground tabular-nums">#{c.number}</p>
           <p className="truncate text-[15px] font-semibold">{c.name}</p>
           <p className={cn("truncate text-xs", c.late ? "font-semibold text-destructive" : "text-muted-foreground")}>

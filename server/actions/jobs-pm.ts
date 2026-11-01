@@ -41,7 +41,7 @@ async function projectRef(s: Session, projectId: string) {
 }
 
 function refresh(number: string | null) {
-  revalidatePath("/jobs");
+  revalidatePath("/jobs", "layout");
   revalidatePath("/today");
   if (number) revalidatePath(`/deals/${number}`);
 }

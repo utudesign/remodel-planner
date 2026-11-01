@@ -1184,5 +1184,50 @@ do $$ begin
 end $$;
 reset role;
 
+-- Review fixes: turned-off logins, task status/% consistency, comment photos, payment steps must be 100 % ----
+reset role;
+update public.users set active = false where clerk_id = 'seed_crew';
+set role authenticated;
+select pg_temp.act_as('seed_crew');
+do $$ begin
+  if exists (select 1 from public.job_worker_view) or exists (select 1 from public.job_worker_tasks) or exists (select 1 from public.site_rules) then
+    raise exception 'a turned-off worker still reads the job'; end if;
+  raise notice 'OK: a turned-off login reads nothing (database, not just the app)';
+end $$;
+reset role;
+update public.users set active = true where clerk_id = 'seed_crew';
+set role authenticated;
+select pg_temp.act_as('seed_tugu');
+do $$
+declare j uuid := (select id from public.projects where deal_id = '00000000-0000-0000-0000-0000000000d2'); t uuid; other_file uuid;
+begin
+  select id into t from public.tasks where project_id = j and phase_key = 'floor';
+  update public.tasks set status = 'doing', pct = 100 where id = t;
+  if (select pct from public.tasks where id = t) = 100 then raise exception 'doing at 100%%'; end if;
+  update public.tasks set status = 'done' where id = t;
+  update public.tasks set pct = 0 where id = t;
+  if (select status from public.tasks where id = t) <> 'todo' then raise exception 'done → 0%% should be todo'; end if;
+  perform public.move_job_to_phase(j, 'backsplash');
+  perform public.move_job_to_phase(j, 'floor');
+  if (select count(*) from public.tasks where project_id = j and status = 'doing' and phase_key is not null) <> 1 then
+    raise exception 'one phase doing after moving back'; end if;
+  if exists (select 1 from public.tasks x where project_id = j and phase_key is not null and status = 'todo' and pct <> 0) then
+    raise exception 'reopened later phases start at 0%%'; end if;
+  select f.id into other_file from public.deal_files f where f.deal_id <> '00000000-0000-0000-0000-0000000000d2' limit 1;
+  if other_file is not null then
+    begin insert into public.task_comments (task_id, body, file_id) values (t, 'x', other_file); raise exception 'comment with another deal''s file';
+    exception when check_violation then null; end;
+  end if;
+  update public.payment_steps set pct = 10 where key = 'deposit';
+  raise notice 'OK: status and %% stay consistent; moving back leaves one phase doing; comment photos must be on the job';
+end $$;
+do $$ begin
+  begin perform public.add_payment_schedule((select id from public.projects where name = 'Other job')); raise exception 'steps not 100';
+  exception when check_violation then if sqlerrm not like '%not 100%' then raise; end if; end;
+  update public.payment_steps set pct = 30 where key = 'deposit';
+  raise notice 'OK: the standard schedule needs steps adding up to 100 %%';
+end $$;
+reset role;
+
 reset role;
 \echo ALL RULE TESTS PASSED

@@ -416,3 +416,12 @@ An independent review of batch C found these; all fixed with SQL tests (rules 45
 - **Needs you:** Reply now · Worker reports today · Job issues (Fixed button) · Job steps due · Follow up (red when overdue)
   · Contract + deposit · Payment links not paid (red when past due) · No touch in 2 days.
 - Sales items stay per person (my deals); job items are the whole workspace's (RLS).
+
+## 2026-10-31 — independent review fixes (folded into 0021–0025 before they were applied)
+
+- A turned-off login (`users.active = false`) now has no database access: `current_user_id/company_id/app_role` require active.
+- Task status/% always agree (status wins when both change; done → 0 % = To do); moving a job back leaves exactly one phase Doing.
+- Comment and daily-report photos must be live photos on that job. Customers never count as "assigned" for crew-visible files.
+- Closed jobs: no phase-task backfill, hidden from worker views. Existing done tasks backfilled to 100 %.
+- Standard payment schedule requires steps that add up to 100 % and locks the job (no double schedule on a double tap).
+- Assignees must be an active worker or teammate; `can_see_task` / `is_customer` not callable by anon; resubmitted-report issue deletes are in History.

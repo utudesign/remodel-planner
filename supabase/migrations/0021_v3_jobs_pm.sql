@@ -68,6 +68,8 @@ alter table public.tasks
 
 update public.tasks t set company_id = p.company_id from public.projects p where p.id = t.project_id and t.company_id is null;
 update public.tasks set status = 'todo' where status is null or status not in ('todo', 'doing', 'blocked', 'done');
+-- existing done tasks: 100 % and a done time (the normalize trigger below only sees new changes)
+update public.tasks set pct = 100, done_at = coalesce(done_at, now()) where status = 'done';
 alter table public.tasks
   alter column status set default 'todo',
   alter column status set not null,
@@ -80,18 +82,19 @@ create index if not exists tasks_assignee_dates on public.tasks (assignee_id, st
 create or replace function public.tasks_normalize()
 returns trigger language plpgsql set search_path = public as $$
 begin
-  if new.company_id is null then
-    select company_id into new.company_id from public.projects where id = new.project_id;
-  end if;
-  if tg_op = 'UPDATE' and new.pct is distinct from old.pct and new.status is not distinct from old.status then
-    new.status := case when new.pct >= 100 then 'done'
-                       when new.pct > 0 and old.status in ('todo', 'done') then 'doing'
-                       when new.pct < 100 and old.status = 'done' then 'doing'
-                       else old.status end;
-  elsif tg_op = 'UPDATE' and new.status is distinct from old.status then
+  -- always the project's company (the client can't pick another)
+  select company_id into new.company_id from public.projects where id = new.project_id;
+  if tg_op = 'UPDATE' and new.status is distinct from old.status then
+    -- status wins when it changed (even if pct changed too)
     if new.status = 'done' then new.pct := 100;
-    elsif old.status = 'done' and new.pct = 100 then new.pct := 90;
+    elsif new.status = 'todo' then new.pct := case when new.pct is distinct from old.pct and new.pct < 100 then new.pct else 0 end;
+    elsif new.pct >= 100 then new.pct := 90;            -- reopened (doing / blocked)
     end if;
+  elsif tg_op = 'UPDATE' and new.pct is distinct from old.pct then
+    new.status := case when new.pct >= 100 then 'done'
+                       when new.pct = 0 and old.status in ('doing', 'done') then 'todo'
+                       when new.pct > 0 and old.status in ('todo', 'done') then 'doing'
+                       else old.status end;
   elsif tg_op = 'INSERT' then
     if new.status = 'done' then new.pct := 100; elsif new.pct >= 100 then new.status := 'done'; end if;
   end if;
@@ -132,6 +135,8 @@ create or replace function public.can_see_task(p_task uuid)
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.tasks t where t.id = p_task and public.can_see_project(t.project_id))
 $$;
+revoke execute on function public.can_see_task(uuid) from public, anon;
+grant execute on function public.can_see_task(uuid) to authenticated;
 
 alter table public.task_comments enable row level security;
 create policy task_comments_team on public.task_comments for select to authenticated
@@ -290,7 +295,7 @@ begin
   update public.tasks set status = 'doing'
    where project_id = p_project and phase_key = p_phase and status in ('todo', 'done');
   update public.tasks set status = 'todo'
-   where project_id = p_project and sort_order > v_sort and phase_key is not null and status = 'done';
+   where project_id = p_project and sort_order > v_sort and phase_key is not null and status <> 'todo';
 end $$;
 revoke execute on function public.move_job_to_phase(uuid, text) from public, anon;
 grant execute on function public.move_job_to_phase(uuid, text) to authenticated;
@@ -337,7 +342,7 @@ declare c uuid; p record;
 begin
   for c in select id from public.companies loop perform public.seed_jobs_v3(c); end loop;
   -- Existing jobs get their phase tasks, planned from the job's start (or the day it was created).
-  for p in select id, coalesce(start_date, created_at::date) as from_day from public.projects loop
+  for p in select id, coalesce(start_date, created_at::date) as from_day from public.projects where closed_at is null loop
     perform public.add_phase_tasks(p.id, p.from_day);
   end loop;
 end $$;

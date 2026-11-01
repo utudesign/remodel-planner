@@ -89,7 +89,7 @@ create trigger daily_report_issues_guard before update on public.daily_report_is
 
 create trigger zz_audit after insert or update on public.daily_reports
   for each row execute function private.audit_row('project');
-create trigger zz_audit after insert or update on public.daily_report_issues
+create trigger zz_audit after insert or update or delete on public.daily_report_issues
   for each row execute function private.audit_row('project');
 
 -- ---------------------------------------------------------------------
@@ -157,7 +157,8 @@ begin
       raise exception 'Pick an issue type' using errcode = 'check_violation';
     end if;
     if nullif(v_issue ->> 'file_id', '') is not null and not exists (
-         select 1 from public.deal_files f where f.id = (v_issue ->> 'file_id')::uuid and f.deal_id = v_proj.deal_id) then
+         select 1 from public.deal_files f where f.id = (v_issue ->> 'file_id')::uuid and f.deal_id = v_proj.deal_id
+            and f.folder = 'photos' and f.deleted_at is null) then
       raise exception 'That photo is not on this job' using errcode = 'check_violation';
     end if;
     insert into public.daily_report_issues (company_id, report_id, project_id, type_key, note, file_id, needs_reorder)

@@ -158,3 +158,18 @@ npx web-push generate-vapid-keys   # prints a public and a private key
 
 New file in `supabase/migrations/` (next number, never edit an applied one) → `pnpm db:reset` →
 `pnpm db:types` → `scripts/test-db.sh` → `pnpm supabase db push`.
+
+**Production database = project `rwwuayoaileewclagwrw`** (the one Vercel's `NEXT_PUBLIC_SUPABASE_URL` points to).
+The project `scrggterleiozyvserkh` got the migrations by mistake on 2026-10-31; it's unused (safe to delete).
+Before every push, check you're linked to the right one, and push the database **before** the code:
+
+```bash
+export CLERK_FRONTEND_API_DOMAIN=allowed-coyote-8244.clerk.accounts.dev   # config.toml reads it
+pnpm supabase link --project-ref rwwuayoaileewclagwrw
+pnpm supabase migration list --linked      # the new ones show only under "Local"
+pnpm supabase db push --linked
+git push                                   # Vercel builds the code that needs those migrations
+```
+
+Cron: `vercel.json` has the 3:30 PM digest (`/api/cron`) and the 7 PM worker reminder (`/api/cron/evening`, 23:00 + 00:00 UTC;
+the run that is 7 PM in New York sends). Both need `CRON_SECRET` in Vercel.

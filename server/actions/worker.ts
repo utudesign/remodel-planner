@@ -37,6 +37,8 @@ export async function addWorkerComment(_: ActionState, fd: FormData): Promise<Ac
     const job = must(
       await s.db.from("job_worker_view").select("deal_id, deal_year, deal_number").eq("project_id", v.project_id).single(),
     );
+    // the task must be on this job (the database checks it's one of my jobs)
+    must(await s.db.from("job_worker_tasks").select("id").eq("id", v.task_id).eq("project_id", v.project_id).single());
     const photo = fd.get("photo");
     let fileId: string | null = null;
     if (photo instanceof File && photo.size > 0) {

@@ -84,15 +84,17 @@ begin
    where p.id = p_project and p.company_id = public.current_company_id();
   if not found then raise exception 'Job not found' using errcode = '42501'; end if;
   if coalesce(v_total, 0) <= 0 then raise exception 'Set the sold price first' using errcode = 'check_violation'; end if;
+  perform 1 from public.projects where id = p_project for update;   -- a double tap waits, then sees the rows
   if exists (select 1 from public.payments where project_id = p_project) then
     raise exception 'This job already has installments' using errcode = 'check_violation';
   end if;
   select count(*), sum(pct) into v_n, v_sum from public.payment_steps where company_id = public.current_company_id() and active;
   if v_n = 0 then raise exception 'Add payment steps in Settings → Jobs' using errcode = 'check_violation'; end if;
+  if v_sum <> 100 then raise exception 'Payment steps add up to % %%, not 100 %% (Settings → Jobs)', v_sum using errcode = 'check_violation'; end if;
   v_left := v_total;
   for st in select * from public.payment_steps where company_id = public.current_company_id() and active order by sort_order, key loop
     v_i := v_i + 1;
-    v_amt := case when v_i = v_n then v_left else floor(v_total * st.pct / v_sum)::bigint end;
+    v_amt := case when v_i = v_n then v_left else floor(v_total * st.pct / 100)::bigint end;
     insert into public.payments (project_id, label, amount, sort_order) values (p_project, st.label, v_amt, v_i);
     v_left := v_left - v_amt;
   end loop;

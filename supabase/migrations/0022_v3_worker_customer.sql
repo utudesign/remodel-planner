@@ -18,6 +18,23 @@
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
+-- 0. A turned-off login has no database access at all (not just no app screens): the three
+--    helpers every policy uses now require users.active. (0001/0002 bodies + "and active".)
+-- ---------------------------------------------------------------------
+create or replace function public.current_user_id()
+returns uuid language sql stable security definer set search_path = public as $$
+  select id from public.users where clerk_id = (auth.jwt() ->> 'sub') and active limit 1
+$$;
+create or replace function public.current_company_id()
+returns uuid language sql stable security definer set search_path = public as $$
+  select company_id from public.users where clerk_id = (auth.jwt() ->> 'sub') and active limit 1
+$$;
+create or replace function public.current_app_role()
+returns text language sql stable security definer set search_path = public as $$
+  select role from public.users where clerk_id = (auth.jwt() ->> 'sub') and active limit 1
+$$;
+
+-- ---------------------------------------------------------------------
 -- 1. Roles
 -- ---------------------------------------------------------------------
 alter table public.users drop constraint if exists users_role_check;
@@ -54,8 +71,16 @@ returns boolean language sql stable security definer set search_path = public as
   select public.current_app_role() = 'crew' and public.is_assigned_to_project(p_project)
 $$;
 
+-- 0004 helper: customers are never "assigned" (crew-visible files are for workers and staff).
+create or replace function public.is_assigned_to_deal(p_deal_id uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select coalesce(public.current_app_role() in ('owner', 'team', 'partner', 'crew'), false)
+     and exists (select 1 from public.projects p
+                  where p.deal_id = p_deal_id and public.is_assigned_to_project(p.id))
+$$;
+
 revoke execute on function public.current_contact_id(), public.is_customer_of_project(uuid),
-  public.is_worker_on_project(uuid) from public, anon;
+  public.is_worker_on_project(uuid), public.is_customer() from public, anon;
 grant execute on function public.current_contact_id(), public.is_customer_of_project(uuid),
   public.is_worker_on_project(uuid), public.is_customer() to authenticated;
 
@@ -126,6 +151,7 @@ select t.id, t.project_id, t.title, t.phase_key, t.trade_key, t.status, t.pct,
        t.assignee_id, u.name as assignee_name,
        coalesce(t.assignee_id = public.current_user_id(), false) as mine
   from public.tasks t
+  join public.projects p on p.id = t.project_id and p.closed_at is null
   left join public.users u on u.id = t.assignee_id
  where t.company_id = public.current_company_id()
    and public.is_worker_on_project(t.project_id);
@@ -135,6 +161,7 @@ select p.id as project_id, v.id as visit_id, v.visited_at, v.walls, v.appliances
   from public.projects p
   join public.site_visits v on v.deal_id = p.deal_id and v.status = 'done'
  where p.company_id = public.current_company_id()
+   and p.closed_at is null
    and public.is_worker_on_project(p.id);
 
 create or replace view public.job_customer_view with (security_barrier) as
@@ -200,6 +227,14 @@ returns trigger language plpgsql security definer set search_path = public as $$
 begin
   select company_id into new.company_id from public.tasks where id = new.task_id;
   new.author_id := coalesce(public.current_user_id(), new.author_id);
+  -- the photo must be a live photo on this task's job
+  if new.file_id is not null and not exists (
+       select 1 from public.deal_files f
+         join public.projects p on p.deal_id = f.deal_id
+         join public.tasks t on t.project_id = p.id
+        where f.id = new.file_id and t.id = new.task_id and f.folder = 'photos' and f.deleted_at is null) then
+    raise exception 'That photo is not on this job' using errcode = 'check_violation';
+  end if;
   return new;
 end $$;
 

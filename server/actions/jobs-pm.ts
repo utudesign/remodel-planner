@@ -72,7 +72,11 @@ export async function updateTask(input: z.input<typeof taskPatch>): Promise<Acti
     const { id: _id, ...patch } = v;
     void _id;
     if (patch.assignee_id) {
-      must(await s.db.from("users").select("id").eq("id", patch.assignee_id).eq("company_id", s.companyId).single());
+      // Workers or the team only (never a customer login), and active.
+      const u = must(
+        await s.db.from("users").select("id, role, active").eq("id", patch.assignee_id).eq("company_id", s.companyId).single(),
+      );
+      if (!u.active || !["crew", "owner", "team", "partner"].includes(u.role)) throw new Error("Pick a worker or a teammate");
     }
     ok(await s.db.from("tasks").update(patch).eq("id", t.id));
     refresh(t.number);

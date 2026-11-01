@@ -207,3 +207,50 @@ export async function saveTrades(input: z.input<typeof tradeRows>): Promise<Acti
     return done("/settings/jobs");
   });
 }
+
+const photoCatRows = z
+  .array(
+    z.object({
+      key: z.string().regex(keyRe).nullable(),
+      label: z.string().trim().min(1).max(40),
+      hint: z.string().trim().max(120).nullable(),
+      min_required: z.number().int().min(0).max(50),
+      active: z.boolean(),
+    }),
+  )
+  .max(30);
+
+/** Settings → Photos (v3 D, 0024): categories, order, and how many the site visit needs. Keys never change. */
+export async function savePhotoCategories(input: z.input<typeof photoCatRows>): Promise<ActionState> {
+  return run(async () => {
+    const rows = photoCatRows.parse(input);
+    const s = await requireRole("owner");
+    const existing = new Set(
+      must(await s.db.from("photo_categories").select("key").eq("company_id", s.companyId)).map((r) => r.key),
+    );
+    for (const [i, r] of rows.entries()) {
+      let key = r.key;
+      if (!key) {
+        key = slugify(r.label).slice(0, 30) || "photos";
+        while (existing.has(key)) key = `${key}_${Math.floor(Math.random() * 1000)}`;
+        existing.add(key);
+      }
+      ok(
+        await s.db.from("photo_categories").upsert(
+          {
+            company_id: s.companyId,
+            key,
+            label: r.label,
+            hint: r.hint || null,
+            min_required: r.min_required,
+            sort_order: i + 1,
+            active: key === "other" ? true : r.active,
+          },
+          { onConflict: "company_id,key" },
+        ),
+      );
+    }
+    revalidatePath("/deals", "layout");
+    return done("/settings/photos");
+  });
+}

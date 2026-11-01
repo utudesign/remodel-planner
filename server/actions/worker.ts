@@ -45,7 +45,7 @@ export async function addWorkerComment(_: ActionState, fd: FormData): Promise<Ac
         s.db,
         { id: job.deal_id!, company_id: s.companyId, deal_year: job.deal_year!, deal_number: job.deal_number! },
         [photo],
-        { folder: "photos", photoTag: v.tag, title: v.body.slice(0, 80) || "Job photo" },
+        { folder: "photos", photoTag: v.tag === "issue" ? "issue" : "completion", title: v.body.slice(0, 80) || "Job photo" },
       );
       fileId = must(await s.db.from("deal_files").select("id").eq("storage_path", path).single()).id;
     }

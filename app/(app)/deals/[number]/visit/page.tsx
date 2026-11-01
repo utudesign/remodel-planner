@@ -8,24 +8,16 @@ import { addressForMaps } from "@/lib/address";
 import { cn } from "@/lib/utils";
 import { maybe } from "@/server/action-utils";
 import { getChecklist, getDealByNumber, getDealFiles } from "@/server/queries/deals";
+import { getPhotoCategories } from "@/server/queries/photo-categories";
 
 export const metadata = { title: "Site visit" };
-
-/** What production needs from the visit: ticks itself from photo tags. */
-const REQUIRED = [
-  { tag: "before", label: "Every wall, ceiling and floor", min: 4 },
-  { tag: "panel", label: "Electrical panel", min: 1 },
-  { tag: "under_sink", label: "Under the sink", min: 1 },
-  { tag: "appliance_label", label: "Appliance labels", min: 1 },
-  { tag: "sketch", label: "Sketch with measurements", min: 1 },
-] as const;
 
 export default async function SiteVisitPage({ params }: { params: Promise<{ number: string }> }) {
   const { number } = await params;
   const s = await requireStaff();
   const deal = await getDealByNumber(s, number);
   if (!deal) notFound();
-  const [files, checklist, visit] = await Promise.all([
+  const [files, checklist, visit, categories] = await Promise.all([
     getDealFiles(s, deal.id),
     getChecklist(s, deal.id, "before_handoff"),
     s.db
@@ -36,7 +28,10 @@ export default async function SiteVisitPage({ params }: { params: Promise<{ numb
       .limit(1)
       .maybeSingle()
       .then(maybe),
+    getPhotoCategories(s),
   ]);
+  // What production needs from the visit (v3 D): every category with a minimum in Settings → Photos. Ticks itself.
+  const REQUIRED = categories.filter((c) => c.min_required > 0).map((c) => ({ tag: c.key, label: c.hint || c.label, min: c.min_required }));
   const count = (tag: string) => files.filter((f) => f.folder === "photos" && f.photo_tag === tag).length;
   const photoReq = checklist.find((i) => i.folder === "photos")?.requirement_id ?? null;
   const sketchReq = checklist.find((i) => /measure/i.test(i.label))?.requirement_id ?? null;
@@ -80,7 +75,8 @@ export default async function SiteVisitPage({ params }: { params: Promise<{ numb
                   dealNumber={deal.deal_number}
                   defaultTag={r.tag}
                   tags={[r.tag]}
-                  requirementId={r.tag === "sketch" ? sketchReq : photoReq}
+                  categories={categories}
+                  requirementId={r.tag === "measurements" ? sketchReq : photoReq}
                   compact
                 />
               </li>

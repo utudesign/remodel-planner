@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Camera, Images, Loader2 } from "lucide-react";
 import { exifDateTime } from "@/lib/exif";
 import { exifToIso, preparePhoto, queue } from "@/lib/photo-queue";
-import { PHOTO_TAGS } from "@/lib/deals/display";
+import { DEFAULT_PHOTO_CATEGORIES } from "@/lib/deals/display";
 import { cn } from "@/lib/utils";
 import { QUEUE_EVENT } from "@/components/photos/photo-queue-runner";
 
@@ -17,13 +17,17 @@ export function PhotoCapture({
   dealNumber,
   defaultTag = "before",
   requirementId = null,
-  tags = PHOTO_TAGS.map((t) => t.key),
+  categories = DEFAULT_PHOTO_CATEGORIES,
+  tags,
   compact = false,
 }: {
+  /** Settings → Photos (0024). */
+  categories?: readonly { key: string; label: string }[];
   dealId: string;
   dealNumber: string;
   defaultTag?: string;
   requirementId?: string | null;
+  /** Limit the chips to these keys (default: every category). */
   tags?: readonly string[];
   compact?: boolean;
 }) {
@@ -49,6 +53,7 @@ export function PhotoCapture({
         mime: p.mime,
         size: p.blob.size,
         blob: p.blob,
+        thumb: p.thumb,
         takenAt: taken,
         width: p.width,
         height: p.height,
@@ -67,7 +72,7 @@ export function PhotoCapture({
     window.dispatchEvent(new Event("photo-queue:kick"));
   }
 
-  const shown = PHOTO_TAGS.filter((t) => tags.includes(t.key));
+  const shown = tags ? categories.filter((t) => tags.includes(t.key)) : categories;
   return (
     <div className="flex flex-col gap-2.5">
       {shown.length > 1 ? (

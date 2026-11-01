@@ -51,7 +51,7 @@ select '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-00000000
 -- File the hand-off checklist for the 4 "ready" deals (what the jacket's Add buttons do).
 -- Images live in Photos (0017); the checklist item still counts them through requirement_id.
 insert into public.deal_files (deal_id, folder, photo_tag, storage_path, mime_type, size_bytes, requirement_id, title)
-select d.id, 'photos', case r.folder when 'photos' then 'before' when 'design' then 'sketch' else 'appliance_label' end,
+select d.id, 'photos', case r.folder when 'photos' then 'before' when 'design' then 'measurements' else 'measurements' end,
        d.company_id || '/' || d.deal_year || '/' || d.deal_number || '/photos/' || gen_random_uuid() || '.jpg',
        'image/jpeg', 250000, r.id, r.label
 from public.deals d

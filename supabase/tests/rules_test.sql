@@ -1012,7 +1012,7 @@ do $$ begin
   if not public.can_upload_deal_path(current_setting('t.path_ok')) then raise exception 'worker uploads job photos'; end if;
   if public.can_upload_deal_path(current_setting('t.path_bad')) then raise exception 'worker uploads into contract folder'; end if;
   insert into public.deal_files (deal_id, folder, photo_tag, title, storage_path, mime_type, size_bytes)
-  values ('00000000-0000-0000-0000-0000000000d2', 'photos', 'progress', 'Uppers', current_setting('t.path_ok'), 'image/jpeg', 1000);
+  values ('00000000-0000-0000-0000-0000000000d2', 'photos', 'completion', 'Uppers', current_setting('t.path_ok'), 'image/jpeg', 1000);
   if not exists (select 1 from public.deal_files where storage_path = current_setting('t.path_ok')) then raise exception 'worker sees own photo'; end if;
   begin
     insert into public.deal_files (deal_id, folder, title, storage_path, mime_type, size_bytes)
@@ -1098,6 +1098,44 @@ begin
   begin update public.daily_report_issues set note = 'edited' where id = i; raise exception 'team edited the worker''s issue';
   exception when check_violation then null; end;
   raise notice 'OK: team reads reports, gets notified, resolves issues (can''t rewrite them); report in History';
+end $$;
+reset role;
+
+-- 0024 photo categories ------------------------------------------------------------------------------
+set role authenticated;
+select pg_temp.act_as('seed_tugu');
+do $$
+declare y text; n text; p text;
+begin
+  if (select count(*) from public.photo_categories where company_id = public.current_company_id()) <> 8 then raise exception '8 default categories'; end if;
+  if exists (select 1 from public.deal_files where folder = 'photos' and photo_tag not in (select key from public.photo_categories)) then
+    raise exception 'every photo has a category'; end if;
+  select deal_year::text, deal_number into y, n from public.deals where id = '00000000-0000-0000-0000-0000000000d2';
+  p := '00000000-0000-0000-0000-0000000000c1/' || y || '/' || n || '/photos/cat-test.jpg';
+  insert into public.deal_files (deal_id, folder, photo_tag, title, storage_path, mime_type, size_bytes, thumb_path)
+  values ('00000000-0000-0000-0000-0000000000d2', 'photos', null, 'x', p, 'image/jpeg', 10, '00000000-0000-0000-0000-0000000000c1/t.jpg');
+  if (select photo_tag from public.deal_files where storage_path = p) <> 'other' then raise exception 'no tag → Other'; end if;
+  update public.deal_files set photo_tag = 'plumbing' where storage_path = p;           -- re-tag
+  begin update public.deal_files set photo_tag = 'sketch' where storage_path = p; raise exception 'old tag accepted';
+  exception when check_violation then null; end;
+  insert into public.photo_categories (company_id, key, label, min_required) values (public.current_company_id(), 'cabinets', 'Cabinets', 2);
+  update public.deal_files set photo_tag = 'cabinets' where storage_path = p;
+  update public.photo_categories set active = false where key = 'cabinets';
+  begin update public.deal_files set photo_tag = 'cabinets' where storage_path = p; -- unchanged: allowed
+  exception when check_violation then raise exception 'unchanged tag on an inactive category must stay'; end;
+  begin update public.photo_categories set active = false where key = 'other'; raise exception 'Other turned off';
+  exception when check_violation then null; end;
+  begin delete from public.photo_categories where key = 'other'; raise exception 'Other deleted';
+  exception when check_violation then null; end;
+  if not exists (select 1 from public.audit_log where table_name = 'deal_files' and before ->> 'photo_tag' = 'other' and after ->> 'photo_tag' = 'plumbing') then
+    raise exception 're-tag in History'; end if;
+  raise notice 'OK: photo categories from the database; old tags mapped; re-tag logged; Other always on';
+end $$;
+select pg_temp.act_as('seed_crystal');
+do $$ begin
+  update public.photo_categories set label = 'x' where key = 'before';
+  if exists (select 1 from public.photo_categories where label = 'x') then raise exception 'team edited categories'; end if;
+  raise notice 'OK: only the owner edits photo categories';
 end $$;
 reset role;
 

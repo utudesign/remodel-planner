@@ -9,6 +9,37 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      photo_categories: {
+        Row: {
+          active: boolean
+          company_id: string
+          hint: string | null
+          key: string
+          label: string
+          min_required: number
+          sort_order: number
+        }
+        ComputedFields: never
+        Insert: {
+          active?: boolean
+          company_id: string
+          hint?: string | null
+          key: string
+          label: string
+          min_required?: number
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          hint?: string | null
+          key?: string
+          label?: string
+          min_required?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
       daily_report_issues: {
         Row: {
           company_id: string
@@ -1439,6 +1470,7 @@ export type Database = {
       }
       deal_files: {
         Row: {
+          thumb_path: string | null
           company_id: string
           created_at: string
           crew_visible: boolean | null
@@ -1462,6 +1494,7 @@ export type Database = {
         }
         ComputedFields: never
         Insert: {
+          thumb_path?: string | null
           company_id: string
           created_at?: string
           crew_visible?: boolean | null
@@ -1484,6 +1517,7 @@ export type Database = {
           width?: number | null
         }
         Update: {
+          thumb_path?: string | null
           company_id?: string
           created_at?: string
           crew_visible?: boolean | null

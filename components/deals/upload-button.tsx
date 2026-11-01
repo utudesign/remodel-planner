@@ -5,7 +5,7 @@ import { Camera, Loader2, Paperclip } from "lucide-react";
 import { useFormStatus } from "react-dom";
 import { FormMessage } from "@/components/shared/form";
 import { NativeSelect } from "@/components/ui/native-select";
-import { PHOTO_TAGS } from "@/lib/deals/display";
+import { DEFAULT_PHOTO_CATEGORIES } from "@/lib/deals/display";
 import { classifyFile, DOC_ACCEPT, FILES_ONLY_MESSAGE } from "@/lib/files/types";
 import { cn } from "@/lib/utils";
 import { addDealFiles } from "@/server/actions/deals";
@@ -48,6 +48,7 @@ export function UploadButton({
   requirementId,
   label,
   showTag = false,
+  categories,
   defaultTag = "before",
   compact = false,
   allowPhotos,
@@ -57,6 +58,7 @@ export function UploadButton({
   requirementId?: string;
   label: string;
   showTag?: boolean;
+  categories?: readonly { key: string; label: string }[];
   defaultTag?: string;
   compact?: boolean;
   /** Files tab: documents only. Checklist "Add": photos too (they're filed in Photos). Default: photos folder only. */
@@ -106,7 +108,7 @@ export function UploadButton({
       <div className="flex flex-wrap items-center gap-2">
         {showTag ? (
           <NativeSelect name="photo_tag" defaultValue={defaultTag} aria-label="Photo tag" className="w-auto">
-            {PHOTO_TAGS.map((t) => (
+            {(categories ?? DEFAULT_PHOTO_CATEGORIES).map((t) => (
               <option key={t.key} value={t.key}>
                 {t.label}
               </option>

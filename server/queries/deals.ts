@@ -202,13 +202,14 @@ export type DealFile = {
   taken_at: string | null;
   created_at: string;
   requirement_id: string | null;
+  thumb_path: string | null;
 };
 
 export async function getDealFiles(s: Session, dealId: string): Promise<DealFile[]> {
   const rows = must(
     await s.db
       .from("deal_files")
-      .select("id, folder, photo_tag, title, storage_path, mime_type, size_bytes, taken_at, created_at, requirement_id")
+      .select("id, folder, photo_tag, title, storage_path, mime_type, size_bytes, taken_at, created_at, requirement_id, thumb_path")
       .eq("deal_id", dealId)
       .is("deleted_at", null)
       .order("created_at", { ascending: false }),

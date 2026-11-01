@@ -23,7 +23,7 @@ async function processQueue(onDone: (number: string) => void) {
         if (!it.uploaded && (!it.path || !it.url || Date.now() - (it.ticketAt ?? 0) > TICKET_TTL)) {
           const t = await createUploadTicket({ deal_id: it.dealId, folder: it.folder as never, file_name: it.name, mime: it.mime as never, size: it.size });
           if (!t.ok) throw new Error(t.error);
-          it = { ...it, path: t.path, url: t.url, ticketAt: Date.now() };
+          it = { ...it, path: t.path, url: t.url, ticketAt: Date.now(), thumbPath: t.thumbPath, thumbUrl: t.thumbUrl, thumbUploaded: false };
           await queue.put(it);
         }
         if (!it.uploaded) {
@@ -43,6 +43,20 @@ async function processQueue(onDone: (number: string) => void) {
           it = { ...it, uploaded: true };
           await queue.put(it);
         }
+        // v3 D: the 400 px thumbnail. Best effort — if it fails, grids show the full photo.
+        if (it.thumb && it.thumbUrl && !it.thumbUploaded) {
+          try {
+            const tb = new FormData();
+            tb.append("cacheControl", "3600");
+            tb.append("", it.thumb, it.name);
+            const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+            const r = await fetch(it.thumbUrl, { method: "PUT", body: tb, headers: { "x-upsert": "false", ...(anon ? { apikey: anon } : {}) } });
+            it = { ...it, thumbUploaded: r.ok || /exists|duplicate/i.test(await r.text()) };
+          } catch {
+            it = { ...it, thumbUploaded: false };
+          }
+          await queue.put(it);
+        }
         const c = await confirmUpload({
           deal_id: it.dealId,
           folder: it.folder as never,
@@ -56,6 +70,7 @@ async function processQueue(onDone: (number: string) => void) {
           width: it.width,
           height: it.height,
           number: it.dealNumber,
+          thumb_path: it.thumbUploaded ? (it.thumbPath ?? null) : null,
         });
         if (!c.ok) {
           if (/didn't reach storage/.test(c.error ?? "")) await queue.put({ ...it, uploaded: false });

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { id, optMoney, optText, reqDateTimeLocal } from "@/lib/validation/common";
 import { DEAL_FOLDERS } from "@/lib/deals/dealNumber";
-import { PHOTO_TAG_KEYS, SCOPE_KEYS, SOURCE_KEYS, TIMELINE_KEYS } from "@/lib/deals/display";
+import { PHOTO_TAG_RE, SCOPE_KEYS, SOURCE_KEYS, TIMELINE_KEYS } from "@/lib/deals/display";
 
 const optEnum = <T extends [string, ...string[]]>(values: T) =>
   z.preprocess((v) => (v === "" || v === undefined ? null : v), z.enum(values).nullable());
@@ -106,7 +106,7 @@ export const bookVisitSchema = z.object({
 export const dealFileSchema = z.object({
   deal_id: id,
   folder: z.enum(DEAL_FOLDERS),
-  photo_tag: z.preprocess((v) => (v === "" ? null : v), z.enum(PHOTO_TAG_KEYS).nullable().optional()),
+  photo_tag: z.preprocess((v) => (v === "" ? null : v), z.string().regex(PHOTO_TAG_RE).nullable().optional()),
   requirement_id: z.preprocess((v) => (v === "" ? null : v), z.uuid().nullable().optional()),
   title: z.string().trim().max(160).optional(),
 });

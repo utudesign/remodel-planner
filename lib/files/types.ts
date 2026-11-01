@@ -55,9 +55,9 @@ export function classifyFile(name: string, type: string): { kind: FileKind; mime
 
 export const FILES_ONLY_MESSAGE = "Files take PDF or Word only (.pdf, .doc, .docx)";
 
-/** Photo tag for an image filed from a non-photo checklist item (design = sketch, other = appliance label). */
+/** Photo category for an image filed from a non-photo checklist item (design / other → Measurements, 0024). */
 export function tagForRequirementFolder(folder: string | null | undefined): string {
-  if (folder === "design") return "sketch";
-  if (folder === "other") return "appliance_label";
+  if (folder === "design") return "measurements";
+  if (folder === "other") return "measurements";
   return "other";
 }

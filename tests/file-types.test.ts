@@ -38,8 +38,8 @@ describe("classifyFile (v3 item 8: Files = PDF/Word, Photos = images)", () => {
   });
 
   it("tags checklist images by the item's folder", () => {
-    expect(tagForRequirementFolder("design")).toBe("sketch");
-    expect(tagForRequirementFolder("other")).toBe("appliance_label");
+    expect(tagForRequirementFolder("design")).toBe("measurements");
+    expect(tagForRequirementFolder("other")).toBe("measurements");
     expect(tagForRequirementFolder("photos")).toBe("other");
   });
 });

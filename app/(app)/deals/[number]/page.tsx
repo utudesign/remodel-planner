@@ -41,7 +41,9 @@ import { EmptyState } from "@/components/shared/states";
 import { requireStaff } from "@/lib/auth/require-role";
 import { DEFAULT_TZ, formatDateTime, todayIn, utcToDatetimeLocal } from "@/lib/dates";
 import { DEAL_FOLDERS, type DealFolder } from "@/lib/deals/dealNumber";
-import { FOLDER_LABELS, PHOTO_TAGS, sourceLabel, timelineLabel } from "@/lib/deals/display";
+import { FOLDER_LABELS, sourceLabel, timelineLabel } from "@/lib/deals/display";
+import { PhotoGallery } from "@/components/photos/photo-gallery";
+import { getPhotoCategories } from "@/server/queries/photo-categories";
 import { leadScore, nextStep } from "@/lib/deals/segments";
 import { formatBudget, formatCentsWhole } from "@/lib/money";
 import { signedUrls } from "@/lib/storage";
@@ -463,6 +465,7 @@ export default async function DealJacket({
             files={photos}
             companyId={s.companyId}
             requirementId={checklist.find((i) => i.folder === "photos")?.requirement_id ?? null}
+            categories={(await getPhotoCategories(s)).map((c) => ({ key: c.key, label: c.label }))}
           />
         ) : null}
 
@@ -733,65 +736,38 @@ async function PhotosTab({
   files,
   companyId,
   requirementId,
+  categories,
 }: {
   dealId: string;
   number: string;
   files: Awaited<ReturnType<typeof getDealFiles>>;
   companyId: string;
   requirementId: string | null;
+  categories: { key: string; label: string }[];
 }) {
+  // v3 D: grids load the 400 px thumbnail; the viewer loads the original.
   const urls = await signedUrls(
-    files.map((f) => f.storage_path),
+    files.flatMap((f) => (f.thumb_path ? [f.thumb_path, f.storage_path] : [f.storage_path])),
     companyId,
   );
-  const groups = PHOTO_TAGS.map((t) => ({
-    ...t,
-    items: files.filter((f) => (f.photo_tag ?? "other") === t.key),
-  })).filter((g) => g.items.length);
   return (
     <>
-      <PhotoCapture dealId={dealId} dealNumber={number} requirementId={requirementId} />
+      <PhotoCapture dealId={dealId} dealNumber={number} requirementId={requirementId} categories={categories} />
       {files.length === 0 ? (
-        <EmptyState
-          title="No photos yet"
-          description="Every wall, ceiling, floor, the panel and under the sink."
-        />
+        <EmptyState title="No photos yet" description="Every wall, ceiling, floor, the panel and under the sink." />
       ) : (
-        groups.map((g) => (
-          <section key={g.key}>
-            <h2 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              {g.label} · {g.items.length}
-            </h2>
-            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
-              {g.items.map((f) =>
-                urls[f.storage_path] ? (
-                  <a
-                    key={f.id}
-                    href={urls[f.storage_path]}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="aspect-square overflow-hidden rounded-lg bg-muted"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={urls[f.storage_path]}
-                      alt={f.title ?? g.label}
-                      loading="lazy"
-                      className="size-full object-cover"
-                    />
-                  </a>
-                ) : (
-                  <div
-                    key={f.id}
-                    className="flex aspect-square items-center justify-center rounded-lg bg-muted p-1 text-center text-[10px] text-muted-foreground"
-                  >
-                    {f.title ?? "photo"}
-                  </div>
-                ),
-              )}
-            </div>
-          </section>
-        ))
+        <PhotoGallery
+          dealNumber={number}
+          categories={categories}
+          photos={files.map((f) => ({
+            id: f.id,
+            tag: f.photo_tag ?? "other",
+            title: f.title,
+            takenAt: f.taken_at,
+            thumb: f.thumb_path ? (urls[f.thumb_path] ?? null) : null,
+            full: urls[f.storage_path] ?? null,
+          }))}
+        />
       )}
     </>
   );

@@ -24,6 +24,11 @@ export type QueueItem = {
   attempts: number;
   error: string | null;
   createdAt: number;
+  /** v3 D: 400 px JPEG for grids (made on the phone; older queue items have none). */
+  thumb?: Blob | null;
+  thumbPath?: string | null;
+  thumbUrl?: string | null;
+  thumbUploaded?: boolean;
 };
 
 const DB = "kitchen-sales";
@@ -62,26 +67,37 @@ export const queue = {
   remove: (id: string) => tx("readwrite", (s) => s.delete(id)),
 };
 
-/** Resize to 2560 px on the long edge, JPEG ~0.82. Drops EXIF (and with it GPS). */
-export async function preparePhoto(file: File): Promise<{ blob: Blob; width: number | null; height: number | null; mime: string }> {
+async function resize(bitmap: ImageBitmap, maxEdge: number, quality: number) {
+  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+  const w = Math.round(bitmap.width * scale);
+  const h = Math.round(bitmap.height * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, w, h);
+  const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", quality));
+  return { blob, w, h };
+}
+
+/**
+ * Resize to 2560 px on the long edge, JPEG ~0.82, plus a 400 px thumbnail (~30–50 KB) for grids
+ * (v3 D: grids stop downloading full photos). Drops EXIF (and with it GPS).
+ */
+export async function preparePhoto(
+  file: File,
+): Promise<{ blob: Blob; width: number | null; height: number | null; mime: string; thumb: Blob | null }> {
   if (!file.type.startsWith("image/") || file.type === "image/gif") {
-    return { blob: file, width: null, height: null, mime: file.type || "application/octet-stream" };
+    return { blob: file, width: null, height: null, mime: file.type || "application/octet-stream", thumb: null };
   }
   try {
     const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, 2560 / Math.max(bitmap.width, bitmap.height));
-    const w = Math.round(bitmap.width * scale);
-    const h = Math.round(bitmap.height * scale);
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, w, h);
-    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.82));
-    if (blob) return { blob, width: w, height: h, mime: "image/jpeg" };
+    const full = await resize(bitmap, 2560, 0.82);
+    const small = await resize(bitmap, 400, 0.72).catch(() => ({ blob: null }));
+    if (full.blob) return { blob: full.blob, width: full.w, height: full.h, mime: "image/jpeg", thumb: small.blob };
   } catch {
     /* fall through: upload the original */
   }
-  return { blob: file, width: null, height: null, mime: file.type };
+  return { blob: file, width: null, height: null, mime: file.type, thumb: null };
 }
 
 /** Wall-clock EXIF time ("2026-10-22T18:42:05", camera local = Eastern) → ISO with offset. */

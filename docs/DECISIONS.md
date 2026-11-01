@@ -374,3 +374,17 @@ An independent review of batch C found these; all fixed with SQL tests (rules 45
 - Evening reminder: `/api/cron/evening` at 23:00 and 00:00 UTC; the run that is 7 PM ET pushes workers with an open task
   today and no report for that job.
 - Reminder from PLAN v3: move hosting to paid plans before any worker or customer logs in.
+
+## 2026-10-31 — v3 batch D: photo categories + thumbnails (0024)
+
+- `photo_categories` (Settings → Photos): label, hint, order, on/off, **site-visit minimum**. Defaults: Before (4),
+  Measurements (1), Plumbing (1), Electrical (1), Issue, Damage, Completion/After, Other. Other is the catch-all (always on).
+- The 0004 CHECK on `deal_files.photo_tag` is gone; a trigger accepts any active category of the company (no tag → Other).
+  Old tags were mapped per PLAN v3 (Q8: progress → Completion/After); the one-time re-map is kept out of History.
+  Task/worker photos picked as "Progress" are filed as Completion/After.
+- Photos tab: filter chips with counts, thumbnail grid, tap → viewer (full photo, prev/next, re-tag chips). Re-tags show in History.
+- The site-visit checklist reads the minimums from the categories (no list in code).
+- Thumbnails: the phone makes a 400 px JPEG next to the 2560 px photo (`…/photos/thumbs/<name>`, `deal_files.thumb_path`),
+  uploaded best-effort by the offline queue. Grids load thumbnails; older photos (no thumbnail) fall back to the original.
+  Server-side uploads (task comments, daily-report issues) have no thumbnail yet.
+- Workers can use the offline photo queue too (upload ticket allows crew, photos only, their jobs).

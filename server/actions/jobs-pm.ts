@@ -178,7 +178,7 @@ export async function addTaskComment(_: ActionState, fd: FormData): Promise<Acti
         s.db,
         { id: deal.id, company_id: deal.company_id, deal_year: deal.deal_year!, deal_number: deal.deal_number! },
         [photo],
-        { folder: "photos", photoTag: v.tag, title: v.body.slice(0, 80) || "Task photo" },
+        { folder: "photos", photoTag: v.tag === "issue" ? "issue" : "completion", title: v.body.slice(0, 80) || "Task photo" },
       );
       fileId = must(await s.db.from("deal_files").select("id").eq("storage_path", path).single()).id;
     }

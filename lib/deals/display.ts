@@ -77,19 +77,23 @@ export const FOLDER_LABELS: Record<DealFolder, string> = {
   other: "Other",
 };
 
-export const PHOTO_TAGS = [
-  { key: "before", label: "Before" },
-  { key: "measurement", label: "Measurement" },
-  { key: "sketch", label: "Sketch" },
-  { key: "appliance_label", label: "Appliance label" },
-  { key: "under_sink", label: "Under sink" },
-  { key: "panel", label: "Panel" },
-  { key: "progress", label: "Progress" },
-  { key: "issue", label: "Issue" },
-  { key: "after", label: "After" },
-  { key: "other", label: "Other" },
+/**
+ * Photo categories live in the database (v3 D, 0024: Settings → Photos). This list is only the default set,
+ * used when the database list hasn't loaded (e.g. offline) and in tests.
+ */
+export const DEFAULT_PHOTO_CATEGORIES = [
+  { key: "before", label: "Before", hint: "Every wall, ceiling and floor", min_required: 4 },
+  { key: "measurements", label: "Measurements", hint: "Sketch with measurements, appliance labels", min_required: 1 },
+  { key: "plumbing", label: "Plumbing", hint: "Under the sink, shut-offs", min_required: 1 },
+  { key: "electrical", label: "Electrical", hint: "The panel", min_required: 1 },
+  { key: "issue", label: "Issue", hint: null, min_required: 0 },
+  { key: "damage", label: "Damage", hint: "Delivery check", min_required: 0 },
+  { key: "completion", label: "Completion/After", hint: null, min_required: 0 },
+  { key: "other", label: "Other", hint: null, min_required: 0 },
 ] as const;
-export const PHOTO_TAG_KEYS = PHOTO_TAGS.map((t) => t.key) as [string, ...string[]];
+export type PhotoCategory = { key: string; label: string; hint: string | null; min_required: number };
+/** Category keys are checked by the database (unknown → refused); the app only checks the shape. */
+export const PHOTO_TAG_RE = /^[a-z0-9_]{2,40}$/;
 
 export const COMMISSION_STATUS_TONE: Record<string, string> = {
   owed: "bg-destructive text-white",

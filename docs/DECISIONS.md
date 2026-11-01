@@ -408,3 +408,11 @@ An independent review of batch C found these; all fixed with SQL tests (rules 45
   "ACH is free" (marks it sent) → **Paid** with date, how (Melio/check/Zelle/cash/other) and reference. Paid ones stay on record.
 - The customer page shows their installments with a **Pay** button (view `job_customer_payments`). Workers see none of it (tested).
 - Deal-level deposit / paid-in-full dates (Sale + payments) are unchanged; they're not auto-set from installments yet.
+
+## 2026-10-31 — v3 batch E2: Today v2 (layout A, focus stack)
+
+- Counts first (tap = jump): overdue (reply now + overdue follow-ups), visits, on site, worker reports, job issues, unpaid.
+- **Now / next:** today's visits by time and every job with a task active today (who, what, site-rules line), each with Call + Directions.
+- **Needs you:** Reply now · Worker reports today · Job issues (Fixed button) · Job steps due · Follow up (red when overdue)
+  · Contract + deposit · Payment links not paid (red when past due) · No touch in 2 days.
+- Sales items stay per person (my deals); job items are the whole workspace's (RLS).

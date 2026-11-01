@@ -8,6 +8,7 @@ import { WorkerTaskRow } from "@/components/work/worker-task";
 import { requireCrew } from "@/lib/auth/require-role";
 import { formatDateTime, todayIn } from "@/lib/dates";
 import { isLate, whenText } from "@/lib/jobs/pm";
+import { directionsUrl } from "@/lib/address";
 import { getWorkerJob } from "@/server/queries/worker";
 
 export const metadata = { title: "Job" };
@@ -35,7 +36,7 @@ export default async function WorkerJobPage({ params }: { params: Promise<{ proj
         <div className="grid grid-cols-2 gap-2">
           {address ? (
             <a
-              href={`https://maps.apple.com/?q=${encodeURIComponent(address)}`}
+              href={directionsUrl(address)}
               className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-card text-sm font-semibold ring-1 ring-border"
             >
               <MapPin className="size-4" /> Directions

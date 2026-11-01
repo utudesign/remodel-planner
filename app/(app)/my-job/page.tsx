@@ -4,6 +4,7 @@ import { EmptyState, PageHeader } from "@/components/shared/states";
 import { requireCustomer } from "@/lib/auth/require-role";
 import { todayIn } from "@/lib/dates";
 import { whenText } from "@/lib/jobs/pm";
+import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { getCustomerJobs } from "@/server/queries/worker";
 
@@ -13,7 +14,7 @@ export const metadata = { title: "My kitchen" };
 export default async function MyJobPage() {
   const s = await requireCustomer();
   const today = todayIn(s.timezone);
-  const { jobs, tasks } = await getCustomerJobs(s);
+  const { jobs, tasks, payments } = await getCustomerJobs(s);
   if (jobs.length === 0) {
     return (
       <>
@@ -28,6 +29,7 @@ export default async function MyJobPage() {
       <div className="flex flex-col gap-5">
         {jobs.map((j) => {
           const list = tasks.filter((t) => t.project_id === j.project_id);
+          const pays = payments.filter((p) => p.project_id === j.project_id);
           return (
             <div key={j.project_id} className="flex flex-col gap-4">
               <Card>
@@ -56,6 +58,40 @@ export default async function MyJobPage() {
                   ) : null}
                 </CardContent>
               </Card>
+              {pays.length ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Payments</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="flex flex-col">
+                      {pays.map((p) => (
+                        <li key={p.id} className="flex min-h-14 items-center gap-3 border-b border-border/60 py-2 last:border-0">
+                          <span className="min-w-0 flex-1">
+                            <span className="block font-medium">{p.label}</span>
+                            <span className="block text-xs text-muted-foreground">
+                              {p.received_at
+                                ? `Paid ${new Date(p.received_at).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: s.timezone })}${p.receipt_number ? ` · receipt ${p.receipt_number}` : ""}`
+                                : p.due_date
+                                  ? `Due ${new Date(`${p.due_date}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                                  : "Not due yet"}
+                            </span>
+                          </span>
+                          <span className="font-semibold tabular-nums">{formatCents(p.amount_cents)}</span>
+                          {!p.received_at && p.link_url ? (
+                            <a href={p.link_url} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground">
+                              Pay
+                            </a>
+                          ) : p.received_at ? (
+                            <Check className="size-5 text-primary" aria-label="Paid" />
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-2 text-xs text-muted-foreground">Payments go through Melio. Bank transfer (ACH) is free.</p>
+                  </CardContent>
+                </Card>
+              ) : null}
               <Card>
                 <CardHeader>
                   <CardTitle>Schedule</CardTitle>

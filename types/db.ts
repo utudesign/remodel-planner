@@ -9,6 +9,34 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      payment_steps: {
+        Row: {
+          active: boolean
+          company_id: string
+          key: string
+          label: string
+          pct: number
+          sort_order: number
+        }
+        ComputedFields: never
+        Insert: {
+          active?: boolean
+          company_id: string
+          key: string
+          label: string
+          pct: number
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          key?: string
+          label?: string
+          pct?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
       photo_categories: {
         Row: {
           active: boolean
@@ -2846,6 +2874,13 @@ export type Database = {
       }
       payments: {
         Row: {
+          company_id: string | null
+          created_at: string
+          link_sent_at: string | null
+          link_url: string | null
+          provider: string | null
+          provider_ref: string | null
+          sort_order: number
           amount: number
           check_number: string | null
           due_date: string | null
@@ -2859,6 +2894,13 @@ export type Database = {
         }
         ComputedFields: never
         Insert: {
+          company_id?: string | null
+          created_at?: string
+          link_sent_at?: string | null
+          link_url?: string | null
+          provider?: string | null
+          provider_ref?: string | null
+          sort_order?: number
           amount: number
           check_number?: string | null
           due_date?: string | null
@@ -2871,6 +2913,13 @@ export type Database = {
           status?: string | null
         }
         Update: {
+          company_id?: string | null
+          created_at?: string
+          link_sent_at?: string | null
+          link_url?: string | null
+          provider?: string | null
+          provider_ref?: string | null
+          sort_order?: number
           amount?: number
           check_number?: string | null
           due_date?: string | null
@@ -4450,6 +4499,21 @@ export type Database = {
       }
     }
     Views: {
+      job_customer_payments: {
+        Row: {
+          amount_cents: number | null
+          due_date: string | null
+          id: string | null
+          label: string | null
+          link_url: string | null
+          project_id: string | null
+          receipt_number: string | null
+          received_at: string | null
+          sort_order: number | null
+          status: string | null
+        }
+        Relationships: []
+      }
       job_customer_tasks: {
         Row: {
           id: string | null
@@ -5064,6 +5128,7 @@ export type Database = {
         Args: { p_issues: Json; p_note?: string; p_progress: Json; p_project: string; p_tomorrow: string | null }
         Returns: string
       }
+      add_payment_schedule: { Args: { p_project: string }; Returns: number }
       worker_update_task: { Args: { p_task: string; p_pct?: number; p_status?: string }; Returns: undefined }
       can_upload_deal_path: { Args: { p_name: string }; Returns: boolean }
       move_job_to_phase: { Args: { p_phase: string; p_project: string }; Returns: undefined }

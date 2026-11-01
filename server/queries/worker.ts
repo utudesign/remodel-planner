@@ -151,9 +151,10 @@ export async function getWorkerJob(s: Session, projectId: string) {
 }
 
 export async function getCustomerJobs(s: Session) {
-  const [jobs, tasks] = await Promise.all([
+  const [jobs, tasks, payments] = await Promise.all([
     s.db.from("job_customer_view").select("*").order("start_date", { ascending: false }).then(must),
     s.db.from("job_customer_tasks").select("*").order("sort_order").then(must),
+    s.db.from("job_customer_payments").select("*").order("sort_order").then(must),
   ]);
-  return { jobs, tasks };
+  return { jobs, tasks, payments };
 }

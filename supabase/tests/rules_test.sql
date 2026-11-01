@@ -1139,5 +1139,50 @@ do $$ begin
 end $$;
 reset role;
 
+-- 0025 installments + payment links ------------------------------------------------------------------
+reset role;
+update public.deals set sold_price_cents = 1000001, change_orders_cents = 0 where id = '00000000-0000-0000-0000-0000000000d2';
+set role authenticated;
+select pg_temp.act_as('seed_tugu');
+do $$
+declare j uuid := (select id from public.projects where deal_id = '00000000-0000-0000-0000-0000000000d2'); n int; first uuid;
+begin
+  n := public.add_payment_schedule(j);
+  if n <> 3 or (select count(*) from public.payments where project_id = j) <> 3 then raise exception '3 installments'; end if;
+  if (select sum(amount) from public.payments where project_id = j) <> 1000001 then raise exception 'installments add up to the contract'; end if;
+  if (select amount from public.payments where project_id = j and sort_order = 1) <> 300000
+     or (select amount from public.payments where project_id = j and sort_order = 3) <> 300001 then
+    raise exception 'each rounds down, last absorbs the remainder'; end if;
+  begin perform public.add_payment_schedule(j); raise exception 'schedule twice';
+  exception when check_violation then null; end;
+  select id into first from public.payments where project_id = j and sort_order = 1;
+  update public.payments set link_url = 'https://pay.melio.com/abc', link_sent_at = now() where id = first;
+  if (select status from public.payments where id = first) <> 'sent' then raise exception 'status sent'; end if;
+  begin update public.payments set link_url = 'http://evil.example' where id = first; raise exception 'http link';
+  exception when check_violation then null; end;
+  if (select company_id from public.payments where id = first) is distinct from public.current_company_id() then raise exception 'company filled'; end if;
+  raise notice 'OK: standard schedule splits the contract (round down, last absorbs); links https only; status follows';
+end $$;
+select pg_temp.act_as('seed_customer');
+do $$ begin
+  if (select count(*) from public.job_customer_payments) <> 3 then raise exception 'customer sees their installments'; end if;
+  if (select link_url from public.job_customer_payments where sort_order = 1) <> 'https://pay.melio.com/abc' then raise exception 'customer sees the pay link'; end if;
+  if exists (select 1 from public.payments) then raise exception 'customer reads payments directly'; end if;
+  raise notice 'OK: customer sees own installments + pay link (view only)';
+end $$;
+select pg_temp.act_as('seed_customer2');
+do $$ begin
+  if exists (select 1 from public.job_customer_payments) then raise exception 'other customer sees payments'; end if;
+end $$;
+select pg_temp.act_as('seed_crew');
+do $$ begin
+  if exists (select 1 from public.payments) or exists (select 1 from public.job_customer_payments) or exists (select 1 from public.payment_steps) then
+    raise exception 'worker sees payments'; end if;
+  begin perform public.add_payment_schedule((select project_id from public.job_worker_view limit 1)); raise exception 'worker planned payments';
+  exception when insufficient_privilege then null; end;
+  raise notice 'OK: workers never see installments or payment steps';
+end $$;
+reset role;
+
 reset role;
 \echo ALL RULE TESTS PASSED

@@ -254,3 +254,31 @@ export async function savePhotoCategories(input: z.input<typeof photoCatRows>): 
     return done("/settings/photos");
   });
 }
+
+const payStepRows = z
+  .array(z.object({ key: z.string().regex(keyRe).nullable(), label: z.string().trim().min(1).max(60), pct: z.number().positive().max(100), active: z.boolean() }))
+  .max(12)
+  .refine((r) => Math.abs(r.filter((x) => x.active).reduce((a, x) => a + x.pct, 0) - 100) < 0.01, "The steps that are on must add up to 100%");
+
+/** Settings → Jobs: the standard payment schedule (v3 G, 0025). Jobs already planned keep theirs. */
+export async function savePaymentSteps(input: z.input<typeof payStepRows>): Promise<ActionState> {
+  return run(async () => {
+    const rows = payStepRows.parse(input);
+    const s = await requireRole("owner");
+    const existing = new Set(must(await s.db.from("payment_steps").select("key").eq("company_id", s.companyId)).map((r) => r.key));
+    for (const [i, r] of rows.entries()) {
+      let key = r.key;
+      if (!key) {
+        key = slugify(r.label).slice(0, 30) || "payment";
+        while (existing.has(key)) key = `${key}_${Math.floor(Math.random() * 1000)}`;
+        existing.add(key);
+      }
+      ok(
+        await s.db
+          .from("payment_steps")
+          .upsert({ company_id: s.companyId, key, label: r.label, pct: r.pct, sort_order: i + 1, active: r.active }, { onConflict: "company_id,key" }),
+      );
+    }
+    return done("/settings/jobs");
+  });
+}

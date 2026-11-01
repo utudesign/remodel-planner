@@ -13,11 +13,12 @@ import { cn } from "@/lib/utils";
 import { SaleForm } from "@/components/jobs/sale-forms";
 import { getJob } from "@/server/queries/jobs";
 import { DailyReportFeed } from "@/components/jobs/daily-reports";
+import { Installments } from "@/components/jobs/installments";
 import { listJobReports } from "@/server/queries/daily-reports";
 import { formatDate } from "@/lib/dates";
 
 /** Deal → Job tab once sold: money, sale + payments, timeline (milestones), tasks, costs. */
-export async function JobTab({ dealId }: { dealId: string; number: string }) {
+export async function JobTab({ dealId, number }: { dealId: string; number: string }) {
   const s = await requireStaff();
   const [job, dealRes] = await Promise.all([
     getJob(s, dealId),
@@ -52,6 +53,21 @@ export async function JobTab({ dealId }: { dealId: string; number: string }) {
     getSiteRules(s, dealId),
     listPmJobs(s),
     listJobReports(s, job.project.id),
+  ]);
+  const [installments, client] = await Promise.all([
+    s.db
+      .from("payments")
+      .select("id, label, amount, due_date, received_at, link_url, link_sent_at, provider, provider_ref, receipt_number, status, sort_order")
+      .eq("project_id", job.project.id)
+      .order("sort_order")
+      .order("due_date", { nullsFirst: false })
+      .then((r) => r.data ?? []),
+    s.db
+      .from("deals")
+      .select("contact:contacts(name, phone)")
+      .eq("id", dealId)
+      .single()
+      .then((r) => (r.data?.contact as { name: string | null; phone: string | null } | null) ?? null),
   ]);
   const dateLabel = Object.fromEntries(reports.map((r) => [r.date, formatDate(r.date)]));
   const photoUrls = pm ? await signedUrls(pm.comments.map((c) => c.photo_path).filter((x): x is string => !!x), s.companyId) : {};
@@ -157,6 +173,37 @@ export async function JobTab({ dealId }: { dealId: string; number: string }) {
               conflicts={conflictText}
             />
           ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Installments</CardTitle>
+          <CardDescription>Paste the Melio link, text it to the client, mark it paid with the Melio reference.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Installments
+            projectId={job.project.id}
+            number={number}
+            revenueCents={money.revenueCents}
+            clientName={client?.name ?? null}
+            clientPhone={client?.phone ?? null}
+            company={s.companyName}
+            today={today}
+            rows={installments.map((p) => ({
+              id: p.id,
+              label: p.label ?? "Payment",
+              amount_cents: p.amount,
+              due_date: p.due_date,
+              received_at: p.received_at,
+              link_url: p.link_url,
+              link_sent_at: p.link_sent_at,
+              provider: p.provider,
+              provider_ref: p.provider_ref,
+              receipt_number: p.receipt_number,
+              status: p.status ?? "due",
+            }))}
+          />
         </CardContent>
       </Card>
 

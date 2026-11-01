@@ -397,3 +397,14 @@ An independent review of batch C found these; all fixed with SQL tests (rules 45
   On a phone: stage tabs with counts, one column at a time. List toggle keeps the old grouped list.
 - Filters in the URL: scope, source, salesperson, overdue follow-up, shared (only when there's more than one workspace).
 - No confirm on backward drags (dragging is deliberate; History records every move).
+
+## 2026-10-31 — v3 batch G: installments + Melio links (0025)
+
+- Installments live on the job (`payments`, + company_id, link_url (https only), link_sent_at, provider, provider_ref, sort_order).
+  Status is derived (due → sent → paid). 0005 still refuses "paid" before the contract is signed.
+- "Use the standard schedule" splits sold price + change orders by `payment_steps` (Settings → Jobs; default 30/40/30);
+  each rounds down, the last takes the cents. Only on a job with no installments yet.
+- Per installment: Add link (paste from Melio) → **Text it** opens Messages with name, what for, amount, link,
+  "ACH is free" (marks it sent) → **Paid** with date, how (Melio/check/Zelle/cash/other) and reference. Paid ones stay on record.
+- The customer page shows their installments with a **Pay** button (view `job_customer_payments`). Workers see none of it (tested).
+- Deal-level deposit / paid-in-full dates (Sale + payments) are unchanged; they're not auto-set from installments yet.

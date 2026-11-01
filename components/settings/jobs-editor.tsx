@@ -5,7 +5,7 @@ import { ArrowDown, ArrowUp, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
-import { saveJobPhases, saveTrades } from "@/server/actions/settings";
+import { saveJobPhases, savePaymentSteps, saveTrades } from "@/server/actions/settings";
 
 type Phase = { key: string | null; label: string; trade_key: string | null; start_offset_days: number; duration_days: number; active: boolean };
 type Trade = { key: string | null; label: string; active: boolean };
@@ -124,6 +124,57 @@ export function TradesEditor({ trades }: { trades: Trade[] }) {
         }
       >
         {pending ? <Loader2 className="animate-spin" /> : null} Save trades
+      </Button>
+      {msg ? <p className="text-sm text-muted-foreground">{msg}</p> : null}
+    </div>
+  );
+}
+
+type Step = { key: string | null; label: string; pct: number; active: boolean };
+
+/** Settings → Jobs: the standard payment schedule (v3 G). Percentages of the contract; on-steps add up to 100. */
+export function PaymentStepsEditor({ steps }: { steps: Step[] }) {
+  const [rows, setRows] = useState(steps);
+  const [pending, start] = useTransition();
+  const [msg, setMsg] = useState<string | null>(null);
+  const total = rows.filter((r) => r.active).reduce((a, r) => a + r.pct, 0);
+  const set = (i: number, p: Partial<Step>) => setRows((r) => r.map((x, k) => (k === i ? { ...x, ...p } : x)));
+  return (
+    <div className="flex flex-col gap-2">
+      {rows.map((r, i) => (
+        <div key={r.key ?? `n${i}`} className="flex items-center gap-2">
+          <Input value={r.label} onChange={(e) => set(i, { label: e.target.value })} aria-label="Payment" />
+          <Input
+            inputMode="decimal"
+            className="w-20"
+            value={r.pct}
+            onChange={(e) => set(i, { pct: Number(e.target.value.replace(/[^\d.]/g, "")) || 0 })}
+            aria-label={`${r.label} percent`}
+          />
+          <span className="text-sm">%</span>
+          <Button type="button" variant="ghost" size="icon" aria-label="Up" onClick={() => setRows((x) => move(x, i, -1))}>
+            <ArrowUp />
+          </Button>
+          <label className="flex items-center gap-1.5 text-sm">
+            <input type="checkbox" className="size-5" checked={r.active} onChange={(e) => set(i, { active: e.target.checked })} /> On
+          </label>
+        </div>
+      ))}
+      <p className={total === 100 ? "text-sm text-muted-foreground" : "text-sm font-semibold text-destructive"}>Total {total}% (must be 100%)</p>
+      <Button type="button" variant="secondary" onClick={() => setRows((r) => [...r, { key: null, label: "New payment", pct: 10, active: true }])}>
+        <Plus /> Add step
+      </Button>
+      <Button
+        type="button"
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            const r = await savePaymentSteps(rows);
+            setMsg(r?.ok ? "Saved. New schedules use these steps." : (r?.error ?? "Couldn't save"));
+          })
+        }
+      >
+        {pending ? <Loader2 className="animate-spin" /> : null} Save schedule
       </Button>
       {msg ? <p className="text-sm text-muted-foreground">{msg}</p> : null}
     </div>

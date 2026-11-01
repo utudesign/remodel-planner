@@ -23,5 +23,5 @@ export const ROLE_LABELS: Record<Role, string> = {
 
 /** Where each role lands after sign-in. */
 export function homeFor(role: Role): string {
-  return role === "crew" ? "/work" : role === "customer" ? "/my-job" : "/today";
+  return role === "crew" ? "/work" : role === "customer" ? "/my-job" : "/deals";
 }

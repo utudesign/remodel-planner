@@ -3,8 +3,8 @@ import { TAB_ITEMS } from "@/lib/nav";
 import { defaultPlanFor, previewFor, type PlanRow } from "@/lib/deals/plans";
 
 describe("nav", () => {
-  it("phone tabs: Today · Deals · Jobs · KPIs · More", () => {
-    expect(TAB_ITEMS.map((i) => i.label)).toEqual(["Today", "Deals", "Jobs", "KPIs", "More"]);
+  it("phone tabs: Deals · Today · Jobs · KPIs · More (v3 E1: Deals is home)", () => {
+    expect(TAB_ITEMS.map((i) => i.label)).toEqual(["Deals", "Today", "Jobs", "KPIs", "More"]);
   });
 });
 
@@ -24,5 +24,13 @@ describe("commission preview before a plan is picked", () => {
   it("no price or gross-profit plan → no preview", () => {
     expect(previewFor(defaultPlanFor(plans, "kitchen"), null)).toBeNull();
     expect(previewFor({ ...plans[0], basis: "gross_profit" }, 100)).toBeNull();
+  });
+});
+
+import { tabsFor } from "@/lib/nav";
+describe("nav per role (v3 F1)", () => {
+  it("workers get My work · Daily report · Alerts; customers no tab bar", () => {
+    expect(tabsFor("crew").map((i) => i.href)).toEqual(["/work", "/work/report", "/notifications"]);
+    expect(tabsFor("customer")).toEqual([]);
   });
 });

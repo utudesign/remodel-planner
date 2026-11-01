@@ -114,6 +114,6 @@ describe("v3 F1/F3 helpers", () => {
   it("each role lands on its own home", () => {
     expect(homeFor("crew")).toBe("/work");
     expect(homeFor("customer")).toBe("/my-job");
-    expect(homeFor("team")).toBe("/today");
+    expect(homeFor("team")).toBe("/deals");
   });
 });

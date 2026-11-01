@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { KanbanSquare, List, Plus, Search } from "lucide-react";
+import { DealsBoard } from "@/components/deals/deals-board";
+import { DealFilters } from "@/components/deals/deal-filters";
+import { SCOPES, SOURCES } from "@/lib/deals/display";
 import { DealCard } from "@/components/deals/deal-card";
 import { EmptyState, PageHeader } from "@/components/shared/states";
 import { requireStaff } from "@/lib/auth/require-role";
@@ -36,18 +39,33 @@ function matcher(q: string, currentYear: number) {
   };
 }
 
-export default async function DealsPage({ searchParams }: { searchParams: Promise<{ seg?: string; q?: string }> }) {
-  const { seg: segParam, q = "" } = await searchParams;
+type Params = { seg?: string; q?: string; view?: string; scope?: string; source?: string; owner?: string; overdue?: string; shared?: string };
+
+/** Deals (v3 E1): the home screen. Selling = a board by stage (or a list); Sold and Closed = lists. Filters in the URL. */
+export default async function DealsPage({ searchParams }: { searchParams: Promise<Params> }) {
+  const sp = await searchParams;
+  const { seg: segParam, q = "" } = sp;
   const s = await requireStaff();
-  const [stages, deals, people, workspaces] = await Promise.all([
+  const [stages, allDeals, people, workspaces, reasons] = await Promise.all([
     getStages(s),
     listDeals(s),
-    s.db.from("users").select("id, name").eq("company_id", s.companyId).then(must),
+    s.db.from("users").select("id, name, role, active").eq("company_id", s.companyId).then(must),
     getWorkspaces(s),
+    s.db.from("lost_reasons").select("key, label, active, sort_order").eq("company_id", s.companyId).order("sort_order").then(must),
   ]);
+  const now = new Date();
+  const nowMs = now.getTime();
+  const deals = allDeals.filter(
+    (d) =>
+      (!sp.scope || d.scope === sp.scope) &&
+      (!sp.source || d.source === sp.source) &&
+      (!sp.owner || d.owner_id === sp.owner) &&
+      (!sp.shared || (d.workspace_id && d.workspace_id !== s.workspaceId)) &&
+      (!sp.overdue || (!!d.next_follow_up_at && new Date(d.next_follow_up_at).getTime() < nowMs)),
+  );
+  const board = sp.view !== "list";
   const wsName = new Map(workspaces.map((w) => [w.id, w.name]));
   const firstName = new Map(people.map((p) => [p.id, (p.name ?? "").split(" ")[0] || null]));
-  const now = new Date();
   const year = Number(todayIn(s.timezone).slice(0, 4));
   const kind = new Map(stages.map((x) => [x.key, x.kind]));
   const match = matcher(q, year);
@@ -108,11 +126,19 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
         </label>
       </form>
 
-      <nav className="mb-4 grid grid-cols-3 rounded-xl bg-muted p-1 text-sm font-semibold sm:w-[28rem]">
+      <DealFilters
+        scopes={SCOPES.map((x) => ({ key: x.key, label: x.label }))}
+        sources={SOURCES.map((x) => ({ key: x.key, label: x.label }))}
+        people={people.filter((p) => p.active && p.role !== "crew" && p.role !== "customer").map((p) => ({ id: p.id, name: p.name ?? "Someone" }))}
+        showShared={workspaces.length > 1}
+      />
+
+      <div className="mb-4 flex items-center gap-2">
+      <nav className="grid flex-1 grid-cols-3 rounded-xl bg-muted p-1 text-sm font-semibold sm:max-w-[28rem]">
         {SEGMENTS.map((x) => (
           <Link
             key={x.key}
-            href={`/deals?seg=${x.key}`}
+            href={`/deals?${new URLSearchParams({ ...Object.fromEntries(Object.entries(sp).filter(([k, v]) => v && k !== "q")), seg: x.key }).toString()}`}
             className={cn(
               "flex h-10 items-center justify-center gap-1.5 rounded-lg text-muted-foreground",
               seg === x.key && "bg-card text-foreground shadow-sm",
@@ -123,6 +149,16 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
           </Link>
         ))}
       </nav>
+        {seg === "selling" && !q ? (
+          <Link
+            href={`/deals?${new URLSearchParams({ ...Object.fromEntries(Object.entries(sp).filter(([k, v]) => v && k !== "view")), ...(board ? { view: "list" } : {}) }).toString()}`}
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-card ring-1 ring-border"
+            aria-label={board ? "Show as list" : "Show as board"}
+          >
+            {board ? <List className="size-5" /> : <KanbanSquare className="size-5" />}
+          </Link>
+        ) : null}
+      </div>
 
       {q ? (
         <p className="mb-3 text-sm text-muted-foreground">
@@ -137,6 +173,17 @@ export default async function DealsPage({ searchParams }: { searchParams: Promis
         <EmptyState
           title={q ? "No deal matches" : seg === "selling" ? "No open deals" : seg === "sold" ? "No jobs in progress" : "Nothing closed yet"}
           description={seg === "selling" && !q ? "Tap + → New deal, or paste a Facebook message." : undefined}
+        />
+      ) : seg === "selling" && !q && board ? (
+        <DealsBoard
+          stages={stages.filter((st) => st.active || st.kind !== "open").map((st) => ({ key: st.key, label: st.label, kind: st.kind as "open" | "handed_off" | "lost" }))}
+          deals={shown.map((d) => ({
+            deal: d,
+            ownerName: d.owner_id ? (firstName.get(d.owner_id) ?? null) : null,
+            sharedBy: d.workspace_id && d.workspace_id !== s.workspaceId ? (wsName.get(d.workspace_id) ?? "another workspace") : null,
+          }))}
+          reasons={reasons.filter((r) => r.active).map((r) => ({ key: r.key, label: r.label }))}
+          nowMs={nowMs}
         />
       ) : seg === "selling" && !q ? (
         <div className="flex flex-col gap-5">

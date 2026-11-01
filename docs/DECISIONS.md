@@ -388,3 +388,12 @@ An independent review of batch C found these; all fixed with SQL tests (rules 45
   uploaded best-effort by the offline queue. Grids load thumbnails; older photos (no thumbnail) fall back to the original.
   Server-side uploads (task comments, daily-report issues) have no thumbnail yet.
 - Workers can use the offline photo queue too (upload ticket allows crew, photos only, their jobs).
+
+## 2026-10-31 — v3 batch E1: Deals board is home
+
+- `/` → `/deals` for the team (workers `/work`, customers `/my-job`). Tabs: Deals · Today · Jobs · KPIs · More.
+- Selling = a board: one column per open stage + **Sold** and **Lost** drop zones (desktop). Drag, or "Move to…" on each card.
+  Sold opens the deal's Job tab (Mark sold checks the job-ready list; the database allows no other way). Lost asks why.
+  On a phone: stage tabs with counts, one column at a time. List toggle keeps the old grouped list.
+- Filters in the URL: scope, source, salesperson, overdue follow-up, shared (only when there's more than one workspace).
+- No confirm on backward drags (dragging is deliberate; History records every move).

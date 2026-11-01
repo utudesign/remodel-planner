@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { UserButton } from "@clerk/nextjs";
 import { Bell } from "lucide-react";
 import { BottomNav, SidebarNav } from "@/components/shared/nav";
@@ -35,8 +36,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .eq("user_id", s.userId)
     .is("read_at", null);
   const unread = count ?? 0;
+  // Appearance (More → Appearance): Asana-style dark by default. Set before first paint so there's no flash.
+  const theme = (await cookies()).get("theme")?.value === "light" ? "light" : "dark";
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-[232px_1fr]">
+    <div className="min-h-dvh bg-background text-foreground lg:grid lg:grid-cols-[232px_1fr]">
+      <script
+        dangerouslySetInnerHTML={{ __html: `document.documentElement.classList.toggle("dark", ${theme === "dark"});` }}
+      />
       <aside className="sticky top-0 hidden h-dvh flex-col gap-6 border-r bg-card px-3 py-5 lg:flex">
         <div className="flex items-center justify-between px-3">
           <Link href={homeFor(s.role)} className="truncate text-base font-semibold tracking-tight">

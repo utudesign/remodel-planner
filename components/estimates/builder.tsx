@@ -133,7 +133,7 @@ export function ShareBar({
     <div className="flex flex-col gap-2">
       {shared ? (
         <div className="grid grid-cols-2 gap-2">
-          <a href={clientUrl} target="_blank" rel="noreferrer" className="flex h-12 items-center justify-center gap-2 rounded-xl bg-white font-semibold text-foreground">
+          <a href={clientUrl} target="_blank" rel="noreferrer" className="flex h-12 items-center justify-center gap-2 rounded-xl bg-white font-semibold text-zinc-900">
             <ExternalLink className="size-4" /> Client view
           </a>
           <button
@@ -156,7 +156,7 @@ export function ShareBar({
           type="button"
           disabled={pending}
           onClick={() => go(() => shareQuote({ quote_id: quoteId }))}
-          className="flex h-12 items-center justify-center gap-2 rounded-xl bg-white font-semibold text-foreground"
+          className="flex h-12 items-center justify-center gap-2 rounded-xl bg-white font-semibold text-zinc-900"
         >
           {pending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />} Show the client
         </button>

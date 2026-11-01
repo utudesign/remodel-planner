@@ -7,6 +7,8 @@ import { PushToggle } from "@/components/shared/push-toggle";
 import { requireStaff } from "@/lib/auth/require-role";
 import { CopyButton } from "@/components/shared/copy-button";
 import { appUrl } from "@/lib/app-url";
+import { cookies } from "next/headers";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 
 export const metadata = { title: "More" };
 
@@ -34,6 +36,15 @@ export default async function MorePage() {
   return (
     <>
       <PageHeader title="More" />
+      <Card className="mb-5">
+        <CardHeader>
+          <CardTitle>Appearance</CardTitle>
+          <CardDescription>Dark looks like an Asana project. Saved on this device.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ThemeToggle theme={(await cookies()).get("theme")?.value === "light" ? "light" : "dark"} />
+        </CardContent>
+      </Card>
       <ul className="mb-5 flex flex-col divide-y rounded-2xl bg-card ring-1 ring-border">
         {links.map((l) => (
           <li key={l.href}>

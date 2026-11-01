@@ -29,28 +29,30 @@
   --ring: #1f5c46;
 }
 
+/* Dark = Asana-style project look (2026-11-01): charcoal page, lighter panels, blue actions, bright tags. */
 .dark {
-  --background: oklch(0.17 0.005 250);
-  --foreground: oklch(0.96 0 0);
-  --card: oklch(0.21 0.006 250);
-  --card-foreground: oklch(0.96 0 0);
-  --popover: oklch(0.21 0.006 250);
-  --popover-foreground: oklch(0.96 0 0);
-  --primary: oklch(0.85 0.03 250);
-  --primary-foreground: oklch(0.2 0.01 250);
-  --secondary: oklch(0.27 0.006 250);
-  --secondary-foreground: oklch(0.96 0 0);
-  --muted: oklch(0.27 0.006 250);
-  --muted-foreground: oklch(0.7 0.01 250);
-  --accent: oklch(0.29 0.008 250);
-  --accent-foreground: oklch(0.96 0 0);
-  --destructive: oklch(0.65 0.2 25);
-  --destructive-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.78 0.14 75);
-  --success: oklch(0.68 0.13 155);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.6 0.04 250);
+  --background: #1e1f21;
+  --foreground: #f5f4f3;
+  --card: #2a2b2d;
+  --card-foreground: #f5f4f3;
+  --popover: #2a2b2d;
+  --popover-foreground: #f5f4f3;
+  --primary: #4573d2;
+  --primary-foreground: #ffffff;
+  --secondary: #252628;
+  --secondary-foreground: #f5f4f3;
+  --muted: #2e2f31;
+  --muted-foreground: #a2a0a2;
+  --accent: #3a3b3e;
+  --accent-foreground: #f5f4f3;
+  --destructive: #e8384f;
+  --destructive-foreground: #ffffff;
+  --warning: #f1bd6c;
+  --success: #5da283;
+  --border: #424244;
+  --input: #565557;
+  --ring: #4573d2;
+  color-scheme: dark;
 }
 
 @theme inline {

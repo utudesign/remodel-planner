@@ -5,14 +5,14 @@
 export type Swatch = { chip: string; bar: string; dot: string };
 
 export const PALETTE: Swatch[] = [
-  { chip: "bg-sky-200 text-sky-950 dark:bg-sky-500/30 dark:text-sky-100", bar: "bg-sky-300 text-sky-950", dot: "bg-sky-400" },
-  { chip: "bg-orange-200 text-orange-950 dark:bg-orange-500/30 dark:text-orange-100", bar: "bg-orange-300 text-orange-950", dot: "bg-orange-400" },
-  { chip: "bg-fuchsia-200 text-fuchsia-950 dark:bg-fuchsia-500/30 dark:text-fuchsia-100", bar: "bg-fuchsia-300 text-fuchsia-950", dot: "bg-fuchsia-400" },
-  { chip: "bg-emerald-200 text-emerald-950 dark:bg-emerald-500/30 dark:text-emerald-100", bar: "bg-emerald-300 text-emerald-950", dot: "bg-emerald-400" },
-  { chip: "bg-amber-200 text-amber-950 dark:bg-amber-500/30 dark:text-amber-100", bar: "bg-amber-300 text-amber-950", dot: "bg-amber-400" },
-  { chip: "bg-violet-200 text-violet-950 dark:bg-violet-500/30 dark:text-violet-100", bar: "bg-violet-300 text-violet-950", dot: "bg-violet-400" },
-  { chip: "bg-teal-200 text-teal-950 dark:bg-teal-500/30 dark:text-teal-100", bar: "bg-teal-300 text-teal-950", dot: "bg-teal-400" },
-  { chip: "bg-rose-200 text-rose-950 dark:bg-rose-500/30 dark:text-rose-100", bar: "bg-rose-300 text-rose-950", dot: "bg-rose-400" },
+  { chip: "bg-sky-200 text-sky-950", bar: "bg-sky-300 text-sky-950", dot: "bg-sky-400" },
+  { chip: "bg-orange-200 text-orange-950", bar: "bg-orange-300 text-orange-950", dot: "bg-orange-400" },
+  { chip: "bg-fuchsia-200 text-fuchsia-950", bar: "bg-fuchsia-300 text-fuchsia-950", dot: "bg-fuchsia-400" },
+  { chip: "bg-emerald-200 text-emerald-950", bar: "bg-emerald-300 text-emerald-950", dot: "bg-emerald-400" },
+  { chip: "bg-amber-200 text-amber-950", bar: "bg-amber-300 text-amber-950", dot: "bg-amber-400" },
+  { chip: "bg-violet-200 text-violet-950", bar: "bg-violet-300 text-violet-950", dot: "bg-violet-400" },
+  { chip: "bg-teal-200 text-teal-950", bar: "bg-teal-300 text-teal-950", dot: "bg-teal-400" },
+  { chip: "bg-rose-200 text-rose-950", bar: "bg-rose-300 text-rose-950", dot: "bg-rose-400" },
 ];
 
 export function swatchFor(key: string | null | undefined, order: readonly { key: string }[]): Swatch | null {
@@ -22,10 +22,10 @@ export function swatchFor(key: string | null | undefined, order: readonly { key:
 }
 
 export const STATUS_STYLE: Record<string, { label: string; chip: string }> = {
-  todo: { label: "To do", chip: "bg-zinc-200 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100" },
-  doing: { label: "In progress", chip: "bg-sky-200 text-sky-950 dark:bg-sky-500/30 dark:text-sky-100" },
-  blocked: { label: "Blocked", chip: "bg-rose-200 text-rose-950 dark:bg-rose-500/30 dark:text-rose-100" },
-  done: { label: "Done", chip: "bg-emerald-200 text-emerald-950 dark:bg-emerald-500/30 dark:text-emerald-100" },
+  todo: { label: "To do", chip: "bg-zinc-200 text-zinc-800" },
+  doing: { label: "In progress", chip: "bg-sky-200 text-sky-950" },
+  blocked: { label: "Blocked", chip: "bg-rose-200 text-rose-950" },
+  done: { label: "Done", chip: "bg-emerald-200 text-emerald-950" },
 };
 
 /** On track / At risk / Off track from the tasks themselves (no status to keep up to date by hand). */

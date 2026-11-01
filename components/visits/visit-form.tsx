@@ -164,7 +164,7 @@ export function VisitForm({
             <button type="button" disabled={pending} onClick={() => save(false)} className="h-12 rounded-xl bg-white/15 font-semibold">
               Save
             </button>
-            <button type="button" disabled={pending} onClick={() => save(true)} className="h-12 rounded-xl bg-white font-semibold text-foreground">
+            <button type="button" disabled={pending} onClick={() => save(true)} className="h-12 rounded-xl bg-white font-semibold text-zinc-900">
               {initial.done ? "Save as done" : "Visit done"}
             </button>
           </div>

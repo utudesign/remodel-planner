@@ -439,3 +439,10 @@ An independent review of batch C found these; all fixed with SQL tests (rules 45
 - Job status (On track / At risk / Off track) is computed from the tasks, not typed by hand: a late or blocked task → At risk;
   more than 3 days late or 3+ late tasks → Off track.
 - Jobs list and board cards open the job workspace; the deal's Job tab links to it ("Open job view").
+
+## 2026-11-01 — Asana-style dark look (default)
+
+- The team and worker app (`(app)` routes) is dark by default, modeled on an Asana project: charcoal page (#1e1f21),
+  lighter panels (#2a2b2d), blue actions (#4573d2), bright tag chips (trades, statuses) that stay bright in dark.
+- More → Appearance switches Dark / Light per device (cookie `theme`); the class is set before first paint.
+- Public pages customers see (estimate link, lead form, booking, sign-in, print) stay light.
